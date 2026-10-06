@@ -11,7 +11,8 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def wheel_requirement(path):
     with zipfile.ZipFile(path) as archive:
-        metadata = [name for name in archive.namelist() if name.endswith('.dist-info/METADATA')]
+        metadata = [name for name in archive.namelist()
+                    if name.count('/') == 1 and name.endswith('.dist-info/METADATA')]
         if len(metadata) != 1:
             raise ValueError('Ambiguous wheel metadata')
         message = email.message_from_bytes(archive.read(metadata[0]))

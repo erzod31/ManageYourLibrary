@@ -17,6 +17,7 @@ class NativeReleaseTests(unittest.TestCase):
             wheel = Path(temp) / 'example.whl'
             with zipfile.ZipFile(wheel, 'w') as handle:
                 handle.writestr('example-1.2.dist-info/METADATA', 'Name: example\nVersion: 1.2\n')
+                handle.writestr('vendor/other-2.dist-info/METADATA', 'Name: other\nVersion: 2\n')
             self.assertRegex(wheel_requirement(wheel), r'^example==1\.2 --hash=sha256:[0-9a-f]{64}$')
 
     def test_payload_rejects_books_and_personal_state(self):

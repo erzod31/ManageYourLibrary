@@ -101,6 +101,7 @@ python3 -m PyInstaller \
   --name ManageYourLibrary \
   main.py
 
+python3 tools/configure_macos_bundle.py
 "$ROOT/dist/macos/ManageYourLibrary.app/Contents/MacOS/ManageYourLibrary" --smoke-test
 # Diagnostic reports stay outside the signed .app to preserve its resource seal.
 "$ROOT/dist/macos/ManageYourLibrary.app/Contents/MacOS/ManageYourLibrary" --runtime-self-test "$ROOT/dist/macos/runtime-self-test.json"

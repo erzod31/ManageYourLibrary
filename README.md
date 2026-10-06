@@ -1,7 +1,7 @@
 # Manage Your Library
 
-A Python/Tkinter desktop organizer for your own digital books. Windows x64
-packages include local OCR and do not require Python.
+A Python/Tkinter desktop organizer for your own digital books. Native Windows,
+macOS and Linux packages include local OCR and do not require Python.
 
 Published Windows release: [`0.5.3`](docs/release_notes_windows_0.5.3.md).
 
@@ -21,19 +21,46 @@ ready-to-run application. These links are for the same published version, 0.5.3:
 | [SHA-256 checksums](https://github.com/erzod31/ManageYourLibrary/releases/download/v0.5.3/SHA256SUMS-0.5.3.txt) | Check downloaded files against this release. |
 | [Build manifest](https://github.com/erzod31/ManageYourLibrary/releases/download/v0.5.3/build-manifest-0.5.3.json) | Exact build source, dependencies and recorded automated gates. |
 
+Native macOS/Linux packages are published separately as the **0.5.3 native
+supplement**, with their own source revision and per-platform validation:
+
+| Download | Target |
+| --- | --- |
+| [Mac Apple Silicon ZIP](https://github.com/erzod31/ManageYourLibrary/releases/download/v0.5.3-native.2/ManageYourLibrary-0.5.3-macOS-arm64.zip) | Apple Silicon; tested on macOS 15. |
+| [Mac Intel ZIP](https://github.com/erzod31/ManageYourLibrary/releases/download/v0.5.3-native.2/ManageYourLibrary-0.5.3-macOS-x64.zip) | Intel x64; tested on macOS 15. |
+| [Linux x64 tar.gz](https://github.com/erzod31/ManageYourLibrary/releases/download/v0.5.3-native.2/ManageYourLibrary-0.5.3-Linux-x64.tar.gz) | Desktop Linux x86_64; tested on Ubuntu 22.04, glibc 2.35. |
+
+Read [native first use](docs/NATIVE_FIRST_USE.md) before opening. The
+[native release](https://github.com/erzod31/ManageYourLibrary/releases/tag/v0.5.3-native.2)
+also contains SHA-256 sums, build/OCR manifests, native wheel hash locks and frozen
+diagnostic reports. Download the checksum file matching your OS/architecture;
+use `shasum -a 256` on Mac or `sha256sum` on Linux and compare the exact filename.
+These native packages do not replace the existing Windows release/tag.
+
 - The distributed packages target **Windows x64**. Local package checks ran on
   Windows 11; other Windows versions/architectures are not certified by that
-  result. Linux/macOS have source/build instructions, not published native packages.
+  result. The native supplement has separate Linux/macOS automated checks;
+  other distributions, older macOS versions and Linux ARM are not certified.
 - Python, a separate Tesseract installation, an application account and API keys
-  are **not required** for the Windows packages.
+  are **not required** for the native packages.
 - Choose a writable library folder and leave space for your books, the extracted
   application and its caches. External PDF/EPUB reading applications are separate.
 - Internet is optional for library management/local OCR, but required for web
   metadata and remote cover lookup. Optional AI and special-format tools are separate.
 - Executables are **unsigned**. Manual installed-UI, upgrade and uninstall checks
   remain unperformed; see the [actual validation record](docs/windows_0.5.3_checksums.md).
+- Mac bundles have only an **ad-hoc signature**, no Developer ID or Apple
+  notarization. Gatekeeper can block downloaded apps. Follow the documented
+  per-app approval only if you trust the verified official package; never disable
+  Gatekeeper globally. Manual Finder/Gatekeeper opening is untested.
 
 ## First use
+
+**Mac:** extract the ZIP and copy `ManageYourLibrary.app` to Applications.
+**Linux:** extract the complete tar.gz and run `./ManageYourLibrary/ManageYourLibrary`
+from a graphical desktop. Retain all bundled files and permissions. Both then
+follow the same choose-folder/import workflow below. See
+[native prerequisites and security limitations](docs/NATIVE_FIRST_USE.md).
 
 1. Install `ManageYourLibrary-0.5.3-Setup-x64.exe`, or extract the **complete**
    portable ZIP and run `ManageYourLibrary.exe` beside `_internal`. Do not run
@@ -54,6 +81,9 @@ and appearance follow the system when supported. No folder is scanned before it
 is chosen. On Windows state lives in `%APPDATA%\ManageYourLibrary`. Installer and
 portable under the same account intentionally share existing state; upgrading
 must not erase it.
+On macOS state lives in `~/Library/Application Support/ManageYourLibrary`.
+On Linux it lives in `$XDG_DATA_HOME/ManageYourLibrary`, or
+`~/.local/share/ManageYourLibrary` when that variable is unset.
 
 ## Features and formats
 
@@ -143,6 +173,10 @@ For a filesystem backup:
 4. Keep the library and profile snapshots together and record their folder paths.
    This is a manual backup procedure, not a claim of automatic backup scheduling.
 
+On macOS/Linux, also copy the **whole** application profile folder listed in
+First use, with the app closed. Update by replacing only the application bundle
+or extracting to a new application folder; never delete the profile or quarantine.
+
 Before updating, keep those backups. Close the app, then install the new version
 or extract a portable release into a **new application folder**; do not mix old
 and new `_internal` files. Both editions intentionally use the same Windows
@@ -177,7 +211,7 @@ Windows may block an unsigned app depending on its security policy. See
 ## Report a problem
 
 Use [GitHub Issues](https://github.com/erzod31/ManageYourLibrary/issues/new) with
-the app version, Windows version/architecture, installer or portable edition,
+the app version, operating-system version/architecture, package edition,
 steps to reproduce, expected/actual result and the exact error message. Say
 whether an operation moved a file and whether a review/pending plan remains.
 Posting an issue requires a GitHub account; using the application does not.
@@ -201,7 +235,8 @@ python main.py
 Run `BUILD_EXE.bat`, then `platforms\windows\BUILD_INSTALLER.bat` (Inno Setup 6)
 and `python tools/package_windows_release.py`. Outputs are in `dist/release/`.
 Linux/macOS scripts require native OCR runtimes. Source CI does not certify
-native Unix release packages.
+native Unix release packages; the separate manually dispatched native release
+workflow builds and exercises those artifacts. See [platform builds](platforms/README.md).
 
 ## Documentation
 
@@ -213,4 +248,5 @@ native Unix release packages.
 - [Manual test plan](docs/manual_test_plan_windows.md)
 - [Identity scan](docs/deep_identity_scan.md)
 - [Optional local AI](docs/local_ai_reinforcement.md)
+- [Native Mac/Linux first use](docs/NATIVE_FIRST_USE.md)
 - [Third-party notices](THIRD_PARTY_NOTICES.md)

@@ -1,10 +1,12 @@
 import tempfile
+import plistlib
 import unittest
 import zipfile
 from pathlib import Path
 from unittest.mock import patch
 
 from tools.bundle_native_ocr import dependencies
+from tools.configure_macos_bundle import configure_bundle, BUNDLE_ID
 from tools.lock_native_wheels import wheel_requirement
 from tools.package_native_release import validate_payload, validate_report
 
@@ -88,6 +90,22 @@ class NativeReleaseTests(unittest.TestCase):
                 self.assertIn(marker, script)
         macos = (ROOT / 'platforms/macos/build_macos.sh').read_text()
         self.assertIn('ICON_ARGS=(--icon', macos)  # macOS Bash 3.2 rejects an empty array with nounset.
+        self.assertIn('configure_macos_bundle.py', macos)
+
+    def test_macos_bundle_version_is_set_before_resealing(self):
+        with tempfile.TemporaryDirectory() as temp:
+            bundle = Path(temp)
+            (bundle / 'Contents').mkdir()
+            metadata = bundle / 'Contents/Info.plist'
+            metadata.write_bytes(plistlib.dumps({'CFBundleShortVersionString': '0.0.0', 'NSHighResolutionCapable': True}))
+            with patch('tools.configure_macos_bundle.subprocess.run') as run:
+                configure_bundle(bundle, '0.5.3')
+            restored = plistlib.loads(metadata.read_bytes())
+            self.assertEqual(restored['CFBundleVersion'], '0.5.3')
+            self.assertEqual(restored['CFBundleShortVersionString'], '0.5.3')
+            self.assertEqual(restored['CFBundleIdentifier'], BUNDLE_ID)
+            self.assertTrue(restored['NSHighResolutionCapable'])
+            self.assertEqual(run.call_count, 2)
 
 
 if __name__ == '__main__':

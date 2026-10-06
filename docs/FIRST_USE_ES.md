@@ -1,4 +1,15 @@
-# Primer uso: Windows x64
+# Primer uso: Windows, Mac y Linux
+
+Para Mac (Apple Silicon o Intel) y Linux x64, descarga el paquete correspondiente
+del [suplemento nativo](https://github.com/erzod31/ManageYourLibrary/releases/tag/v0.5.3-native.2)
+y sigue las [instrucciones nativas](NATIVE_FIRST_USE.md). Incluyen Python y OCR.
+En Mac extrae el ZIP y copia la app a Aplicaciones; no está notarizada por Apple.
+En Linux extrae todo el tar.gz y ejecuta `ManageYourLibrary/ManageYourLibrary`
+desde un escritorio gráfico compatible. Las pruebas se hicieron en macOS 15 y
+Ubuntu 22.04 x64; no certifican otros sistemas. Después elige la carpeta e importa
+como se describe abajo.
+
+## Windows x64
 
 1. Descarga el instalador de la versión publicada y ejecútalo. No necesitas
    Python, una cuenta de la app ni claves API. El OCR ya está incluido.

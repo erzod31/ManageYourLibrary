@@ -18,12 +18,21 @@ python3 -c 'import sys; raise SystemExit(0 if sys.version_info[:2] == (3, 12) el
   exit 1
 }
 
-python3 -m pip install -r "$ROOT/requirements-build.txt"
+if [ -f "$ROOT/dist/native-dependencies/requirements.lock" ]; then
+  python3 -m pip install --no-index --find-links "$ROOT/dist/native-dependencies" --require-hashes -r "$ROOT/dist/native-dependencies/requirements.lock"
+else
+  python3 -m pip install -r "$ROOT/requirements-build.txt"
+fi
 python3 -m unittest discover -s tests -v
 python3 main.py --smoke-test
 python3 tools/benchmark_catalog.py --check
 
-rm -rf "$ROOT/dist/macos" "${TMPDIR:-/tmp}/ManageYourLibrary_pyinstaller_macos"
+if [ -e "$ROOT/dist/macos" ]; then
+  echo "Refusing to overwrite an existing build. Use a clean checkout."
+  exit 1
+fi
+BUILD_TEMP="$(mktemp -d "${TMPDIR:-/tmp}/myl-macos.XXXXXX")"
+trap 'rm -rf -- "$BUILD_TEMP"' EXIT
 mkdir -p "$ROOT/dist/macos"
 
 ICON_ARGS=()
@@ -51,7 +60,7 @@ else
 fi
 
 if [ "${#TESSERACT_ARGS[@]}" -gt 0 ]; then
-  for lang in eng spa fra chi_sim; do
+  for lang in eng spa fra nld chi_sim; do
     if [ ! -f "$ROOT/platforms/macos/tesseract/tessdata/${lang}.traineddata" ] && [ ! -f "$ROOT/platforms/macos/tesseract/share/tessdata/${lang}.traineddata" ]; then
       echo "ERROR: macOS Tesseract language data is incomplete."
       echo "Missing: ${lang}.traineddata"
@@ -65,12 +74,13 @@ python3 -m PyInstaller \
   --noconfirm \
   --onedir \
   --windowed \
-  --workpath "${TMPDIR:-/tmp}/ManageYourLibrary_pyinstaller_macos/build" \
-  --specpath "${TMPDIR:-/tmp}/ManageYourLibrary_pyinstaller_macos" \
+  --workpath "$BUILD_TEMP/build" \
+  --specpath "$BUILD_TEMP" \
   --distpath "$ROOT/dist/macos" \
   "${ICON_ARGS[@]}" \
   --add-data "$ROOT/app_icon.ico:." \
   --add-data "$ROOT/VERSION:." \
+  --add-data "$ROOT/data:data" \
   "${TESSERACT_ARGS[@]}" \
   --collect-all pypdfium2 \
   --collect-all ftfy \
@@ -90,10 +100,12 @@ python3 -m PyInstaller \
   --name ManageYourLibrary \
   main.py
 
-rm -f "${TMPDIR:-/tmp}/ManageYourLibrary_pyinstaller_macos/ManageYourLibrary.spec"
-
 "$ROOT/dist/macos/ManageYourLibrary.app/Contents/MacOS/ManageYourLibrary" --smoke-test
-python3 tools/write_build_manifest.py "$ROOT/dist/macos/ManageYourLibrary.app/Contents/MacOS/ManageYourLibrary" --platform macos --validated-release-gates
+# Diagnostic reports stay outside the signed .app to preserve its resource seal.
+"$ROOT/dist/macos/ManageYourLibrary.app/Contents/MacOS/ManageYourLibrary" --runtime-self-test "$ROOT/dist/macos/runtime-self-test.json"
+"$ROOT/dist/macos/ManageYourLibrary.app/Contents/MacOS/ManageYourLibrary" --first-use-self-test "$ROOT/dist/macos/first-use-self-test.json"
+python3 tools/write_build_manifest.py "$ROOT/dist/macos/ManageYourLibrary.app/Contents/MacOS/ManageYourLibrary" --platform macos --validated-release-gates --validated-runtime --validated-first-use
+mv "$ROOT/dist/macos/ManageYourLibrary.app/Contents/MacOS/build-manifest.json" "$ROOT/dist/macos/build-manifest.json"
 
 echo
 echo "DONE"

@@ -1,0 +1,107 @@
+name: Native macOS and Linux packages
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish the validated native supplement (never overwrite a release)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  native-build:
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            platform: linux
+            arch: x64
+          - os: macos-15
+            platform: macos
+            arch: arm64
+          - os: macos-15-intel
+            platform: macos
+            arch: x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Linux build/runtime prerequisites
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb libtk8.6 patchelf tesseract-ocr tesseract-ocr-eng tesseract-ocr-spa tesseract-ocr-fra tesseract-ocr-nld tesseract-ocr-chi-sim
+      - name: Install macOS OCR prerequisites
+        if: runner.os == 'macOS'
+        run: brew install tesseract tesseract-lang
+      - name: Resolve and hash-lock native Python wheels
+        run: python3 tools/lock_native_wheels.py
+      - name: Bundle native OCR and dependency licenses
+        run: python3 tools/bundle_native_ocr.py
+      - name: Build and test Linux frozen application and archive
+        if: runner.os == 'Linux'
+        run: |
+          xvfb-run -a bash platforms/linux/build_linux.sh
+          xvfb-run -a python3 tools/package_native_release.py --platform linux
+      - name: Build and test macOS frozen application and archive
+        if: runner.os == 'macOS'
+        run: |
+          bash platforms/macos/build_macos.sh
+          python3 tools/package_native_release.py --platform macos
+      - name: Retain native packages and provenance
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-${{ matrix.platform }}-${{ matrix.arch }}
+          path: dist/native-release/*
+          if-no-files-found: error
+          compression-level: 0
+      - name: Retain failed diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: failed-diagnostics-${{ matrix.platform }}-${{ matrix.arch }}
+          path: |
+            dist/**/runtime-self-test.json
+            dist/**/first-use-self-test.json
+          if-no-files-found: ignore
+
+  publish:
+    needs: native-build
+    if: inputs.publish
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: native-*
+          merge-multiple: true
+          path: native-artifacts
+      - name: Publish only complete verified native packages
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ github.sha }}
+          RUN_LINK: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          cd native-artifacts
+          for checksums in *-SHA256SUMS.txt; do sha256sum -c "$checksums"; done
+          test "$(find . -name '*.tar.gz' | wc -l)" -eq 1
+          test "$(find . -name '*.zip' | wc -l)" -eq 2
+          cd ..
+          tag="v$(tr -d '\r\n' < VERSION)-native.1"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo 'Release already exists; refusing to overwrite it.'
+            exit 1
+          fi
+          cp docs/NATIVE_FIRST_USE.md native-notes.md
+          printf '\nSource revision: `%s`\n\nNative build and checks: %s\n\nThis supplement does not replace the Windows v0.5.3 release.\n' "$SOURCE_SHA" "$RUN_LINK" >> native-notes.md
+          gh release create "$tag" native-artifacts/* --target "$SOURCE_SHA" --title '0.5.3 — macOS and Linux native packages' --notes-file native-notes.md --latest=false

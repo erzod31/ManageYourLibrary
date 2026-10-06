@@ -87,12 +87,17 @@ def main():
             rpath = '$ORIGIN/lib' if target.name == 'tesseract' else '$ORIGIN'
             subprocess.run(['patchelf', '--force-rpath', '--set-rpath', rpath, str(target)], check=True)
         else:
-            subprocess.run(['codesign', '--remove-signature', str(target)], check=False, capture_output=True)
+            # Keep the existing LC_CODE_SIGNATURE while install_name_tool edits
+            # LINKEDIT. Removing it first can leave padding that Apple's linker
+            # refuses to process. Re-sign the relocated bytes afterwards.
+            changes = ['install_name_tool']
             if target.name != 'tesseract':
-                subprocess.run(['install_name_tool', '-id', '@loader_path/' + target.name, str(target)], check=True)
+                changes.extend(['-id', '@loader_path/' + target.name])
             for raw, dep in edges[source].items():
                 relative = '@loader_path/' + ('lib/' if target.name == 'tesseract' else '') + dep.name
-                subprocess.run(['install_name_tool', '-change', raw, relative, str(target)], check=True)
+                changes.extend(['-change', raw, relative])
+            if len(changes) > 1:
+                subprocess.run([*changes, str(target)], check=True)
             subprocess.run(['codesign', '--force', '--sign', '-', str(target)], check=True)
     if system == 'linux':
         tessdata = Path('/usr/share/tesseract-ocr/4.00/tessdata')

@@ -53,6 +53,7 @@ jobs:
       - name: Build and test macOS frozen application and archive
         if: runner.os == 'macOS'
         run: |
+          set -euo pipefail
           bash platforms/macos/build_macos.sh
           python3 tools/package_native_release.py --platform macos
       - name: Retain native packages and provenance
@@ -104,4 +105,5 @@ jobs:
           fi
           cp docs/NATIVE_FIRST_USE.md native-notes.md
           printf '\nSource revision: `%s`\n\nNative build and checks: %s\n\nThis supplement does not replace the Windows v0.5.3 release.\n' "$SOURCE_SHA" "$RUN_LINK" >> native-notes.md
-          gh release create "$tag" native-artifacts/* --target "$SOURCE_SHA" --title '0.5.3 — macOS and Linux native packages' --notes-file native-notes.md --latest=false
+          gh release create "$tag" native-artifacts/* --target "$SOURCE_SHA" --title '0.5.3 — macOS and Linux native packages' --notes-file native-notes.md --draft --latest=false
+          gh release edit "$tag" --draft=false --latest=false

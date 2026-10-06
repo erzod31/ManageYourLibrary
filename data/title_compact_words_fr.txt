@@ -1,0 +1,21 @@
+# Vocabulaire additionnel conservateur pour les titres français compactés.
+# Un mot par ligne. Garder cette liste courte et couverte par des tests.
+
+amour
+archive
+bibliotheque
+chateau
+ciel
+coeur
+empire
+histoire
+jardin
+lumiere
+maison
+monde
+mort
+mystere
+nuit
+ombre
+secret
+temps

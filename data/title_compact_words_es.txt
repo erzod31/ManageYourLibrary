@@ -1,0 +1,24 @@
+# Vocabulario adicional para segmentar títulos compactados.
+# Mantener esta lista conservadora y acompañar cada ampliación con tests.
+# Una palabra por línea. Se normaliza internamente a minúsculas sin espacios.
+
+abalorio
+abismo
+arcano
+archivo
+arturo
+batalla
+cabecera
+casandra
+criptonomicon
+desobediencia
+encantamiento
+escepticos
+espia
+guardia
+iluminador
+maravillas
+profundidades
+sombra
+torquemada
+tiranosaurio

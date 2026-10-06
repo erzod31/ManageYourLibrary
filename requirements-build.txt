@@ -1,0 +1,7 @@
+# Cross-platform build versions. Native release CI should add a platform-specific
+# hash lock after resolving wheels on that operating system.
+pypdf==6.13.2
+pypdfium2==5.9.0
+Pillow==12.2.0
+ftfy==6.3.1
+pyinstaller==6.21.0

@@ -60,6 +60,13 @@ class ReadmeCompletenessTests(unittest.TestCase):
         ):
             self.assertIn(marker, self.readme)
 
+    def test_native_downloads_and_security_limits_are_documented(self):
+        prefix = f'https://github.com/erzod31/ManageYourLibrary/releases/download/v{self.version}-native.2/'
+        for target in ('macOS-arm64.zip', 'macOS-x64.zip', 'Linux-x64.tar.gz'):
+            self.assertIn(prefix + f'ManageYourLibrary-{self.version}-' + target, self.readme)
+        for marker in ('macOS 15', 'Ubuntu 22.04', 'no Developer ID', 'notarization', 'XDG_DATA_HOME', 'Application Support'):
+            self.assertIn(marker, self.readme)
+
 
 if __name__ == "__main__":
     unittest.main()

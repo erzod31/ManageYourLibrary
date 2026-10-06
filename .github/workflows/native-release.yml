@@ -3,6 +3,10 @@ name: Native macOS and Linux packages
 on:
   workflow_dispatch:
     inputs:
+      native_revision:
+        description: Native supplement number; an existing release is never overwritten
+        type: string
+        default: '2'
       publish:
         description: Publish the validated native supplement (never overwrite a release)
         type: boolean
@@ -91,6 +95,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           SOURCE_SHA: ${{ github.sha }}
           RUN_LINK: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          NATIVE_REVISION: ${{ inputs.native_revision }}
         run: |
           set -euo pipefail
           cd native-artifacts
@@ -98,7 +103,8 @@ jobs:
           test "$(find . -name '*.tar.gz' | wc -l)" -eq 1
           test "$(find . -name '*.zip' | wc -l)" -eq 2
           cd ..
-          tag="v$(tr -d '\r\n' < VERSION)-native.1"
+          [[ "$NATIVE_REVISION" =~ ^[1-9][0-9]*$ ]]
+          tag="v$(tr -d '\r\n' < VERSION)-native.$NATIVE_REVISION"
           if gh release view "$tag" >/dev/null 2>&1; then
             echo 'Release already exists; refusing to overwrite it.'
             exit 1

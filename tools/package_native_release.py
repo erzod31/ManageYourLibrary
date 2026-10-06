@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 import platform
+import plistlib
 import shutil
 import subprocess
 import sys
@@ -75,6 +76,10 @@ def main():
         if manifest['validation'].get(gate) != 'passed':
             raise ValueError('Build gate was not recorded: ' + gate)
     if name == 'macos':
+        with (payload / 'Contents/Info.plist').open('rb') as handle:
+            metadata = plistlib.load(handle)
+        if metadata.get('CFBundleShortVersionString') != version or metadata.get('CFBundleVersion') != version:
+            raise ValueError('Finder-visible version does not match the release')
         subprocess.run(['codesign', '--verify', '--deep', '--strict', str(payload)], check=True)
         manifest['validation']['code_signing'] = 'ad_hoc_only; no Developer ID; not notarized'
     files = validate_payload(payload)

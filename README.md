@@ -249,4 +249,5 @@ workflow builds and exercises those artifacts. See [platform builds](platforms/R
 - [Identity scan](docs/deep_identity_scan.md)
 - [Optional local AI](docs/local_ai_reinforcement.md)
 - [Native Mac/Linux first use](docs/NATIVE_FIRST_USE.md)
+- [Native package build evidence](docs/native_0.5.3_checksums.md)
 - [Third-party notices](THIRD_PARTY_NOTICES.md)

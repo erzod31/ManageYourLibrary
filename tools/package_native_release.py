@@ -6,16 +6,20 @@ import os
 import platform
 import shutil
 import subprocess
+import sys
 import tarfile
 import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+from tools.write_build_manifest import git_value, source_tree_fingerprint
 RUNTIME_CHECKS = {'tk_init', 'bundled_languages', 'image_ocr', 'pdfium_ocr'}
 FIRST_CHECKS = {'clean_defaults', 'empty_workspace', 'no_background_operations', 'no_automatic_network', 'fresh_state'}
 PRIVATE_NAMES = {'config.json', 'library_index.json', 'historial.csv', 'library_history.csv',
                  'undo_log.jsonl', 'file_transactions.jsonl', 'trash_manifest.jsonl'}
-PRIVATE_SUFFIXES = {'.sqlite3', '.gguf', '.part', '.log', '.pdf', '.epub', '.mobi', '.azw', '.azw3'}
+PRIVATE_SUFFIXES = {'.db', '.jsonl', '.csv', '.gguf', '.part', '.log', '.pdf', '.epub', '.mobi', '.azw', '.azw3',
+                    '.djvu', '.fb2', '.rtf', '.doc', '.docx', '.odt', '.cbr', '.cbz'}
 
 
 def sha256(path):
@@ -29,7 +33,10 @@ def validate_payload(payload):
     for path in sorted(payload.rglob('*')):
         if path.is_symlink() and not path.resolve().is_relative_to(root):
             raise ValueError('Payload symlink escapes the application')
-        if path.name in PRIVATE_NAMES or path.suffix.lower() in PRIVATE_SUFFIXES:
+        name = path.name.lower()
+        if (name in PRIVATE_NAMES or '.sqlite' in name or path.suffix.lower() in PRIVATE_SUFFIXES
+                or name.startswith(('metadata_cache', 'ocr_cache', 'analysis_cache'))
+                or name in {'.trash_manageyourlibrary', 'ui_thumbnails', '__pycache__', 'test_reports', 'backups'}):
             raise ValueError('Personal state or book file in payload: ' + path.name)
         if path.is_file():
             files[path.relative_to(payload).as_posix()] = sha256(path)
@@ -59,6 +66,9 @@ def main():
     validate_report(evidence / 'runtime-self-test.json', RUNTIME_CHECKS, version)
     validate_report(evidence / 'first-use-self-test.json', FIRST_CHECKS, version)
     manifest = json.loads((evidence / 'build-manifest.json').read_text(encoding='utf-8'))
+    if (manifest['version'] != version or manifest['git_commit'] != git_value('rev-parse', 'HEAD')
+            or manifest['source_tree'] != source_tree_fingerprint()):
+        raise ValueError('Manifest does not describe the current build source/version')
     if manifest['git_status'] or manifest['sha256'].lower() != sha256(executable):
         raise ValueError('Build source is dirty or executable differs from manifest')
     for gate in ('automated_tests', 'source_smoke', 'catalog_performance_gate', 'frozen_smoke', 'runtime_self_test', 'first_use_self_test'):

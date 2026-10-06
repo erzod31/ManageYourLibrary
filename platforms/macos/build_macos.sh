@@ -35,7 +35,7 @@ BUILD_TEMP="$(mktemp -d "${TMPDIR:-/tmp}/myl-macos.XXXXXX")"
 trap 'rm -rf -- "$BUILD_TEMP"' EXIT
 mkdir -p "$ROOT/dist/macos"
 
-ICON_ARGS=()
+ICON_ARGS=(--icon "$ROOT/app_icon.ico")
 if [ -f "$ROOT/app_icon.icns" ]; then
   ICON_ARGS+=(--icon "$ROOT/app_icon.icns")
 fi

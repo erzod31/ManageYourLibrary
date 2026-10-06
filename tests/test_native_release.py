@@ -23,7 +23,7 @@ class NativeReleaseTests(unittest.TestCase):
     def test_payload_rejects_books_and_personal_state(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            for name in ('config.json', 'library_catalog.sqlite3', 'my-book.pdf'):
+            for name in ('config.json', 'library_catalog.sqlite3', 'library_catalog.sqlite3-wal', 'metadata_cache.json', 'my-book.pdf', 'my-book.docx'):
                 path = root / name
                 path.touch()
                 with self.assertRaises(ValueError):
@@ -86,6 +86,8 @@ class NativeReleaseTests(unittest.TestCase):
             script = (ROOT / 'platforms' / name / ('build_' + name + '.sh')).read_text()
             for marker in ('--add-data "$ROOT/data:data"', 'eng spa fra nld chi_sim', '--runtime-self-test', '--first-use-self-test', '--require-hashes', '--hidden-import PIL._tkinter_finder'):
                 self.assertIn(marker, script)
+        macos = (ROOT / 'platforms/macos/build_macos.sh').read_text()
+        self.assertIn('ICON_ARGS=(--icon', macos)  # macOS Bash 3.2 rejects an empty array with nounset.
 
 
 if __name__ == '__main__':

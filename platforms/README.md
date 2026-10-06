@@ -57,6 +57,33 @@ release. Passing Windows tests does not validate Linux or macOS artifacts.
 
 The `dist/` folder is ignored by Git and should not be committed.
 
+## Native release CI
+
+The manually dispatched `native-release.yml` workflow builds on Ubuntu 22.04
+x64, macOS 15 Apple Silicon, and macOS 15 Intel. It prepares the native OCR
+payload, resolves exact Python wheel versions into a SHA-256 lock, and uses the
+existing platform entry points. Both frozen diagnostics and extracted-archive
+diagnostics must pass before publication. The workflow refuses to overwrite an
+existing release. `publish=false` retains only Actions artifacts; `publish=true`
+publishes a native supplement without changing the existing Windows release.
+
+For a clean native checkout with the OS prerequisites installed:
+
+```bash
+python3 tools/lock_native_wheels.py
+python3 tools/bundle_native_ocr.py
+# Linux requires a graphical display (CI uses xvfb-run -a).
+bash platforms/linux/build_linux.sh
+python3 tools/package_native_release.py --platform linux
+# On macOS, use build_macos.sh and --platform macos instead.
+```
+
+Each package retains manifests, wheel hash locks, OCR inventories, SHA-256 sums,
+and first-use/runtime diagnostic reports as release assets. macOS ZIPs preserve
+the .app symlinks and ad-hoc signature; Developer ID signing and notarization are
+not performed. Linux tar archives preserve executable permissions. Read
+[native first use and limitations](../docs/NATIVE_FIRST_USE.md).
+
 ## OCR Runtime
 
 Windows already uses the bundled runtime in the project root:

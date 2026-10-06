@@ -221,3 +221,9 @@ ai/models/
 !platforms/linux/tesseract/README.md
 !platforms/macos/tesseract/
 !platforms/macos/tesseract/README.md
+
+# Native OCR payloads are generated on their own OS, never committed.
+platforms/linux/tesseract/*
+!platforms/linux/tesseract/README.md
+platforms/macos/tesseract/*
+!platforms/macos/tesseract/README.md

@@ -36,7 +36,7 @@ class WindowsReleaseMetadataTests(unittest.TestCase):
     def test_readme_links_final_release_docs(self):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
 
-        self.assertIn(f"Prepared Windows release: [`{VERSION}`]", readme)
+        self.assertIn(f"Published Windows release: [`{VERSION}`]", readme)
         self.assertNotIn("Current Windows release candidate:", readme)
         for marker in (
             f"docs/release_notes_windows_{VERSION}.md",

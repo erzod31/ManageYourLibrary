@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Complete the public README with direct 0.5.3 downloads, supported formats,
+  SHA-256 verification, backup/restore guidance, troubleshooting and private-data
+  precautions for issue reports. This documentation update does not replace the
+  published 0.5.3 executables or their recorded build evidence.
+
 ## 0.5.3 - 2026-10-06
 
 - Begin a clean public distribution with fresh history and product-only installer

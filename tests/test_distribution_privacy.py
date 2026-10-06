@@ -1,4 +1,4 @@
-"""Check product attribution without recording a developer's personal identity."""
+"""Keep intentional public ownership separate from private user/profile data."""
 import re
 import unittest
 from pathlib import Path
@@ -14,9 +14,11 @@ class DistributionPrivacyTests(unittest.TestCase):
         self.assertIsNotNone(publisher)
         self.assertEqual(publisher.group(1).strip(), "Manage Your Library")
 
-    def test_readme_uses_first_use_instructions_not_personal_attribution(self):
+    def test_readme_retains_first_use_instructions_and_public_owner(self):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         self.assertNotRegex(readme, r"(?m)^## Author\s*$")
+        self.assertIn('**[erzod31](https://github.com/erzod31)**', readme)
+        self.assertIn('Built and maintained by', readme)
         for marker in ("Choose library folder", "**Import**", "move and rename", "empty catalog"):
             self.assertIn(marker, readme)
 

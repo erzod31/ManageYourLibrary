@@ -1,5 +1,8 @@
 # Manage Your Library
 
+Built and maintained by **[erzod31](https://github.com/erzod31)** — project owner.
+Creado y mantenido por **erzod31**, propietario del proyecto.
+
 A Python/Tkinter desktop organizer for your own digital books. Native Windows,
 macOS and Linux packages include local OCR and do not require Python.
 
@@ -151,8 +154,10 @@ volumes require review. Discarded duplicates remain recoverable in
 originals. Catalog and settings are preserved on upgrade.
 
 The public snapshot excludes personal libraries, developer profiles, local paths,
-private development conversations and earlier Git history. Product attribution
-uses the application name. Third-party notices are retained.
+private development conversations and earlier Git history. Project attribution
+uses the owner's public GitHub identity, **erzod31**, without publishing a personal
+email address or Windows profile name. Installer product attribution remains
+Manage Your Library. Third-party notices are retained.
 
 Executables are **unsigned**. Automated checks do not replace manual installed-UI,
 upgrade or uninstall tests. See each release's exact validation record.

@@ -96,6 +96,7 @@ python3 -m PyInstaller \
   --hidden-import pypdf \
   --hidden-import pypdfium2 \
   --hidden-import PIL \
+  --hidden-import PIL._tkinter_finder \
   --hidden-import ftfy \
   --name ManageYourLibrary \
   main.py

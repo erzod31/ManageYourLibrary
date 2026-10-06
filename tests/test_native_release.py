@@ -84,7 +84,7 @@ class NativeReleaseTests(unittest.TestCase):
     def test_native_scripts_include_resources_languages_and_frozen_gates(self):
         for name in ('linux', 'macos'):
             script = (ROOT / 'platforms' / name / ('build_' + name + '.sh')).read_text()
-            for marker in ('--add-data "$ROOT/data:data"', 'eng spa fra nld chi_sim', '--runtime-self-test', '--first-use-self-test', '--require-hashes'):
+            for marker in ('--add-data "$ROOT/data:data"', 'eng spa fra nld chi_sim', '--runtime-self-test', '--first-use-self-test', '--require-hashes', '--hidden-import PIL._tkinter_finder'):
                 self.assertIn(marker, script)
 
 

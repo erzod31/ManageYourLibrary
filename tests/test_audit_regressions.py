@@ -130,14 +130,36 @@ class AuditRegressionTests(unittest.TestCase):
         self.assertTrue(self.book.exists())
 
     def test_ambiguous_legacy_journal_requires_review(self):
-        destination, row = self.make_undo()
-        del row["sha256"]
-        tx.iniciar_transaccion_archivo(self.journal, self.data, "move", self.book, destination)
-        tx.registrar_evento_transaccion(self.journal, self.data, "another", "move", "committed",
-                                       self.book, destination, hash_archivo="other digest")
-        ok, _ = tx.restaurar_accion_undo(row, journal_path=self.journal, app_data=self.data)
+        # Both digests must be inside the legacy row's evidence cutoff. Using
+        # the real clock made this depend on whether execution crossed a second.
+        moment = "2026-10-06 12:00:00"
+        with patch.object(tx, "timestamp", return_value=moment), \
+                patch("core.undo_history.timestamp", return_value=moment):
+            destination, row = self.make_undo()
+            del row["sha256"]
+            tx.iniciar_transaccion_archivo(self.journal, self.data, "move", self.book, destination)
+            tx.registrar_evento_transaccion(self.journal, self.data, "another", "move", "committed",
+                                           self.book, destination, hash_archivo="other digest")
+            ok, _ = tx.restaurar_accion_undo(row, journal_path=self.journal, app_data=self.data)
         self.assertFalse(ok)
         self.assertTrue(destination.exists())
+        self.assertEqual(destination.read_bytes(), b"synthetic book")
+        self.assertFalse(self.book.exists())
+        self.assertEqual(tx.leer_jsonl(self.journal)[-1]["state"], "needs_review")
+
+    def test_legacy_undo_excludes_journal_evidence_after_its_cutoff(self):
+        moment = "2026-10-06 12:00:00"
+        with patch.object(tx, "timestamp", return_value=moment), \
+                patch("core.undo_history.timestamp", return_value=moment):
+            destination, row = self.make_undo()
+        del row["sha256"]
+        with patch.object(tx, "timestamp", return_value="2026-10-06 12:00:01"):
+            tx.registrar_evento_transaccion(self.journal, self.data, "later", "move", "committed",
+                                           self.book, destination, hash_archivo="other digest")
+            ok, _ = tx.restaurar_accion_undo(row, journal_path=self.journal, app_data=self.data)
+        self.assertTrue(ok)
+        self.assertFalse(destination.exists())
+        self.assertEqual(self.book.read_bytes(), b"synthetic book")
 
     def test_full_rescan_preserves_all_manual_fields_and_explicit_empty_values(self):
         with self.scan_context(), patch.object(core, "biblioteca_configurada", return_value=True), \

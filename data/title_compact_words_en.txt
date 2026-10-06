@@ -1,0 +1,21 @@
+# Additional conservative vocabulary for compacted English titles.
+# One word per line. Keep this list small and test-backed.
+
+ancient
+archive
+city
+dark
+dragon
+empire
+garden
+history
+library
+moon
+murder
+night
+shadow
+silent
+star
+story
+time
+world

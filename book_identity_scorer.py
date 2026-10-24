@@ -55,7 +55,7 @@ def _same_group(field_name: str, a: str, b: str) -> bool:
         return False
     if a == b:
         return True
-    if field_name in {"isbn", "year"}:
+    if field_name in {"isbn", "year", "language", "volume", "edition"}:
         return False
     threshold = 0.88 if field_name == "title" else 0.84
     return similarity(a, b) >= threshold
@@ -63,7 +63,9 @@ def _same_group(field_name: str, a: str, b: str) -> bool:
 
 def group_equivalent_evidence(evidences: list[IdentityEvidence], field_name: str) -> list[dict]:
     groups: list[dict] = []
-    for evidence in [ev for ev in evidences if ev.field == field_name and ev.normalized]:
+    ordered = sorted((ev for ev in evidences if ev.field == field_name and ev.normalized),
+                     key=lambda ev: (-ev.weight * ev.quality, ev.normalized, ev.source, ev.value, ev.location))
+    for evidence in ordered:
         placed = False
         for group in groups:
             if _same_group(field_name, group["normalized"], evidence.normalized):
@@ -74,14 +76,20 @@ def group_equivalent_evidence(evidences: list[IdentityEvidence], field_name: str
             groups.append({"normalized": evidence.normalized, "items": [evidence]})
 
     for group in groups:
-        sources = {ev.source for ev in group["items"] if ev.source}
-        weighted = sum(max(0.0, ev.weight) * ev.quality for ev in group["items"])
+        sources = {ev.source.casefold().strip() for ev in group["items"] if ev.source.strip()}
+        # One source cannot confirm itself by returning the same candidate or
+        # several almost-identical records. Only its strongest signal counts.
+        source_weights = {}
+        for ev in group["items"]:
+            source = ev.source.casefold().strip() or "unknown"
+            source_weights[source] = max(source_weights.get(source, 0), max(0.0, ev.weight) * ev.quality)
+        weighted = sum(source_weights.values())
         source_bonus = min(14.0, max(0, len(sources) - 1) * 5.0)
         best_item = sorted(group["items"], key=lambda ev: (ev.weight * ev.quality, len(ev.value)), reverse=True)[0]
         group["score"] = min(100.0, weighted + source_bonus)
         group["sources"] = sources
         group["best"] = best_item
-    return sorted(groups, key=lambda g: g["score"], reverse=True)
+    return sorted(groups, key=lambda g: (-g["score"], g["normalized"]))
 
 
 def _field_confidence(groups: list[dict], cap: float) -> float:
@@ -132,7 +140,13 @@ def _summary_for_group(label: str, group: dict | None) -> str:
 
 
 def score_identity(evidences: list[IdentityEvidence], external_evidences: list[IdentityEvidence] | None = None) -> dict:
-    all_evidence = list(evidences or []) + list(external_evidences or [])
+    unique = {}
+    for ev in list(evidences or []) + list(external_evidences or []):
+        key = (ev.field, ev.source.casefold().strip(), ev.normalized)
+        old = unique.get(key)
+        if old is None or (ev.weight * ev.quality, ev.value, ev.location) > (old.weight * old.quality, old.value, old.location):
+            unique[key] = ev
+    all_evidence = [unique[key] for key in sorted(unique)]
     title_groups = group_equivalent_evidence(all_evidence, "title")
     author_groups = group_equivalent_evidence(all_evidence, "author")
     isbn_groups = group_equivalent_evidence(all_evidence, "isbn")
@@ -160,7 +174,7 @@ def score_identity(evidences: list[IdentityEvidence], external_evidences: list[I
         confidence += year_conf * 0.08
 
     independent_sources = {
-        ev.source
+        ev.source.casefold().strip()
         for ev in all_evidence
         if ev.field in {"title", "author", "isbn"} and ev.source and ev.normalized
     }
@@ -173,6 +187,9 @@ def score_identity(evidences: list[IdentityEvidence], external_evidences: list[I
     conflicts.extend(_detect_conflicts(title_groups, "title"))
     conflicts.extend(_detect_conflicts(author_groups, "author"))
     conflicts.extend(_detect_conflicts(year_groups, "year"))
+    conflicts.extend(_detect_conflicts(isbn_groups, "isbn"))
+    for field in ('language', 'volume', 'edition'):
+        conflicts.extend(_detect_conflicts(group_equivalent_evidence(all_evidence, field), field))
     if conflicts:
         confidence -= min(28, 12 + len(conflicts) * 6)
 
@@ -194,6 +211,8 @@ def score_identity(evidences: list[IdentityEvidence], external_evidences: list[I
         warnings.append("Solo hay pistas del nombre de archivo")
 
     confidence = max(0.0, min(99.0, round(confidence, 1)))
+    if conflicts:
+        confidence = min(confidence, 74.0)
     decision = decision_for_confidence(confidence)
     title_value = best_title["best"].value if best_title else ""
     author_value = best_author["best"].value if best_author else ""

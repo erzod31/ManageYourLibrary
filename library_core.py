@@ -67,7 +67,7 @@ DUPLICATE_REVIEW_DB = APP_DATA / "duplicate_reviews.sqlite3"
 CATALOG_DB = APP_DATA / "library_catalog.sqlite3"
 TRASH_DIR_NAME = ".trash_manageyourlibrary"
 MAX_WEB_CACHE_ENTRIES = 2500
-ANALYSIS_CACHE_VERSION = "identity_v11_provenance"
+ANALYSIS_CACHE_VERSION = "identity_v12_independent_evidence"
 AI_CONFIG_KEY = "ai_local"
 
 FAST_OK = _performance_pipeline.FAST_OK
@@ -1289,13 +1289,21 @@ def en_raiz_biblioteca(ruta: Path) -> bool:
         return False
 
 
-def buscar_libros_final():
-    if not biblioteca_configurada() or not FINAL.exists():
+def buscar_libros_final(cancellation=None):
+    if not biblioteca_configurada():
         return []
-    return sorted(
-        [p for p in FINAL.rglob("*") if es_libro(p) and not ignorar_por_carpeta(p)],
-        key=lambda p: str(p).lower()
-    )
+    if not FINAL.is_dir():
+        raise FileNotFoundError(f'Biblioteca no disponible; se conserva el catálogo: {FINAL}')
+    def failed(error):
+        raise OSError(f'Exploración incompleta; no se guardará un catálogo parcial: {error}') from error
+    books = []
+    for folder, directories, names in os.walk(FINAL, onerror=failed, followlinks=False):
+        if cancellation:
+            cancellation.raise_if_cancelled()
+        directories[:] = [name for name in directories if not ignorar_por_carpeta(Path(folder) / name)]
+        books.extend(Path(folder) / name for name in names
+                     if Path(name).suffix.lower() in EXTENSIONES_LIBROS and not ignorar_por_carpeta(Path(folder) / name))
+    return sorted(books, key=lambda path: str(path).lower())
 
 
 def calcular_hash(ruta: Path, bloque=1024 * 1024) -> str:
@@ -1664,19 +1672,16 @@ def carpeta_ia_local():
     return _ai_paths.bundled_ai_dir()
 
 def cargar_indice():
-    return _index_store.cargar_indice(INDICE_JSON)
+    return repositorio_catalogo().load()
+
+
+def repositorio_catalogo():
+    from core.catalog_repository import CatalogRepository
+    return CatalogRepository(CATALOG_DB, INDICE_JSON)
 
 
 def guardar_indice(indice):
-    # Keep the portable JSON index as the compatibility/export surface.  The
-    # richer catalog is a non-destructive projection: a catalog problem must
-    # never prevent the already-proven atomic JSON write from completing.
-    result = _index_store.guardar_indice(INDICE_JSON, indice)
-    try:
-        catalog_store().sync_index(indice)
-    except Exception:
-        pass
-    return result
+    return repositorio_catalogo().save(indice)
 
 
 def catalog_store():
@@ -1705,13 +1710,12 @@ def aplicar_correccion_manual_indice(ruta, cambios, indice=None):
         "titulo", "autor", "isbn", "idioma", "editorial", "anio", "serie", "edicion",
     }
     cleaned = {key: value for key, value in dict(cambios or {}).items() if key in allowed}
+    if 'read_status' in cleaned and cleaned['read_status'] not in {'unread', 'reading', 'read'}:
+        raise ValueError('Estado de lectura no válido')
     current = dict(indice if indice is not None else cargar_indice())
-    rows = [dict(row) for row in current.get("archivos", [])]
-    found = False
-    for row in rows:
-        if clave_ruta_resuelta(row.get("ruta", "")) != ruta_clave:
-            continue
-        found = True
+    rows = list(current.get("archivos", []))
+
+    def transform(row):
         provenance = dict(row.get("provenance") or {})
         for key, value in cleaned.items():
             if key == "tags" and isinstance(value, str):
@@ -1723,14 +1727,28 @@ def aplicar_correccion_manual_indice(ruta, cambios, indice=None):
             row.pop("is_favorite", None)
         row["provenance"] = provenance
         if identity_fields.intersection(cleaned):
+            previous_locks = row.get('locked_fields')
+            if previous_locks is None and (row.get('manual_lock') or row.get('confirmed_correction')):
+                previous_locks = identity_fields  # Keep legacy all-field locks.
+            row['locked_fields'] = sorted(set(previous_locks or []) | identity_fields.intersection(cleaned))
             row["manual_lock"] = True
             row["confirmed_correction"] = True
-            row["confianza_global"] = 100
-        break
-    if not found:
-        raise FileNotFoundError(str(ruta))
+        return row
+
+    updated, revision = repositorio_catalogo().update(ruta, transform, initial=current)
+    if current.get('_revision') is not None and revision != current['_revision'] + 1:
+        # Another transaction changed a different row. Do not stamp its newer
+        # revision onto an otherwise stale in-memory snapshot.
+        return repositorio_catalogo().load()
+    position = next((i for i, row in enumerate(rows) if row.get("ruta") == str(ruta)), None)
+    if position is None:
+        position = next((i for i, row in enumerate(rows)
+                         if clave_ruta_resuelta(row.get("ruta", "")) == ruta_clave), None)
+    if position is None:
+        return repositorio_catalogo().load()
+    rows[position] = updated
     current["archivos"] = rows
-    guardar_indice(current)
+    current['_revision'] = revision
     return current
 
 
@@ -1782,6 +1800,7 @@ def actualizar_indice_rutas(rutas, indice=None, metadata_por_ruta=None):
         build_item=item_indice_desde_ruta,
         ignore_path=ignorar_por_carpeta,
         metadata_by_path=metadata_normalizada,
+        committed_moves=_file_transactions.leer_jsonl(FILE_TRANSACTION_JOURNAL),
     )
     guardar_indice(actualizado)
     return actualizado
@@ -1794,7 +1813,7 @@ def escribir_historial(accion, origen, destino="", resultado="", detalle="", nom
     )
 
 
-def crear_o_actualizar_indice(callback=None):
+def crear_o_actualizar_indice(callback=None, cancellation=None):
     APP_DATA.mkdir(parents=True, exist_ok=True)
 
     if not biblioteca_configurada():
@@ -1806,15 +1825,22 @@ def crear_o_actualizar_indice(callback=None):
         guardar_indice(indice)
         return indice
 
-    FINAL.mkdir(parents=True, exist_ok=True)
-
     viejo = cargar_indice()
     mapa_viejo = {clave_ruta_resuelta(item["ruta"]): item for item in viejo.get("archivos", []) if item.get("ruta")}
-    libros = buscar_libros_final()
+    libros = buscar_libros_final(**({'cancellation': cancellation} if cancellation else {}))
+    seen_paths = {clave_ruta_resuelta(path) for path in libros}
+    for row in viejo.get('archivos', []):
+        if row.get('linked') and row.get('ruta') and clave_ruta_resuelta(row['ruta']) not in seen_paths:
+            path = Path(row['ruta'])
+            if path.is_file():
+                libros.append(path)
+                seen_paths.add(clave_ruta_resuelta(path))
     items = []
     total = len(libros)
 
     for i, ruta in enumerate(libros, start=1):
+        if cancellation:
+            cancellation.raise_if_cancelled()
         try:
             stat = ruta.stat()
             ruta_str = str(ruta)
@@ -1830,7 +1856,7 @@ def crear_o_actualizar_indice(callback=None):
             else:
                 if callback:
                     callback(tr("updating_index_item", i=i, total=total, name=ruta.name))
-                _, sha = _file_identity.validated_sha256_file(ruta)
+                _, sha = _file_identity.validated_sha256_file(ruta, cancellation=cancellation)
 
             meta_nombre = extraer_metadatos_desde_nombre(limpiar_nombre_como_pista(ruta.name))
             fresh = {
@@ -1849,7 +1875,14 @@ def crear_o_actualizar_indice(callback=None):
             }
             same_content = bool(anterior and anterior.get("sha256") == sha)
             items.append(_index_service.merge_persistent_metadata(fresh, anterior if same_content else None))
+        except OperationCancelled:
+            raise
         except Exception as e:
+            # An unreadable file is not evidence that a confirmed catalog entry
+            # disappeared. Retain it, with an explicit diagnostic, for recovery.
+            anterior = mapa_viejo.get(clave_ruta_resuelta(ruta))
+            if anterior:
+                items.append({**anterior, 'scan_error': str(e)})
             if callback:
                 callback(tr("index_read_error", path=ruta, error=e))
 
@@ -1857,7 +1890,10 @@ def crear_o_actualizar_indice(callback=None):
         "creado": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "library": str(FINAL),
         "archivos": items,
+        "_revision": viejo.get('_revision'),
     }
+    if cancellation:
+        cancellation.raise_if_cancelled()
     guardar_indice(indice)
     return indice
 
@@ -4519,6 +4555,10 @@ def elegir_metadatos_locales(libro: Path, datos):
     }
 
 
+from core.reader_worker import isolated as _isolated_reader
+
+
+@_isolated_reader('local_full', timeout=180)
 def extraer_datos_locales(ruta: Path, callback=None, permitir_ocr=True, max_paginas_ocr=12, cancellation=None):
     if cancellation:
         cancellation.raise_if_cancelled()
@@ -4981,7 +5021,8 @@ def extraer_datos_locales(ruta: Path, callback=None, permitir_ocr=True, max_pagi
     }
 
 
-def extraer_datos_rapidos(ruta: Path):
+@_isolated_reader('local_fast', timeout=30)
+def extraer_datos_rapidos(ruta: Path, cancellation=None):
     isbns_nombre = extraer_isbns(ruta.name)
     nombre_pista = limpiar_nombre_como_pista(ruta.name)
     meta_nombre = extraer_metadatos_desde_nombre(nombre_pista)
@@ -5137,10 +5178,10 @@ def resolver_rapido_si_seguro(libro: Path, callback=None, solo_analizar=False, d
         return None
 
 
-def analizar_archivo_rapido(libro: Path, callback=None, solo_analizar=False):
+def analizar_archivo_rapido(libro: Path, callback=None, solo_analizar=False, cancellation=None):
     libro = Path(libro)
     try:
-        datos = extraer_datos_rapidos(libro)
+        datos = extraer_datos_rapidos(libro, **({'cancellation': cancellation} if cancellation else {}))
         local = elegir_metadatos_locales(libro, datos)
         identidad = resolver_rapido_si_seguro(
             libro,
@@ -5225,7 +5266,7 @@ def analizar_archivos_rapido_en_paralelo(
 ):
     return _performance_pipeline.process_fast_batch(
         libros,
-        lambda libro: analizar_archivo_rapido(libro, callback=callback, solo_analizar=solo_analizar),
+        lambda libro: analizar_archivo_rapido(libro, callback=callback, solo_analizar=solo_analizar, cancellation=cancellation),
         max_workers=max_workers,
         event_callback=event_callback,
         cancellation=cancellation,
@@ -6476,6 +6517,7 @@ def aplicar_consenso_bibliografico(libro: Path, datos, resultado, candidatos=Non
     conflictos_deep = list(deep_scan.get("conflicts", []) or [])
     if conflictos_deep:
         consenso["conflicts"] = list(dict.fromkeys(list(consenso["conflicts"]) + conflictos_deep))
+        consenso["confidence_total"] = min(74, consenso["confidence_total"])
         accion = "revisar_nuevamente"
 
     out = dict(resultado)
@@ -6485,7 +6527,7 @@ def aplicar_consenso_bibliografico(libro: Path, datos, resultado, candidatos=Non
     out["titulo_completo"] = identidad["titulo_completo"]
     out["confianza_titulo"] = consenso["confidence_title"]
     out["confianza_autor"] = consenso["confidence_author"]
-    out["confianza_global"] = max(float(out.get("confianza", 0) or 0), consenso["confidence_total"])
+    out["confianza_global"] = consenso["confidence_total"]
     out["razones_consenso"] = consenso["reasons"]
     out["conflictos"] = consenso["conflicts"]
     out["advertencias"] = list(dict.fromkeys(list(out.get("advertencias", [])) + consenso["warnings"]))
@@ -6845,7 +6887,7 @@ def orchestrate_identification(libro: Path, callback=None, solo_analizar=False, 
 
     if callback:
         callback(tr("pipeline_level0"))
-    analisis_rapido = analizar_archivo_rapido(libro, callback=callback, solo_analizar=solo_analizar)
+    analisis_rapido = analizar_archivo_rapido(libro, callback=callback, solo_analizar=solo_analizar, cancellation=cancellation)
     if analisis_rapido.get("status") == FAST_OK:
         resultado_rapido = analisis_rapido["identity_result"]
         _guardar_resumen_analisis_cache(libro, resultado_rapido, context)
@@ -6911,11 +6953,13 @@ def orchestrate_identification(libro: Path, callback=None, solo_analizar=False, 
 
 
 def resolver_identidad_libro(libro: Path, callback=None, solo_analizar=False, modo_analisis=DEEP_MODE, max_paginas_ocr=None, cancellation=None):
-    return orchestrate_identification(
-        libro, callback=callback, solo_analizar=solo_analizar,
-        modo_analisis=modo_analisis, max_paginas_ocr=max_paginas_ocr,
-        cancellation=cancellation,
-    )
+    from metadata.external_providers import request_context
+    with request_context(cancellation):
+        return orchestrate_identification(
+            libro, callback=callback, solo_analizar=solo_analizar,
+            modo_analisis=modo_analisis, max_paginas_ocr=max_paginas_ocr,
+            cancellation=cancellation,
+        )
 
 
 def obtener_nombre_web(libro: Path, callback=None, modo_analisis=DEEP_MODE, cancellation=None):

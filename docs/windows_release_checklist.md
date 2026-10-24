@@ -16,17 +16,19 @@ Use this checklist before publishing a Windows build of Manage Your Library.
 The regular `python` command must resolve to the Python installation used for packaging.
 
 ```bat
-python -m compileall .
-python -m unittest discover -s tests
+python -B tools/run_tests.py
+python -B tools/evaluate_corpus.py --ocr
+ruff check --no-cache --select E9,F63,F7,F82 .
 git diff --check
 git diff --cached --check
 ```
 
 Expected result:
 
-- [ ] Compilation succeeds.
+- [ ] The isolated runner finishes without accessing a real user profile.
 - [ ] The full unit-test suite succeeds.
 - [ ] Both Git whitespace checks succeed.
+- [ ] Disposable-reader crash, timeout, memory and cancellation checks succeed.
 - [ ] No forbidden cloud OCR or Google Books references are present.
 - [ ] `rapidfuzz` is not present in requirements or build scripts.
 
@@ -54,6 +56,10 @@ Expected result:
 - [ ] `eng`, `spa`, `fra`, `nld`, and `chi_sim` are listed.
 - [ ] OCR is local only.
 - [ ] No document is uploaded to an OCR service.
+- [ ] Record exact native DLL/model provenance, license notices, source obligations and security review.
+- [ ] Preserve Python/wheel license texts in the frozen payload.
+- [ ] Close the native redistribution review before approving a public package.
+      `--development` only creates explicitly marked local test artifacts; it does not clear this gate.
 
 ## 4. Build the EXE
 

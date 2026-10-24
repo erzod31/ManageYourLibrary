@@ -23,7 +23,7 @@ if [ -f "$ROOT/dist/native-dependencies/requirements.lock" ]; then
 else
   python3 -m pip install -r "$ROOT/requirements-build.txt"
 fi
-python3 -m unittest discover -s tests -v
+python3 -B tools/run_tests.py
 python3 main.py --smoke-test
 python3 tools/benchmark_catalog.py --check
 
@@ -80,10 +80,13 @@ python3 -m PyInstaller \
   "${ICON_ARGS[@]}" \
   --add-data "$ROOT/app_icon.ico:." \
   --add-data "$ROOT/VERSION:." \
+  --add-data "$ROOT/LICENSE:." \
+  --add-data "$ROOT/THIRD_PARTY_NOTICES.md:." \
   --add-data "$ROOT/data:data" \
   "${TESSERACT_ARGS[@]}" \
   --collect-all pypdfium2 \
   --collect-all ftfy \
+  --copy-metadata Pillow --copy-metadata pypdf --copy-metadata wcwidth --copy-metadata pyinstaller \
   --exclude-module pandas \
   --exclude-module pyarrow \
   --exclude-module scipy \

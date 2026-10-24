@@ -5,10 +5,11 @@ import threading
 import time
 import tkinter as tk
 from pathlib import Path
-from tkinter import filedialog, messagebox
+from tkinter import filedialog, messagebox, ttk
 
 import library_core as core
-from core.cancellation import CancellationToken
+from core.cancellation import CancellationToken, OperationCancelled
+from core.import_preview import needs_review
 from core.contracts import BatchProgressEvent
 from library_core import (
     APP_DATA,
@@ -56,7 +57,7 @@ def resource_path(relative_path):
 
 
 class App:
-    def __init__(self, root):
+    def __init__(self, root, *, initial_index=None, initial_view=None):
         self.root = root
         self.root.title(tr("window_title"))
         self.aplicar_icono_ventana()
@@ -65,7 +66,8 @@ class App:
         self.root.resizable(True, True)
         self.root.protocol("WM_DELETE_WINDOW", self.cerrar_aplicacion)
         self.ui_events = core.UiEventQueue()
-        self.indice = cargar_indice()
+        self.indice = cargar_indice() if initial_index is None else initial_index
+        self.initial_view = initial_view
         self.trabajando = False
         self.cancel_token = CancellationToken()
         self.worker_threads = set()
@@ -73,7 +75,7 @@ class App:
         operation_config = core.cargar_configuracion_operacion()
         self._aplicar_configuracion_operacion(operation_config)
         self.theme_preference = operation_config.get("theme", "system")
-        self.modo_oscuro = self._tema_sistema_oscuro() if self.theme_preference == "system" else self.theme_preference == "dark"
+        self.modo_oscuro = self._tema_sistema_oscuro() if self.theme_preference == "system" else self.theme_preference in {"dark", "contrast"}
         self.theme_widgets = []
         self.crear_interfaz()
         self.actualizar_label_indice()
@@ -81,16 +83,22 @@ class App:
         self.root.after(50, self._drenar_eventos_ui)
         self.root.after(250, self.revisar_transacciones_archivo_pendientes)
         self.root.after(400, self.revisar_planes_pendientes)
-        self.root.after(650, self.sincronizar_catalogo_en_segundo_plano)
+        # Catalog migration and projection now commit together on load/save.
         if biblioteca_configurada():
             self.root.after(500, self.actualizar_indice_automatico)
         else:
             self.root.after(200, lambda: self.estado(tr("first_state")))
+        from core.catalog_gc import CatalogGcGuard
+        self.catalog_gc = CatalogGcGuard(len(self.indice.get('archivos', [])))
 
     def _encolar_ui(self, callback, *args, **kwargs):
+        if getattr(self, '_closing', False):
+            return
         self.ui_events.post(callback, *args, **kwargs)
 
     def _drenar_eventos_ui(self):
+        if getattr(self, '_closing', False):
+            return
         try:
             # Give mouse/keyboard/paint events a turn even during cover bursts.
             self.ui_events.drain(time_budget_ms=8)
@@ -147,6 +155,9 @@ class App:
         return widget
 
     def cerrar_aplicacion(self):
+        if getattr(self, '_closing', False):
+            return
+        self._closing = True
         self.cancel_token.cancel()
         try:
             workspace = getattr(self, "workspace", None)
@@ -154,11 +165,6 @@ class App:
                 workspace.shutdown()
         except Exception:
             pass
-        with self.worker_threads_lock:
-            workers = list(self.worker_threads)
-        for worker in workers:
-            if worker is not threading.current_thread():
-                worker.join(timeout=1.5)
         try:
             from ocr_engine import limpiar_cache_ocr
 
@@ -172,9 +178,23 @@ class App:
         except Exception:
             pass
 
-        self.root.destroy()
+        self.root.withdraw()
+
+        def finish_when_safe():
+            # Keep the profile lock until file workers have durably finished;
+            # never block the Tk thread with join during cancellation.
+            with self.worker_threads_lock:
+                alive = any(worker.is_alive() for worker in self.worker_threads)
+            if alive:
+                self.root.after(50, finish_when_safe)
+            else:
+                self.root.destroy()
+        finish_when_safe()
 
     def _start_worker(self, target):
+        if getattr(self, '_closing', False):
+            return None
+        self.bloquear(True)
         self.cancel_token = CancellationToken()
 
         def wrapped():
@@ -288,10 +308,10 @@ class App:
 
     def establecer_preferencia_tema(self, preference):
         preference = str(preference or "system").lower()
-        if preference not in {"system", "light", "dark"}:
+        if preference not in {"system", "light", "dark", "contrast"}:
             preference = "system"
         self.theme_preference = preference
-        self.modo_oscuro = self._tema_sistema_oscuro() if preference == "system" else preference == "dark"
+        self.modo_oscuro = self._tema_sistema_oscuro() if preference == "system" else preference in {"dark", "contrast"}
         self.aplicar_tema()
 
     def aplicar_tema(self):
@@ -341,6 +361,13 @@ class App:
         }
 
         self.tema_actual = oscuro if self.modo_oscuro else claro
+        if self.theme_preference == 'contrast':
+            self.tema_actual = {**oscuro, 'bg': '#000000', 'card': '#000000', 'text': '#ffffff',
+                'muted': '#ffffff', 'border': '#ffffff', 'entry_bg': '#000000', 'log_bg': '#000000',
+                'button_bg': '#000000', 'button_active': '#333333', 'primary_bg': '#ffff00',
+                'primary_active': '#ffffff', 'primary_text': '#000000', 'quiet_bg': '#000000',
+                'quiet_active': '#333333', 'accent': '#00ffff', 'disabled_text': '#bfbfbf',
+                'success': '#00ff00', 'progress': '#ffff00'}
         c = self.tema_actual
 
         try:
@@ -1043,7 +1070,8 @@ class App:
             return
 
         if not self.biblioteca_lista():
-            self.indice = {"creado": None, "library": "", "archivos": []}
+            if not biblioteca_configurada():
+                self.indice = {"creado": None, "library": "", "archivos": []}
             self.actualizar_label_indice()
             self.actualizar_estado_botones()
             self.estado(tr("valid_library"))
@@ -1060,11 +1088,13 @@ class App:
                 def cb(msg):
                     self._encolar_ui(self.estado, msg)
 
-                self.indice = crear_o_actualizar_indice(cb)
+                self.indice = crear_o_actualizar_indice(cb, cancellation=self.cancel_token)
                 self._encolar_ui(self.actualizar_label_indice)
                 self._encolar_ui(self.set_progreso, 100)
                 self._encolar_ui(self.escribir, tr("index_ready", count=len(self.indice.get("archivos", []))))
                 self._encolar_ui(self.estado, tr("ready"))
+            except OperationCancelled:
+                self._encolar_ui(self.estado, 'Actualización cancelada; se conserva el catálogo anterior.')
             except Exception as e:
                 self._encolar_ui(messagebox.showerror, tr("error_title"), str(e))
                 self._encolar_ui(self.estado, "Error al actualizar el índice.")
@@ -1074,6 +1104,8 @@ class App:
         self._start_worker(tarea)
 
     def deshacer_ultima_accion(self):
+        if self.trabajando:
+            return
         batch, accion = obtener_ultima_accion_undo()
 
         if not batch or not accion:
@@ -1083,40 +1115,303 @@ class App:
         if not messagebox.askyesno(tr("undo_confirm_title"), tr("undo_confirm_msg", batch=batch, count=len(accion))):
             return
 
-        hechos = 0
-        errores = 0
-        rutas_indice_afectadas = set()
-
-        for item in reversed(accion):
-            rutas_indice_afectadas.update((item.get("origen", ""), item.get("destino", "")))
+        self.bloquear(True)
+        def task():
+            hechos, errores = 0, 0
+            paths = set()
             try:
-                ok, mensaje = restaurar_accion_undo(item)
-                if ok:
-                    hechos += 1
-                    rutas_indice_afectadas.add(mensaje)
-                    mark_undo_item_restored(batch, item)
-                else:
+                for item in reversed(accion):
+                    self.cancel_token.raise_if_cancelled()
+                    paths.update((item.get('origen', ''), item.get('destino', '')))
+                    try:
+                        ok, message = restaurar_accion_undo(item)
+                        if ok:
+                            hechos += 1
+                            paths.add(message)
+                            mark_undo_item_restored(batch, item)
+                        else:
+                            errores += 1
+                            self._encolar_ui(self.escribir, str(message))
+                    except Exception as exc:
+                        errores += 1
+                        self._encolar_ui(self.escribir, str(exc))
+                if not errores:
+                    mark_action_undone(batch)
+            except OperationCancelled:
+                self._encolar_ui(self.estado, 'Deshacer pausado; el progreso se conserva.')
+            finally:
+                try:
+                    self.indice = core.actualizar_indice_rutas(paths, self.indice)
+                    self._encolar_ui(self.actualizar_label_indice)
+                    self._encolar_ui(self.workspace.refresh_library)
+                except Exception as exc:
                     errores += 1
-                    if mensaje:
-                        self.escribir(str(mensaje))
-            except Exception as e:
-                errores += 1
-                self.escribir(str(e))
+                    self._encolar_ui(self.escribir, str(exc))
+                self._encolar_ui(self.bloquear, False)
+                self._encolar_ui(self.escribir, tr('undo_log_line', done=hechos, errors=errores))
+        self._start_worker(task)
 
-        if errores == 0:
-            mark_action_undone(batch)
+    def _preparar_importacion(self, libros, previous_plan=None):
+        from core.import_preview import prepare_import
+        self.bloquear(True)
 
-        try:
-            self.indice = core.actualizar_indice_rutas(rutas_indice_afectadas, self.indice)
-            self.actualizar_label_indice()
-        except Exception:
-            pass
+        def task():
+            try:
+                store = core.operation_plan_store()
+                plan = prepare_import(libros, store,
+                                      lambda path: obtener_nombre_web(path, cancellation=self.cancel_token),
+                                      FINAL, self.cancel_token,
+                                      lambda done, total: self._encolar_ui(self.estado, f'Analizados {done}/{total}'),
+                                      previous_plan=previous_plan, previous_catalog=self.indice)
+                self._encolar_ui(self._mostrar_previsualizacion, plan)
+            except OperationCancelled:
+                self._encolar_ui(self.estado, 'Análisis cancelado; el plan queda disponible para reanudar.')
+            except Exception as exc:
+                self._encolar_ui(messagebox.showerror, tr('error_title'), str(exc))
+            finally:
+                self._encolar_ui(self.bloquear, False)
 
-        mensaje = tr("undo_done_msg", done=hechos, errors=errores)
-        messagebox.showinfo(tr("undo_done_title"), mensaje)
-        self.escribir(tr("undo_log_line", done=hechos, errors=errores))
+        self._start_worker(task)
 
-    def agregar_libros(self, rutas=None, plan_existente=None):
+    def _mostrar_previsualizacion(self, plan):
+        window = tk.Toplevel(self.root)
+        window.title('Previsualización — ningún original modificado')
+        window.geometry('980x600')
+        window.transient(self.root)
+        colors = self.tema_actual
+        window.configure(bg=colors['bg'])
+        actions = tk.Frame(window, bg=colors['bg'], padx=12, pady=12)
+        actions.pack(side='bottom', fill='x')
+        tk.Label(window, text='Revisa título, autor y nombre propuesto. Catalogar conserva cada archivo en su ubicación.',
+                 bg=colors['bg'], fg=colors['text'], wraplength=900, pady=12).pack(fill='x')
+        tk.Label(window, text='Organizar puede mover archivos y enviar duplicados exactos a cuarentena. '
+                             'Los casos ambiguos quedan sin modificar.', bg=colors['bg'], fg=colors['muted'],
+                 wraplength=900, pady=8).pack(side='bottom', fill='x')
+        selection_info = tk.Text(window, height=4, wrap='word', bg=colors['card'], fg=colors['text'],
+                                 font=('Segoe UI', 9), relief='flat', padx=8, pady=6)
+        selection_info.pack(side='bottom', fill='x', padx=12, pady=6)
+        selection_info.configure(state='disabled')
+        pager = tk.Frame(window, bg=colors['bg'])
+        pager.pack(side='bottom', fill='x', padx=12, pady=6)
+        host = tk.Frame(window, bg=colors['bg'])
+        host.pack(fill='both', expand=True, padx=12)
+        host.grid_rowconfigure(0, weight=1)
+        host.grid_columnconfigure(0, weight=1)
+        table = ttk.Treeview(host, columns=('source', 'title', 'author', 'proposed', 'review'), show='headings')
+        for key, label in [('source', 'Archivo actual'), ('title', 'Título'), ('author', 'Autor'),
+                           ('proposed', 'Nombre propuesto'), ('review', 'Estado')]:
+            table.heading(key, text=label)
+            table.column(key, width=175, minwidth=60)
+        table.grid(row=0, column=0, sticky='nsew')
+        vertical = ttk.Scrollbar(host, orient='vertical', command=table.yview)
+        vertical.grid(row=0, column=1, sticky='ns')
+        horizontal = ttk.Scrollbar(host, orient='horizontal', command=table.xview)
+        horizontal.grid(row=1, column=0, sticky='ew')
+        table.configure(yscrollcommand=vertical.set, xscrollcommand=horizontal.set)
+        proposals = plan['metadata']['prepared_metadata']
+        pending = [item for item in plan['items'] if item['state'] not in {'completed', 'skipped'}]
+        page = 0
+        page_size = 100
+
+        def render_page(offset=0):
+            nonlocal page
+            pages = max(1, (len(pending) + page_size - 1) // page_size)
+            page = max(0, min(pages - 1, page + offset))
+            table.delete(*table.get_children())
+            for position in range(page * page_size, min(len(pending), (page + 1) * page_size)):
+                item = pending[position]
+                meta = proposals.get(item['source'], {})
+                table.insert('', 'end', iid=str(position), values=(item['source'], meta.get('titulo', ''),
+                    meta.get('autor', ''), meta.get('nombre_sugerido', Path(item['source']).name),
+                    'Revisión — no renombrar' if needs_review(meta) else 'Propuesta'))
+            page_label.configure(text=f'{page + 1} / {pages} · {len(pending)} archivos')
+            previous.configure(state='normal' if page else 'disabled')
+            following.configure(state='normal' if page < pages - 1 else 'disabled')
+            children = table.get_children()
+            if children:
+                table.selection_set(children[0])
+
+        def inspect_selection(_event=None):
+            selected = table.selection()
+            if not selected:
+                return
+            item = pending[int(selected[0])]
+            meta = proposals.get(item['source'], {})
+            proposed = meta.get('nombre_sugerido') or Path(item['source']).name
+            destination = str(Path(plan['metadata']['library']) / proposed)
+            detail = (f"Origen: {item['source']}\n"
+                      f"Destino propuesto al organizar (sujeto a revisión de duplicados): {destination}\n"
+                      f"Fuente: {meta.get('fuente', '—')} · Motivo: {meta.get('motivo', 'Sin explicación disponible')}")
+            selection_info.configure(state='normal')
+            selection_info.delete('1.0', 'end')
+            selection_info.insert('1.0', detail)
+            selection_info.configure(state='disabled')
+
+        previous = self.workspace._button(pager, 'Anterior', lambda: render_page(-1))
+        previous.pack(side='left')
+        page_label = tk.Label(pager, bg=colors['bg'], fg=colors['text'])
+        page_label.pack(side='left', padx=12)
+        following = self.workspace._button(pager, 'Siguiente', lambda: render_page(1))
+        following.pack(side='left')
+        table.bind('<<TreeviewSelect>>', inspect_selection)
+        render_page()
+
+        def catalog():
+            if plan['metadata'].get('import_mode') == 'copy':
+                messagebox.showinfo('Plan de copia', 'Reanuda este plan con «Importar copias».', parent=window)
+                return
+            window.destroy()
+            self._catalogar_plan(plan)
+
+        def copy_books():
+            window.destroy()
+            self._copiar_plan(plan)
+
+        def compare_fields():
+            from core.import_preview import field_comparison
+            selected = table.selection()
+            if not selected:
+                return
+            item = pending[int(selected[0])]
+            old = next((row for row in (self.indice or {}).get('archivos', [])
+                        if core.clave_ruta_resuelta(row['ruta']) == core.clave_ruta_resuelta(item['source'])), {})
+            dialog = tk.Toplevel(window)
+            dialog.title('Revisión por campo — original / propuesta / resultado')
+            dialog.geometry('1000x440')
+            dialog.configure(bg=colors['bg'])
+            details = ttk.Treeview(dialog, columns=('field', 'before', 'proposed', 'effective', 'source'), show='headings')
+            for field, label in [('field', 'Campo'), ('before', 'Actual'), ('proposed', 'Propuesta'),
+                                  ('effective', 'Resultado protegido'), ('source', 'Fuente')]:
+                details.heading(field, text=label)
+                details.column(field, width=175, minwidth=70)
+            details.pack(fill='both', expand=True, padx=12, pady=12)
+            explanation = tk.Text(dialog, height=4, wrap='word', bg=colors['card'], fg=colors['text'])
+            explanation.pack(fill='x', padx=12, pady=(0, 12))
+            rows = field_comparison(old, proposals.get(item['source'], {}))
+            for position, row in enumerate(rows):
+                details.insert('', 'end', iid=str(position), values=tuple(row[key] for key in
+                               ('field', 'before', 'proposed', 'effective', 'source')))
+
+            def explain(_event=None):
+                choice = details.selection()
+                if choice:
+                    row = rows[int(choice[0])]
+                    explanation.configure(state='normal')
+                    explanation.delete('1.0', 'end')
+                    explanation.insert('1.0', row['reason'])
+                    explanation.configure(state='disabled')
+            details.bind('<<TreeviewSelect>>', explain)
+            details.selection_set('0')
+
+        def organize():
+            if plan['metadata'].get('import_mode') == 'copy':
+                messagebox.showinfo('Plan de copia', 'Reanuda este plan con «Importar copias».', parent=window)
+                return
+            if messagebox.askyesno('Confirmar movimientos', '¿Autorizar los movimientos y la cuarentena '
+                                  'de duplicados exactos de este plan? Los originales pueden cambiar de ubicación.', parent=window):
+                window.destroy()
+                self.agregar_libros([item['source'] for item in plan['items']
+                                     if item['state'] not in {'completed', 'skipped'}], plan, confirmado=True)
+
+        self.workspace._button(actions, 'Catalogar sin mover', catalog, primary=True).pack(side='left')
+        self.workspace._button(actions, 'Importar copias', copy_books).pack(side='left', padx=8)
+        self.workspace._button(actions, 'Comparar campos…', compare_fields).pack(side='left')
+        self.workspace._button(actions, 'Organizar archivos…', organize).pack(side='left', padx=8)
+        self.workspace._button(actions, tr('cancel'), window.destroy).pack(side='right')
+        self.aplicar_tema()
+        return window
+
+    def _copiar_plan(self, plan):
+        if self.trabajando:
+            return
+        self.bloquear(True)
+
+        def task():
+            from core.import_copy import import_copies
+            store = core.operation_plan_store()
+            batch = 'copy_' + plan['id']
+            try:
+                def catalog_copy(source, destination, metadata, digest):
+                    # Persist Undo before cataloguing, so a subsequent catalog
+                    # conflict never leaves an unrecorded copy.
+                    existing = core._file_transactions.leer_jsonl(core.UNDO_JSONL)
+                    if not any(row.get('batch_id') == batch and row.get('destino') == str(destination) for row in existing):
+                        registrar_undo(batch, 'copiar', source, destination, 'Importación por copia; original intacto')
+                    index = core.cargar_indice()
+                    previous = next((row for row in index['archivos'] if core.clave_ruta_resuelta(row['ruta'])
+                                     == core.clave_ruta_resuelta(source)), {})
+                    fields = core._index_service.merge_persistent_metadata({}, previous,
+                                core.campos_indice_desde_metadatos(metadata))
+                    fields.pop('catalog_file_id', None)
+                    fields['linked'] = False
+                    fresh = item_indice_desde_ruta(destination, destination.name)
+                    row = core._index_service.merge_persistent_metadata(fresh, fields)
+                    row['copied_from'] = str(source)
+                    index['archivos'] = [old for old in index['archivos'] if core.clave_ruta_resuelta(old['ruta'])
+                                         != core.clave_ruta_resuelta(destination)] + [row]
+                    core.guardar_indice(index)
+                    self.indice = index
+
+                result = import_copies(plan, store, library=FINAL, journal_path=core.FILE_TRANSACTION_JOURNAL,
+                                       app_data=core.APP_DATA, cancellation=self.cancel_token, catalog_copy=catalog_copy)
+                self._encolar_ui(self.workspace.refresh_library)
+                self._encolar_ui(self.estado, 'Copias importadas; originales intactos.' if result['state'] == 'completed'
+                                else 'Copias seguras importadas; quedan elementos para revisión.')
+            except OperationCancelled:
+                self._encolar_ui(self.estado, 'Copia cancelada; el plan y las copias parciales se conservan.')
+            except Exception as exc:
+                self._encolar_ui(messagebox.showerror, tr('error_title'), str(exc))
+            finally:
+                self._encolar_ui(self.bloquear, False)
+        self._start_worker(task)
+
+    def _catalogar_plan(self, plan):
+        if self.trabajando:
+            return
+        self.bloquear(True)
+
+        def task():
+            store = core.operation_plan_store()
+            try:
+                store.set_plan_state(plan['id'], 'applying')
+                index = core.cargar_indice()
+                rows = {core.clave_ruta_resuelta(row['ruta']): row for row in index['archivos']}
+                for item in plan['items']:
+                    self.cancel_token.raise_if_cancelled()
+                    if item['state'] in {'completed', 'skipped'}:
+                        continue
+                    store.validate_item(plan['id'], item['ordinal'])
+                    path = Path(item['source'])
+                    key = core.clave_ruta_resuelta(path)
+                    meta = plan['metadata']['prepared_metadata'].get(item['source'], {})
+                    fresh = item_indice_desde_ruta(path, path.name)
+                    fields = core.campos_indice_desde_metadatos(meta)
+                    rows[key] = core._index_service.merge_persistent_metadata(fresh, rows.get(key), fields)
+                    rows[key]['linked'] = True
+                    rows[key]['review_required'] = needs_review(meta)
+                    rows[key]['review_reason'] = str(meta.get('motivo') or '') if needs_review(meta) else ''
+                index['archivos'] = list(rows.values())
+                core.guardar_indice(index)
+                for item in plan['items']:
+                    if item['state'] not in {'completed', 'skipped'}:
+                        store.set_item_state(plan['id'], item['ordinal'], 'completed', result={'catalog_only': True})
+                store.finalize_tracked_plan(plan['id'])
+                self.indice = index
+                self._encolar_ui(self.actualizar_label_indice)
+                self._encolar_ui(self.workspace.refresh_library)
+                self._encolar_ui(self.estado, 'Libros catalogados; originales intactos.')
+            except OperationCancelled:
+                store.set_plan_state(plan['id'], 'paused')
+                self._encolar_ui(self.estado, 'Catalogación cancelada; el plan queda disponible.')
+            except Exception as exc:
+                store.set_plan_state(plan['id'], 'paused')
+                self._encolar_ui(messagebox.showerror, tr('error_title'), str(exc))
+            finally:
+                self._encolar_ui(self.bloquear, False)
+
+        self._start_worker(task)
+
+    def agregar_libros(self, rutas=None, plan_existente=None, confirmado=False):
         if self.trabajando:
             return
 
@@ -1138,38 +1433,19 @@ class App:
             return
 
         libros = [Path(a) for a in archivos]
+        if not plan_existente or not plan_existente.get('metadata', {}).get('analyzed_preview'):
+            self._preparar_importacion(libros, previous_plan=plan_existente)
+            return
+        if not confirmado:
+            self._mostrar_previsualizacion(plan_existente)
+            return
         try:
             plan_store = core.operation_plan_store()
-            if plan_existente:
-                plan = plan_existente
-            else:
-                plan = plan_store.create_plan(
-                    "import_books",
-                    [
-                        {
-                            "action": "analyze_and_import",
-                            "source": libro,
-                            "destination": FINAL,
-                            "reason": "Importación seleccionada por el usuario",
-                        }
-                        for libro in libros
-                    ],
-                    metadata={"library": str(FINAL)},
-                )
+            plan = plan_existente
         except Exception as exc:
             messagebox.showerror(tr("error_title"), f"No se pudo crear el plan seguro de importación:\n{exc}")
             return
 
-        preview = "\n".join(f"• {libro.name}" for libro in libros[:12])
-        if len(libros) > 12:
-            preview += f"\n… y {len(libros) - 12} más"
-        if not messagebox.askyesno(
-            "Previsualización de importación",
-            f"Se analizarán {len(libros)} archivos. No se modificará ninguno hasta confirmar.\n\n{preview}\n\n¿Aplicar este plan?",
-        ):
-            if not plan_existente:
-                plan_store.set_plan_state(plan["id"], "cancelled")
-            return
         plan_id = plan["id"]
         plan_ordinals = {core.clave_ruta_resuelta(item["source"]): item["ordinal"] for item in plan["items"]}
 
@@ -1203,7 +1479,10 @@ class App:
                     if core.clave_ruta_resuelta(item.get("ruta", "")) not in rutas_entrada
                 ]
                 inicio_operacion = time.monotonic()
-                metadatos_precalculados = self._precalcular_metadatos(libros)
+                metadatos_precalculados = {
+                    core.clave_ruta_resuelta(path): meta
+                    for path, meta in plan['metadata']['prepared_metadata'].items()
+                }
 
                 for i, libro in enumerate(libros, start=1):
                     if self.cancel_token.cancelled:
@@ -1219,6 +1498,7 @@ class App:
                         continue
                     plan_store.set_item_state(plan_id, plan_ordinal, "running")
                     item_plan_error = ""
+                    item_needs_review = False
                     errores_antes_del_item = errores
                     self._encolar_ui(self.set_progreso, (i - 1) * 100 / max(1, len(libros)))
                     self._encolar_ui(
@@ -1230,6 +1510,11 @@ class App:
                     )
 
                     try:
+                        meta = metadatos_precalculados.get(core.clave_ruta_resuelta(libro))
+                        if needs_review(meta):
+                            item_needs_review = True
+                            self._encolar_ui(self.escribir, f'Revisión pendiente, original intacto: {libro.name}\n')
+                            continue
                         resultado = verificar_libro(libro, indice_actual)
 
                         if resultado["estado"] in {"unico", "posible_duplicado"}:
@@ -1238,49 +1523,9 @@ class App:
                                 self._encolar_ui(self.escribir, tr("possible_name_match_deferred"))
                             self._encolar_ui(self.escribir, tr("searching_web_name"))
 
-                            def cb_web(msg):
-                                self._encolar_ui(self.estado_con_tiempo, f"{libro.name} | {msg}", i, len(libros), inicio_operacion)
-
-                            meta = metadatos_precalculados.get(core.clave_ruta_resuelta(libro))
-                            if not meta:
-                                meta = obtener_nombre_web(libro, callback=cb_web, cancellation=self.cancel_token)
-
-                            if meta.get("no_es_libro"):
-                                rechazados += 1
-                                detalle = meta.get("motivo", "")
-                                escribir_historial("agregar", libro, "", "rechazado_no_es_libro", detalle)
-                                self._encolar_ui(self.escribir, tr("not_a_book", name=libro.name))
-                                self._encolar_ui(self.escribir, detalle + "\n")
-                                continue
-
-                            if meta["encontrado"]:
-                                nombre_destino = meta["nombre_sugerido"]
-                                detalle = f"Renombrado por metadatos | fuente={meta['fuente']} | confianza={meta['confianza']} | {meta['motivo']}"
-                                self._encolar_ui(self.escribir, tr("suggested_name", name=nombre_destino))
-                                self._encolar_ui(self.escribir, tr("source_conf", source=meta["fuente"], confidence=meta["confianza"]))
-                                mover_func = lambda: mover_a_final(libro, nombre_destino, motivo=detalle)
-                            else:
-                                nombre_destino = libro.name
-                                detalle = f"Sin coincidencia fiable. No se movió. Mejor confianza={meta['confianza']} | {meta['motivo']}"
-                                self._encolar_ui(self.escribir, tr("no_reliable"))
-                                if core.en_carpeta_revisar_nuevamente(libro):
-                                    escribir_historial("agregar", libro, libro, "sin_cambios_sigue_en_revision", detalle, nombre_destino, meta.get("fuente", ""), meta.get("confianza", ""))
-                                    self._encolar_ui(self.escribir, tr("stays_in_review", name=libro.name))
-                                    self._encolar_ui(self.escribir, detalle + "\n")
-                                    continue
-                                moved_original += 1
-                                try:
-                                    destino_revision = mover_a_revisar_nuevamente(libro, motivo=detalle)
-                                    rutas_indice_afectadas.add(destino_revision)
-                                    registrar_undo(batch_id, "mover", libro, destino_revision, detalle)
-                                    escribir_historial("agregar", libro, destino_revision, "movido_a_revisar_sin_confianza", detalle, nombre_destino, meta.get("fuente", ""), meta.get("confianza", ""))
-                                    self._encolar_ui(self.escribir, tr("moved_to_review", name=destino_revision.name))
-                                except Exception as e:
-                                    errores += 1
-                                    escribir_historial("agregar", libro, "", "sin_cambios_sin_confianza", f"{detalle} | No se pudo mover a revisión: {e}", nombre_destino, meta.get("fuente", ""), meta.get("confianza", ""))
-                                    self._encolar_ui(self.escribir, tr("move_original"))
-                                self._encolar_ui(self.escribir, detalle + "\n")
-                                continue
+                            nombre_destino = meta['nombre_sugerido']
+                            detalle = f"Renombrado por metadatos | fuente={meta.get('fuente', '')} | confianza={meta.get('confianza', '')} | {meta.get('motivo', '')}"
+                            self._encolar_ui(self.escribir, tr('suggested_name', name=nombre_destino))
 
                             titulo_real = meta.get("titulo") or nombre_destino
                             coincidencias_titulo = core.coincidencias_por_titulo_real_en_biblioteca(
@@ -1301,26 +1546,14 @@ class App:
                                     f"traducción o versión. Coincidencia existente: {existente}"
                                 )
                                 posibles += 1
-                                if core.en_carpeta_revisar_nuevamente(libro):
-                                    escribir_historial(
-                                        "agregar", libro, libro, "revision_manual_por_titulo",
-                                        motivo_revision, nombre_destino, meta.get("fuente", ""),
-                                        meta.get("confianza", ""),
-                                    )
-                                else:
-                                    destino_revision = mover_a_revisar_nuevamente(libro, motivo=motivo_revision)
-                                    rutas_indice_afectadas.add(destino_revision)
-                                    registrar_undo(batch_id, "mover", libro, destino_revision, motivo_revision)
-                                    escribir_historial(
-                                        "agregar", libro, destino_revision, "movido_a_revision_por_titulo",
-                                        motivo_revision, nombre_destino, meta.get("fuente", ""),
-                                        meta.get("confianza", ""),
-                                    )
+                                item_needs_review = True
+                                escribir_historial('agregar', libro, libro, 'revision_manual_por_titulo', motivo_revision)
                                 self._encolar_ui(self.escribir, motivo_revision + "\n")
                                 continue
 
                             origen_original = str(libro)
-                            destino = mover_func()
+                            plan_store.validate_item(plan_id, plan_ordinal)
+                            destino = mover_a_final(libro, nombre_destino, motivo=detalle)
                             rutas_indice_afectadas.add(destino)
                             metadata_indice_por_ruta[str(destino)] = meta
                             registrar_undo(batch_id, "mover", origen_original, destino, detalle)
@@ -1348,10 +1581,7 @@ class App:
                                 ruta_existente = Path(existente)
                                 if not core.archivos_identicos_vivos(libro, ruta_existente):
                                     motivo_revision = "Los archivos cambiaron desde la comprobación de duplicados; se requiere revisión manual."
-                                    if not core.en_carpeta_revisar_nuevamente(libro):
-                                        destino_revision = mover_a_revisar_nuevamente(libro, motivo=motivo_revision)
-                                        rutas_indice_afectadas.add(destino_revision)
-                                        registrar_undo(batch_id, "mover", libro, destino_revision, motivo_revision)
+                                    item_needs_review = True
                                     posibles += 1
                                     escribir_historial("agregar", libro, "", "duplicado_cambio_detectado", motivo_revision)
                                     self._encolar_ui(self.escribir, motivo_revision + "\n")
@@ -1425,8 +1655,8 @@ class App:
                             item_plan_error = "La operación del archivo terminó con errores; puede reintentarse de forma segura."
                         plan_store.set_item_state(
                             plan_id, plan_ordinal,
-                            "failed" if item_plan_error else "completed",
-                            result={"source_exists": libro.exists()},
+                            "failed" if item_plan_error else "pending" if item_needs_review else "completed",
+                            result={"source_exists": libro.exists(), 'review_required': item_needs_review},
                             error=item_plan_error,
                         )
 
@@ -1434,7 +1664,7 @@ class App:
                 self._encolar_ui(self.estado, tr("updating_final_index"))
                 self.indice = core.actualizar_indice_rutas(
                     rutas_indice_afectadas,
-                    indice_actual,
+                    self.indice,
                     metadata_por_ruta=metadata_indice_por_ruta,
                 )
 
@@ -1473,6 +1703,7 @@ class App:
             finally:
                 self._encolar_ui(self.bloquear, False)
 
+        self.bloquear(True)
         self._start_worker(tarea)
 
     def revisar_dobles_post_operacion(self, resumen_operacion=""):
@@ -2131,11 +2362,7 @@ class App:
                 vincular_click_recursivo(card, comando, card)
 
         def refrescar_indice_ligero():
-            try:
-                self.indice = crear_o_actualizar_indice(lambda msg: self.estado(msg))
-                self.actualizar_label_indice()
-            except Exception:
-                pass
+            self.actualizar_indice_automatico()
 
         def terminar():
             titulo.config(text=tr("review_clean_title"))
@@ -2669,8 +2896,63 @@ def main():
         except Exception:
             pass
     ventana = tk.Tk()
-    App(ventana)
-    ventana.mainloop()
+    from queue import Queue, Empty
+    from core.library_view_model import LibraryViewIndex
+    from core.profile_guard import ProfileGuard
+    guard = ProfileGuard(APP_DATA)
+    try:
+        guard.__enter__()
+    except Exception as exc:
+        ventana.withdraw()
+        messagebox.showerror('No se pudo abrir la biblioteca', str(exc), parent=ventana)
+        ventana.destroy()
+        return
+    ventana.title(tr('window_title'))
+    ventana.geometry('560x180')
+    loading = tk.Label(ventana, text='Abriendo el catálogo…\nLos libros originales permanecen intactos.', pady=36)
+    loading.pack(fill='both', expand=True)
+    results = Queue()
+    app_instance = []
+
+    def load():
+        try:
+            index = cargar_indice()
+            results.put((index, LibraryViewIndex(index['archivos']), None))
+        except Exception as exc:
+            results.put((None, None, exc))
+
+    loader = threading.Thread(target=load, name='catalog-startup', daemon=False)
+    loader.start()
+
+    def poll():
+        try:
+            index, view, error = results.get_nowait()
+        except Empty:
+            ventana.after(25, poll)
+            return
+        if error:
+            messagebox.showerror('No se pudo abrir la biblioteca', str(error), parent=ventana)
+            ventana.destroy()
+            return
+        loading.destroy()
+        try:
+            app_instance.append(App(ventana, initial_index=index, initial_view=view))
+        except Exception as exc:
+            messagebox.showerror('No se pudo abrir la biblioteca', str(exc), parent=ventana)
+            ventana.destroy()
+
+    ventana.after(25, poll)
+    try:
+        ventana.mainloop()
+    finally:
+        # Do not release profile ownership while a migration is still running.
+        loader.join()
+        if app_instance:
+            with app_instance[0].worker_threads_lock:
+                workers = list(app_instance[0].worker_threads)
+            for worker in workers:
+                worker.join()
+        guard.__exit__()
 
 
 if __name__ == "__main__":

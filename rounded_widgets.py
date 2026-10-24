@@ -1,8 +1,34 @@
 import tkinter as tk
+import time
 from functools import lru_cache
 from collections import OrderedDict
 
 from PIL import Image, ImageDraw, ImageTk
+
+
+def schedule_paint(widget, callback):
+    """Coalesce theme updates and give input events a turn every ~4 ms."""
+    root = widget._root()
+    tasks = getattr(root, '_myl_paints', None)
+    if tasks is None:
+        tasks = root._myl_paints = OrderedDict()
+    tasks[widget] = callback
+    if getattr(root, '_myl_paint_after', None) is not None:
+        return
+
+    def drain():
+        root._myl_paint_after = None
+        deadline = time.perf_counter() + .004
+        while tasks and time.perf_counter() < deadline:
+            target, paint = tasks.popitem(last=False)
+            try:
+                if target.winfo_exists() and target.winfo_ismapped():
+                    paint()
+            except tk.TclError:
+                pass
+        if tasks:
+            root._myl_paint_after = root.after(1, drain)
+    root._myl_paint_after = root.after(1, drain)
 
 
 def _render_full_surface(width, height, radius, outer, fill, border, scale):
@@ -111,6 +137,7 @@ class RoundedCard(tk.Frame):
 
         self.canvas.bind("<Configure>", self._on_canvas)
         self.inner.bind("<Configure>", self._on_inner)
+        self.bind('<Map>', lambda _event: schedule_paint(self, self._draw), add='+')
 
         self._schedule_height_adjust()
 
@@ -123,7 +150,7 @@ class RoundedCard(tk.Frame):
         self.configure(bg=bg_outer)
         self.canvas.configure(bg=bg_outer)
         self.inner.configure(bg=bg_inner)
-        self._draw()
+        schedule_paint(self, self._draw)
 
     def _schedule_quality_draw(self, delay=90):
         if self._draw_after is not None:
@@ -308,6 +335,7 @@ class RoundedButton(tk.Canvas):
         self.bind("<FocusOut>", self._focus_out)
         self.bind("<Enter>", self._enter)
         self.bind("<Leave>", self._leave)
+        self.bind('<Map>', lambda _event: schedule_paint(self, self._draw), add='+')
         self._draw()
 
     def _on_resize(self, _event=None):
@@ -345,7 +373,7 @@ class RoundedButton(tk.Canvas):
             self.anchor = kwargs.pop("anchor")
         result = super().configure(**kwargs) if kwargs else None
         tk.Canvas.configure(self, cursor="arrow" if self.state == "disabled" else "hand2")
-        self._draw()
+        schedule_paint(self, self._draw)
         return result
 
     def set_theme(self, bg, fg, border, active, disabled_bg, disabled_fg):
@@ -363,7 +391,7 @@ class RoundedButton(tk.Canvas):
             return
         self.theme = theme
         tk.Canvas.configure(self, bg=outer)
-        self._draw()
+        schedule_paint(self, self._draw)
 
     def _click(self, event=None):
         self.focus_set()

@@ -279,11 +279,13 @@ class LibraryCoreIsolatedWorkflowTests(unittest.TestCase):
         self.assertTrue(any(item.get("id") == op_id for item in incompletas))
         self.assertIn(("move_to_library", "rolled_back"), states)
 
-    def test_corrupt_index_json_returns_safe_default(self):
+    def test_corrupt_index_json_requires_recovery(self):
         library_core.INDICE_JSON.parent.mkdir(parents=True, exist_ok=True)
         library_core.INDICE_JSON.write_text("{json roto", encoding="utf-8")
 
-        self.assertEqual(library_core.cargar_indice(), {"creado": None, "archivos": []})
+        with self.assertRaises(index_store.IndexRecoveryError):
+            library_core.cargar_indice()
+        self.assertEqual(library_core.INDICE_JSON.read_text(encoding="utf-8"), "{json roto")
 
 
 if __name__ == "__main__":

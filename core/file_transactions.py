@@ -178,7 +178,7 @@ def transacciones_archivo_incompletas(journal_path):
         op_id = registro.get("id")
         if op_id:
             ultimos[op_id] = registro
-    incompletos = {"pending", "validated", "old_quarantined", "moved", "failed", "needs_review"}
+    incompletos = {"pending", "validated", "old_quarantined", "moved", "staged", "failed", "needs_review"}
     return [registro for registro in ultimos.values() if registro.get("state") in incompletos]
 
 
@@ -192,6 +192,23 @@ def recuperar_transacciones_archivo_pendientes(journal_path, app_data):
         cuarentena = Path(item.get("quarantine", "")) if item.get("quarantine") else None
         estado = "needs_review"
         motivo = "No se pudo determinar automáticamente el resultado físico de la operación."
+
+        if item.get('type') == 'copy':
+            # Copies intentionally leave both files. Never roll them back as a
+            # replacement or restore a staging file over the original.
+            try:
+                published = not cuarentena or not cuarentena.exists()
+                if destino_existe and item.get('hash') and published:
+                    _size, digest = file_identity.validated_sha256_file(destino)
+                    if digest == item['hash']:
+                        estado = 'committed_recovered'
+                        motivo = 'Copia verificada; el origen no se ha modificado.'
+            except OSError:
+                pass
+            registrar_evento_transaccion(journal_path, app_data, item['id'], 'copy', estado,
+                                         origen or '', destino or '', item.get('quarantine', ''),
+                                         motivo, item.get('hash', ''))
+            continue
 
         if origen_existe and not destino_existe:
             if cuarentena and cuarentena.exists() and destino:
@@ -570,6 +587,10 @@ def restaurar_accion_undo(item, *, journal_path, app_data):
                 candidates.add(record["hash"])
         if len(candidates) == 1:
             expected = candidates.pop()
+    if item.get('tipo') == 'copiar':
+        # Undo removes the imported copy from the catalog by moving it to a
+        # recoverable profile quarantine; it never touches its source book.
+        original = Path(app_data) / 'quarantine' / 'undone-copies' / actual.name
     original.parent.mkdir(parents=True, exist_ok=True)
     destino_final = original
     if destino_final.exists():

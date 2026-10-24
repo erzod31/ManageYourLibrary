@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import hashlib
-import io
 import os
 import posixpath
 import threading
+import tempfile
 import time
 import urllib.parse
 import urllib.request
@@ -15,15 +15,34 @@ from pathlib import Path, PurePosixPath
 from xml.etree import ElementTree
 
 from PIL import Image, ImageOps, UnidentifiedImageError
+from .pdf_runtime import serialized_pdfium
+from .document_readers import _read_zip_member, _xml_root
+from .reader_worker import in_worker, run_reader, decode_image_result, ReaderFailure
+from .cancellation import CancellationToken
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tif", ".tiff"}
 MAX_ARCHIVE_IMAGE_BYTES = 20 * 1024 * 1024
 MAX_REMOTE_IMAGE_BYTES = 8 * 1024 * 1024
+MAX_IMAGE_PIXELS = 24_000_000
+MAX_ARCHIVE_ENTRIES = 10_000
 DEFAULT_CACHE_BYTES = 100 * 1024 * 1024
 REMOTE_TIMEOUT_SECONDS = 6
 MISS_CACHE_SECONDS = 6 * 60 * 60
 REMOTE_MISS_CACHE_SECONDS = 30
 ALLOWED_COVER_HOSTS = {"covers.openlibrary.org"}
+
+
+class SafeCoverRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        if not CoverService._validated_remote_url(newurl):
+            raise ValueError("Redirección de portada fuera de los servidores permitidos")
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+def _copy_bounded_image(image):
+    if image.width * image.height > MAX_IMAGE_PIXELS:
+        raise ValueError("La portada supera el límite de píxeles")
+    return image.copy()
 
 
 class CoverService:
@@ -43,10 +62,12 @@ class CoverService:
         self.cache_dir = Path(cache_dir)
         self.size = tuple(size)
         self.max_cache_bytes = max(1, int(max_cache_bytes))
-        self.urlopen_func = urlopen_func or urllib.request.urlopen
+        self.urlopen_func = urlopen_func or urllib.request.build_opener(SafeCoverRedirect()).open
         self._last_prune = 0.0
+        self.cancellation = CancellationToken()
 
     def thumbnail_path(self, source: Path, remote_url: str = "") -> Path | None:
+        self.cancellation.raise_if_cancelled()
         source = Path(source)
         try:
             stat = source.stat()
@@ -114,7 +135,11 @@ class CoverService:
         except ValueError:
             return ""
         host = (parsed.hostname or "").casefold()
-        if parsed.scheme != "https" or host not in ALLOWED_COVER_HOSTS or parsed.username or parsed.password:
+        try:
+            port = parsed.port
+        except ValueError:
+            return ""
+        if parsed.scheme != "https" or host not in ALLOWED_COVER_HOSTS or parsed.username or parsed.password or port not in {None, 443}:
             return ""
         return urllib.parse.urlunsplit(("https", parsed.netloc, parsed.path, parsed.query, ""))
 
@@ -150,9 +175,13 @@ class CoverService:
                 data = response.read(MAX_REMOTE_IMAGE_BYTES + 1)
             if not data or len(data) > MAX_REMOTE_IMAGE_BYTES:
                 return None
-            with Image.open(io.BytesIO(data)) as image:
-                return image.copy()
-        except (OSError, TypeError, ValueError, UnidentifiedImageError):
+            with tempfile.TemporaryDirectory(prefix='myl_cover_') as directory:
+                path = Path(directory) / 'remote-image'
+                with path.open('xb') as stream:
+                    stream.write(data)
+                return decode_image_result(run_reader('image_decode', {'path': str(path), 'size': self.size},
+                                                       timeout=15, memory_mb=512, cancellation=self.cancellation))
+        except (OSError, TypeError, ValueError, ReaderFailure, UnidentifiedImageError, Image.DecompressionBombError):
             return None
 
     @staticmethod
@@ -204,11 +233,19 @@ class CoverService:
                     break
 
     def _extract(self, source: Path) -> Image.Image | None:
+        if not in_worker():
+            if source.suffix.lower() not in IMAGE_EXTENSIONS | {'.pdf', '.epub', '.cbz'}:
+                return None
+            try:
+                return decode_image_result(run_reader('cover', {'path': str(source.resolve()), 'size': self.size},
+                                                       timeout=20, memory_mb=512, cancellation=self.cancellation))
+            except ReaderFailure:
+                return None
         extension = source.suffix.lower()
         try:
             if extension in IMAGE_EXTENSIONS:
                 with Image.open(source) as image:
-                    return image.copy()
+                    return _copy_bounded_image(image)
             if extension == ".pdf":
                 return self._extract_pdf(source, self.size)
             if extension == ".epub":
@@ -224,12 +261,14 @@ class CoverService:
             ValueError,
             ElementTree.ParseError,
             UnidentifiedImageError,
+            Image.DecompressionBombError,
             zipfile.BadZipFile,
         ):
             return None
         return None
 
     @staticmethod
+    @serialized_pdfium
     def _extract_pdf(source: Path, size=(120, 172)) -> Image.Image | None:
         import pypdfium2 as pdfium
 
@@ -264,10 +303,12 @@ class CoverService:
         if info.file_size <= 0 or info.file_size > MAX_ARCHIVE_IMAGE_BYTES:
             return None
         with archive.open(info) as stream, Image.open(stream) as image:
-            return image.copy()
+            return _copy_bounded_image(image)
 
     def _extract_cbz(self, source: Path) -> Image.Image | None:
         with zipfile.ZipFile(source) as archive:
+            if len(archive.infolist()) > MAX_ARCHIVE_ENTRIES:
+                return None
             names = sorted(
                 info.filename
                 for info in archive.infolist()
@@ -281,14 +322,16 @@ class CoverService:
 
     def _extract_epub(self, source: Path) -> Image.Image | None:
         with zipfile.ZipFile(source) as archive:
-            container = ElementTree.fromstring(archive.read("META-INF/container.xml"))
+            if len(archive.infolist()) > MAX_ARCHIVE_ENTRIES:
+                return None
+            container = _xml_root(_read_zip_member(archive, "META-INF/container.xml"))
             rootfile = container.find(".//{*}rootfile")
             if rootfile is None:
                 return None
             opf_path = rootfile.attrib.get("full-path", "")
             if not opf_path:
                 return None
-            package = ElementTree.fromstring(archive.read(opf_path))
+            package = _xml_root(_read_zip_member(archive, opf_path))
             manifest = {
                 node.attrib.get("id", ""): node
                 for node in package.findall(".//{*}manifest/{*}item")

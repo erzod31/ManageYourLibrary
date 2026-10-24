@@ -21,6 +21,12 @@ def default_start_dir() -> Path:
 
 
 def app_data_dir() -> Path:
+    override = os.environ.get('MANAGE_YOUR_LIBRARY_PROFILE', '').strip()
+    if override:
+        path = Path(override).expanduser().resolve()
+        if path.parent == path:
+            raise ValueError('El perfil necesita una carpeta propia, no la raíz de un disco.')
+        return path
     if os.name == "nt":
         return Path(os.environ.get("APPDATA", str(Path.home()))) / APP_NAME
     if sys.platform == "darwin":
@@ -45,7 +51,7 @@ def normalize_operation_config(candidate=None, previous=None) -> dict:
     candidate = dict(candidate or {})
     fallback_pages = _bounded_ocr_pages(previous.get("ocr_max_pages", DEFAULT_OPERATION_CONFIG["ocr_max_pages"]))
     theme = str(candidate.get("theme", previous.get("theme", DEFAULT_OPERATION_CONFIG["theme"])) or "system").lower()
-    if theme not in {"system", "light", "dark"}:
+    if theme not in {"system", "light", "dark", "contrast"}:
         theme = "system"
     return {
         "ocr_max_pages": _bounded_ocr_pages(candidate.get("ocr_max_pages", fallback_pages), fallback_pages),

@@ -15,10 +15,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from tools.write_build_manifest import git_value, source_tree_fingerprint
-RUNTIME_CHECKS = {'tk_init', 'bundled_languages', 'image_ocr', 'pdfium_ocr'}
+RUNTIME_CHECKS = {'tk_init', 'bundled_languages', 'image_ocr', 'pdfium_ocr', 'reader_isolation'}
 FIRST_CHECKS = {'clean_defaults', 'empty_workspace', 'no_background_operations', 'no_automatic_network', 'fresh_state'}
 PRIVATE_NAMES = {'config.json', 'library_index.json', 'historial.csv', 'library_history.csv',
-                 'undo_log.jsonl', 'file_transactions.jsonl', 'trash_manifest.jsonl'}
+                 'undo_log.jsonl', 'file_transactions.jsonl', 'trash_manifest.jsonl',
+                 'saved_views.json', 'profile-manifest.json', '.profile.lock'}
 PRIVATE_SUFFIXES = {'.db', '.jsonl', '.csv', '.gguf', '.part', '.log', '.pdf', '.epub', '.mobi', '.azw', '.azw3',
                     '.djvu', '.fb2', '.rtf', '.doc', '.docx', '.odt', '.cbr', '.cbz'}
 

@@ -1,0 +1,69 @@
+{
+  "environment": {
+    "python": "3.12.10",
+    "platform": "Windows-11-10.0.26300-SP0",
+    "processor": "AMD64 Family 25 Model 33 Stepping 2, AuthenticAMD"
+  },
+  "results": [
+    {
+      "size": 1000,
+      "prepare_ms": 38.039,
+      "search_p50_ms": 0.072,
+      "search_p95_ms": 0.076,
+      "format_filter_p50_ms": 0.039,
+      "format_filter_p95_ms": 0.042,
+      "all_items_p50_ms": 0.004,
+      "all_items_p95_ms": 0.004,
+      "cover_layout_p95_ms": 0.002,
+      "visible_cover_widget_limit": 30,
+      "prepared_view_peak_mib": 1.668,
+      "interaction_budget_ms": 100,
+      "within_budget": true
+    },
+    {
+      "size": 10000,
+      "prepare_ms": 390.402,
+      "search_p50_ms": 0.936,
+      "search_p95_ms": 1.163,
+      "format_filter_p50_ms": 0.416,
+      "format_filter_p95_ms": 0.652,
+      "all_items_p50_ms": 0.027,
+      "all_items_p95_ms": 0.039,
+      "cover_layout_p95_ms": 0.002,
+      "visible_cover_widget_limit": 30,
+      "prepared_view_peak_mib": 16.405,
+      "interaction_budget_ms": 100,
+      "within_budget": true
+    },
+    {
+      "size": 50000,
+      "prepare_ms": 2663.754,
+      "search_p50_ms": 12.424,
+      "search_p95_ms": 13.28,
+      "format_filter_p50_ms": 9.226,
+      "format_filter_p95_ms": 10.697,
+      "all_items_p50_ms": 0.25,
+      "all_items_p95_ms": 0.267,
+      "cover_layout_p95_ms": 0.003,
+      "visible_cover_widget_limit": 30,
+      "prepared_view_peak_mib": 83.447,
+      "interaction_budget_ms": 100,
+      "within_budget": true
+    },
+    {
+      "size": 100000,
+      "prepare_ms": 6271.82,
+      "search_p50_ms": 25.254,
+      "search_p95_ms": 28.581,
+      "format_filter_p50_ms": 17.874,
+      "format_filter_p95_ms": 20.029,
+      "all_items_p50_ms": 0.489,
+      "all_items_p95_ms": 0.781,
+      "cover_layout_p95_ms": 0.003,
+      "visible_cover_widget_limit": 30,
+      "prepared_view_peak_mib": 166.846,
+      "interaction_budget_ms": 100,
+      "within_budget": true
+    }
+  ]
+}

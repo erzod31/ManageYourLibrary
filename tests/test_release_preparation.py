@@ -17,10 +17,10 @@ class ReleasePreparationTests(unittest.TestCase):
             "version": "0.5.3", "git_commit": "test-commit", "source_tree": {"sha256": "TEST", "files": 1},
             "sha256": write_build_manifest.sha256(folder / "ManageYourLibrary.exe"),
             "validation": {key: "passed" for key in (
-                "automated_tests", "source_smoke", "catalog_performance_gate", "frozen_smoke", "runtime_self_test", "first_use_self_test")},
+                "automated_tests", "source_smoke", "catalog_performance_gate", "frozen_smoke", "runtime_self_test", "first_use_self_test", "redistribution_review")},
         }
         runtime = {"version": "0.5.3", "passed": True, "frozen": True,
-                   "checks": {key: "passed" for key in ("tk_init", "bundled_languages", "image_ocr", "pdfium_ocr")}}
+                   "checks": {key: "passed" for key in ("tk_init", "bundled_languages", "image_ocr", "pdfium_ocr", "reader_isolation")}}
         (folder / "build-manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
         (folder / "runtime-self-test.json").write_text(json.dumps(runtime), encoding="utf-8")
         first_use = {"version": "0.5.3", "passed": True, "frozen": True,
@@ -101,7 +101,8 @@ class ReleasePreparationTests(unittest.TestCase):
             manifest = self.payload(folder)
             for name in ("config.json", "library_catalog.sqlite3-wal", "undo_log.jsonl",
                          "metadata_cache-old.json", "ocr_cache.json", "notes.db",
-                         "personal.epub", "personal.pdf", "model.gguf.part"):
+                         "personal.epub", "personal.pdf", "model.gguf.part",
+                         "saved_views.json", "profile-manifest.json", ".profile.lock"):
                 state = folder / name
                 state.write_text("private", encoding="utf-8")
                 with self.assertRaisesRegex(ValueError, "Personal state"):
@@ -156,6 +157,26 @@ class ReleasePreparationTests(unittest.TestCase):
             for artifact in artifacts[:-1]:
                 self.assertIn(write_build_manifest.sha256(artifact), checksums)
                 self.assertTrue(artifact.is_file())
+
+    def test_missing_redistribution_review_requires_explicit_development_label(self):
+        import zipfile
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / 'VERSION').write_text('0.5.3')
+            folder = root / 'dist/windows/ManageYourLibrary'
+            manifest = self.payload(folder)
+            manifest['validation'].pop('redistribution_review')
+            (folder / 'build-manifest.json').write_text(json.dumps(manifest))
+            installer = root / 'dist/installer/ManageYourLibrary-0.5.3-Setup-x64.exe'
+            installer.parent.mkdir()
+            installer.write_bytes(b'synthetic installer')
+            with patch.object(packaging, 'source_tree_fingerprint', return_value=manifest['source_tree']):
+                with self.assertRaisesRegex(ValueError, 'Redistribution review'):
+                    packaging.package(root)
+                artifacts = packaging.package(root, development=True)
+            self.assertTrue(all('development' in path.name for path in artifacts))
+            with zipfile.ZipFile(artifacts[0]) as archive:
+                self.assertIn('DEVELOPMENT-ONLY.txt', archive.namelist())
 
 
 if __name__ == "__main__":

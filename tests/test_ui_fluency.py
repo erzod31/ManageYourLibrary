@@ -80,6 +80,10 @@ class FluencyTests(unittest.TestCase):
         workspace._table_items = None
         workspace._table_after = None
         workspace._table_generation = 0
+        workspace.grid_page = 0
+        workspace.page_label = SimpleNamespace(configure=lambda **kwargs: None)
+        workspace.page_previous = SimpleNamespace(configure=lambda **kwargs: None)
+        workspace.page_next = SimpleNamespace(configure=lambda **kwargs: None)
         workspace.filtered_items = [
             {"ruta": f"book_{index}", "titulo": str(index), "autor_mostrar": "Author",
              "formato": "EPUB", "tamano_mostrar": "1 MB"}
@@ -92,10 +96,13 @@ class FluencyTests(unittest.TestCase):
         workspace._render_table()
         self.assertGreater(len(rows), 0)
         self.assertLessEqual(len(rows), 120)
-        self.assertTrue(workspace.root.pending)
         workspace.root.run_all()
-        self.assertEqual(len(rows), 1000)
-        self.assertEqual(len(workspace.item_by_iid), 1000)
+        self.assertEqual(len(rows), workspace.PAGE_SIZE)
+        self.assertEqual(len(workspace.item_by_iid), workspace.PAGE_SIZE)
+        workspace.grid_page = 1
+        workspace._render_table()
+        workspace.root.run_all()
+        self.assertEqual(rows['book-0'][0], str(workspace.PAGE_SIZE))
 
     def test_table_search_cancels_old_batches(self):
         workspace, rows = self.make_table()

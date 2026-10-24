@@ -1,0 +1,159 @@
+{
+  "corpus_sha256": "6ad19d8f30fde7b1f08ea7e3dccbee7fbb3176edbfa9a20e39fc9b20d8c351d6",
+  "schema": 1,
+  "split": "evaluation",
+  "license": "MIT",
+  "scope": "Evidence scoring regression, not end-to-end bibliographic accuracy on real books.",
+  "cases": [
+    {
+      "id": "eval-01",
+      "decision": "AUTO_RENAME",
+      "confidence": 91.4,
+      "fields_match": true,
+      "automatic": true,
+      "safe_auto_label": true,
+      "unsafe_decision": false,
+      "elapsed_ms": 0.939
+    },
+    {
+      "id": "eval-02",
+      "decision": "AUTO_RENAME",
+      "confidence": 91.4,
+      "fields_match": true,
+      "automatic": true,
+      "safe_auto_label": true,
+      "unsafe_decision": false,
+      "elapsed_ms": 0.176
+    },
+    {
+      "id": "eval-03",
+      "decision": "AUTO_RENAME",
+      "confidence": 91.4,
+      "fields_match": true,
+      "automatic": true,
+      "safe_auto_label": true,
+      "unsafe_decision": false,
+      "elapsed_ms": 0.158
+    },
+    {
+      "id": "eval-04",
+      "decision": "REVIEW_AGAIN",
+      "confidence": 50,
+      "fields_match": true,
+      "automatic": false,
+      "safe_auto_label": false,
+      "unsafe_decision": false,
+      "elapsed_ms": 0.097
+    },
+    {
+      "id": "eval-05",
+      "decision": "UNIDENTIFIED",
+      "confidence": 40.9,
+      "fields_match": true,
+      "automatic": false,
+      "safe_auto_label": false,
+      "unsafe_decision": false,
+      "elapsed_ms": 1.094
+    },
+    {
+      "id": "eval-06",
+      "decision": "UNIDENTIFIED",
+      "confidence": 45.1,
+      "fields_match": true,
+      "automatic": false,
+      "safe_auto_label": false,
+      "unsafe_decision": false,
+      "elapsed_ms": 0.106
+    },
+    {
+      "id": "eval-07",
+      "decision": "REVIEW_AGAIN",
+      "confidence": 73.4,
+      "fields_match": true,
+      "automatic": false,
+      "safe_auto_label": false,
+      "unsafe_decision": false,
+      "elapsed_ms": 0.192
+    },
+    {
+      "id": "eval-08",
+      "decision": "REVIEW_AGAIN",
+      "confidence": 73.4,
+      "fields_match": true,
+      "automatic": false,
+      "safe_auto_label": false,
+      "unsafe_decision": false,
+      "elapsed_ms": 0.177
+    },
+    {
+      "id": "eval-09",
+      "decision": "REVIEW_AGAIN",
+      "confidence": 73.4,
+      "fields_match": true,
+      "automatic": false,
+      "safe_auto_label": false,
+      "unsafe_decision": false,
+      "elapsed_ms": 0.174
+    },
+    {
+      "id": "eval-10",
+      "decision": "UNIDENTIFIED",
+      "confidence": 4.3,
+      "fields_match": true,
+      "automatic": false,
+      "safe_auto_label": false,
+      "unsafe_decision": false,
+      "elapsed_ms": 0.072
+    },
+    {
+      "id": "eval-11",
+      "decision": "AUTO_RENAME",
+      "confidence": 91.4,
+      "fields_match": true,
+      "automatic": true,
+      "safe_auto_label": true,
+      "unsafe_decision": false,
+      "elapsed_ms": 0.181
+    },
+    {
+      "id": "eval-12",
+      "decision": "AUTO_RENAME",
+      "confidence": 91.4,
+      "fields_match": true,
+      "automatic": true,
+      "safe_auto_label": true,
+      "unsafe_decision": false,
+      "elapsed_ms": 0.153
+    }
+  ],
+  "count": 12,
+  "automatic_count": 5,
+  "automatic_precision": 1.0,
+  "automatic_coverage": 0.4166666666666667,
+  "unsafe_decisions": 0,
+  "actual_file_operations": 0,
+  "field_accuracy": 1.0,
+  "ocr": [
+    {
+      "id": "ocr-eval-01",
+      "character_error_rate": 0.0,
+      "exact": true,
+      "error": null,
+      "elapsed_ms": 3591.85
+    },
+    {
+      "id": "ocr-eval-02",
+      "character_error_rate": 0.0,
+      "exact": true,
+      "error": null,
+      "elapsed_ms": 2512.65
+    },
+    {
+      "id": "ocr-eval-03",
+      "character_error_rate": 0.0,
+      "exact": true,
+      "error": null,
+      "elapsed_ms": 3608.98
+    }
+  ]
+}

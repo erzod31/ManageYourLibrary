@@ -1,0 +1,67 @@
+{
+  "framework": "Qt isolated prototype, NOT feature parity",
+  "qt_version": "6.12.0",
+  "size": 50000,
+  "qt_import_ms": 256.79,
+  "prepare_ms": 2059.14,
+  "callbacks": {
+    "search": {
+      "samples": 100,
+      "median_ms": 7.21,
+      "p95_ms": 14.19,
+      "max_ms": 15.2
+    },
+    "selection": {
+      "samples": 100,
+      "median_ms": 0.5,
+      "p95_ms": 0.69,
+      "max_ms": 0.97
+    },
+    "resize": {
+      "samples": 100,
+      "median_ms": 0.25,
+      "p95_ms": 0.37,
+      "max_ms": 0.46
+    },
+    "theme": {
+      "samples": 100,
+      "median_ms": 4.47,
+      "p95_ms": 5.4,
+      "max_ms": 6.31
+    }
+  },
+  "heartbeat_max_ms": 31.91,
+  "process_cpu_seconds": 22.03,
+  "interaction_seconds": 50.82,
+  "memory": {
+    "rss_mib": 200.04,
+    "peak_rss_mib": 200.04
+  },
+  "accessible_qt_interfaces": {
+    "search": {
+      "role": "Role.EditableText",
+      "name": "Buscar en mi biblioteca"
+    },
+    "favorite": {
+      "role": "Role.CheckBox",
+      "name": "Favorito (prueba sin persistencia)"
+    },
+    "library": {
+      "role": "Role.List",
+      "name": "Biblioteca de prueba"
+    },
+    "path": {
+      "role": "Role.EditableText",
+      "name": "Ruta completa"
+    }
+  },
+  "widget_count": 23,
+  "shared_cover_images": 4,
+  "model_rows": 50000,
+  "not_tested": [
+    "NVDA/VoiceOver",
+    "packaged Qt runtime",
+    "full app workflows",
+    "cold cover extraction"
+  ]
+}

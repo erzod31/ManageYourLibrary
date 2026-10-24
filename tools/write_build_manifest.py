@@ -42,7 +42,7 @@ def source_tree_fingerprint():
         path = ROOT / relative
         if not path.is_file() or (
             path.suffix.lower() not in allowed_suffixes
-            and relative not in {"VERSION", ".gitignore"}
+            and relative not in {"VERSION", ".gitignore", "LICENSE"}
         ):
             continue
         # Derived evidence is completed after building; it is not a build input.
@@ -101,6 +101,7 @@ def main(argv=None):
             "first_use_self_test": "passed" if args.validated_first_use else "not_recorded",
             "manual_installed_ui": "not_run",
             "code_signing": "not_performed",
+            "redistribution_review": "not_complete",
         },
     }
     output = artifact.parent / "build-manifest.json"

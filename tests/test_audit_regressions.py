@@ -231,9 +231,12 @@ class AuditRegressionTests(unittest.TestCase):
             workspace = object.__new__(Workspace)
             workspace.selected_item = display_item({"ruta": str(self.book), alias: True})
             workspace.app = SimpleNamespace(trabajando=False, indice={"archivos": [dict(workspace.selected_item)]}, estado=lambda text: None)
+            workspace.app.bloquear = lambda busy: setattr(workspace.app, 'trabajando', busy)
+            workspace.app._start_worker = lambda task: task()
+            workspace.app._encolar_ui = lambda callback, *args: callback(*args)
             workspace.refresh_library = lambda: None
             workspace.select_item = lambda item: setattr(workspace, "selected_item", item)
-            with patch.object(core, "guardar_indice"):
+            with self.scan_context():
                 workspace.toggle_selected_favorite()
             self.assertFalse(item_is_favorite(workspace.selected_item), alias)
             self.assertNotIn(alias, workspace.selected_item)

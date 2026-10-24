@@ -1,5 +1,5 @@
 import os
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
@@ -100,16 +100,29 @@ def _parallel_batch(
     completed = 0
     with ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix=f"myl-{phase}") as executor:
         futures = {}
-        for index, item in indexed_items:
-            if cancellation and cancellation.cancelled:
-                break
-            futures[executor.submit(worker, item)] = (index, item)
-        for future in as_completed(futures):
+        iterator = iter(indexed_items)
+
+        def fill_queue():
+            while len(futures) < max_workers * 2:
+                if cancellation and cancellation.cancelled:
+                    break
+                pair = next(iterator, None)
+                if pair is None:
+                    break
+                index, item = pair
+                futures[executor.submit(worker, item)] = (index, item)
+
+        fill_queue()
+        while futures:
             if cancellation and cancellation.cancelled:
                 for pending in futures:
                     pending.cancel()
                 break
-            index, item = futures[future]
+            done, _pending = wait(futures, timeout=.05, return_when=FIRST_COMPLETED)
+            if not done:
+                continue
+            future = next(iter(done))
+            index, item = futures.pop(future)
             try:
                 results[index] = future.result()
             # This is the isolation boundary for third-party parsers and user
@@ -127,6 +140,7 @@ def _parallel_batch(
                     "status": results[index].get("status", ERROR),
                 }
                 event_callback(event)
+            fill_queue()
     return [result for result in results if result is not None]
 
 

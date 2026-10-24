@@ -10,11 +10,15 @@ class FileChangedDuringReadError(OSError):
     """Raised when a file identity changes while its digest is being read."""
 
 
-def sha256_file(path: Path, block_size: int = 1024 * 1024) -> str:
+def sha256_file(path: Path, block_size: int = 1024 * 1024, *, cancellation=None) -> str:
     """Return the complete SHA-256 digest of a live file."""
     digest = hashlib.sha256()
+    if cancellation:
+        cancellation.raise_if_cancelled()
     with Path(path).open("rb") as stream:
         while chunk := stream.read(block_size):
+            if cancellation:
+                cancellation.raise_if_cancelled()
             digest.update(chunk)
     return digest.hexdigest()
 
@@ -33,16 +37,16 @@ def partial_file_signature(path: Path, block_size: int = 256 * 1024) -> str:
     return digest.hexdigest()
 
 
-def _live_signature(path: Path) -> tuple[int, int, int]:
+def _live_signature(path: Path) -> tuple[int, int, int, int, int]:
     stat = path.stat()
-    return stat.st_size, stat.st_mtime_ns, stat.st_ctime_ns
+    return stat.st_size, stat.st_mtime_ns, stat.st_ctime_ns, stat.st_dev, stat.st_ino
 
 
-def validated_sha256_file(path: Path, block_size: int = 1024 * 1024) -> tuple[int, str]:
+def validated_sha256_file(path: Path, block_size: int = 1024 * 1024, *, cancellation=None) -> tuple[int, str]:
     """Return size and digest only when the live file stayed unchanged."""
     path = Path(path)
     before = _live_signature(path)
-    digest = sha256_file(path, block_size=block_size)
+    digest = sha256_file(path, block_size=block_size, **({'cancellation': cancellation} if cancellation else {}))
     after = _live_signature(path)
     if before != after:
         raise FileChangedDuringReadError(f"File changed while hashing: {path}")

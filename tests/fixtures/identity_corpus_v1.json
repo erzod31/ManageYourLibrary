@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "license": "MIT",
+  "provenance": "Original synthetic fixtures authored for this project; no user books or OCR contents.",
+  "scope": "Evidence scoring regression, not end-to-end bibliographic accuracy on real books.",
+  "cases": [
+    {"id":"tune-01","split":"tuning","title":"Synthetic Harbor","author":"Fixture Writer","variant":"consistent","safe_auto":true},
+    {"id":"tune-02","split":"tuning","title":"Synthetic Valley","author":"Fixture Writer","variant":"filename","safe_auto":false},
+    {"id":"tune-03","split":"tuning","title":"Synthetic River","author":"Fixture Writer","variant":"repeat","safe_auto":false},
+    {"id":"tune-04","split":"tuning","title":"Synthetic Mountain","author":"Fixture Writer","variant":"language_conflict","safe_auto":false},
+    {"id":"eval-01","split":"evaluation","title":"El faro de prueba","author":"Autora Sintética","variant":"consistent","safe_auto":true},
+    {"id":"eval-02","split":"evaluation","title":"La forêt inventée","author":"Auteur Fictif","variant":"consistent","safe_auto":true},
+    {"id":"eval-03","split":"evaluation","title":"合成图书测试","author":"示例作者","variant":"consistent","safe_auto":true},
+    {"id":"eval-04","split":"evaluation","title":"The Uncertain Archive","author":"Imaginary Writer","variant":"filename","safe_auto":false},
+    {"id":"eval-05","split":"evaluation","title":"The Repeated Signal","author":"Imaginary Writer","variant":"repeat","safe_auto":false},
+    {"id":"eval-06","split":"evaluation","title":"A Title Without an Author","author":"","variant":"title_only","safe_auto":false},
+    {"id":"eval-07","split":"evaluation","title":"A Book in Two Languages","author":"Imaginary Writer","variant":"language_conflict","safe_auto":false},
+    {"id":"eval-08","split":"evaluation","title":"The Same Series","author":"Imaginary Writer","variant":"volume_conflict","safe_auto":false},
+    {"id":"eval-09","split":"evaluation","title":"The Revised Atlas","author":"Imaginary Writer","variant":"edition_conflict","safe_auto":false},
+    {"id":"eval-10","split":"evaluation","title":"The Unreadable Cover","author":"Imaginary Writer","variant":"weak_ocr","safe_auto":false},
+    {"id":"eval-11","split":"evaluation","title":"The Language Alias","author":"Imaginary Writer","variant":"language_alias","safe_auto":true},
+    {"id":"eval-12","split":"evaluation","title":"The Stable Evidence","author":"Imaginary Writer","variant":"reordered","safe_auto":true}
+  ],
+  "ocr": [
+    {"id":"ocr-tune-01","split":"tuning","text":"SYNTHETIC LIBRARY TEST","rotation":0},
+    {"id":"ocr-eval-01","split":"evaluation","text":"THE IMAGINARY HARBOR","rotation":0},
+    {"id":"ocr-eval-02","split":"evaluation","text":"BIBLIOTECA DE PRUEBA","rotation":2},
+    {"id":"ocr-eval-03","split":"evaluation","text":"ARCHIVE NUMBER 2026","rotation":-2}
+  ]
+}

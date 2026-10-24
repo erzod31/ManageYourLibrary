@@ -29,6 +29,9 @@ def candidate_to_evidence(candidate: dict) -> list[IdentityEvidence]:
         ("author", candidate.get("autor") or candidate.get("author"), 76),
         ("year", candidate.get("anio") or candidate.get("year"), 48),
         ("isbn", candidate.get("isbn"), 92),
+        ('language', candidate.get('idioma') or candidate.get('language'), 60),
+        ('volume', candidate.get('volumen') or candidate.get('volume'), 65),
+        ('edition', candidate.get('edicion') or candidate.get('edition'), 60),
     ]
     for field_name, value, weight in fields:
         ev = make_evidence(field_name, value, source, weight, location="external candidate")

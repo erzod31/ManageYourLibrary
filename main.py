@@ -30,6 +30,16 @@ def smoke_test():
 
 def cli(argv=None):
     argv = list(sys.argv[1:] if argv is None else argv)
+    if len(argv) == 2 and argv[0] == '--reader-worker':
+        from core.reader_worker import worker_main
+        return worker_main(argv[1])
+    if '--profile' in argv:
+        import os
+        position = argv.index('--profile')
+        if position + 1 >= len(argv):
+            raise ValueError('--profile requires a directory')
+        os.environ['MANAGE_YOUR_LIBRARY_PROFILE'] = str(Path(argv[position + 1]).expanduser().resolve())
+        del argv[position:position + 2]
     if "--first-use-self-test" in argv:
         from tools.first_use_self_test import run_and_record
 

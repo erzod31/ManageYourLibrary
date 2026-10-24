@@ -10,13 +10,14 @@ import time
 import tkinter as tk
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from tkinter import messagebox, ttk
+from tkinter import filedialog, messagebox, simpledialog, ttk
 from tkinter.scrolledtext import ScrolledText
 
 from PIL import Image, ImageTk
 
 import library_core as core
 from core.cover_service import CoverService
+from core.index_store import IndexRecoveryError
 from core.library_view_model import (
     FAVORITE_TAGS,
     LibraryViewIndex,
@@ -124,6 +125,7 @@ TEXT = {
         "theme_system": "Usar tema de Windows",
         "theme_light": "Claro",
         "theme_dark": "Oscuro",
+        "theme_contrast": "Alto contraste",
         "isbn": "ISBN",
         "language": "Idioma",
         "publisher": "Editorial",
@@ -308,6 +310,37 @@ TEXT = {
     },
 }
 
+TEXT['es'].update({
+    'reading_state': 'Estado de lectura', 'unread': 'Por leer', 'reading': 'Leyendo', 'read': 'Leído',
+    'filters': 'Filtros', 'pending_review': 'Revisión pendiente', 'save_filter': 'Guardar filtro actual',
+    'backup': 'Copia del perfil', 'restore': 'Restaurar en carpeta nueva', 'export_catalog': 'Exportar catálogo JSON',
+    'backup_help': 'La copia incluye catálogo, ajustes, planes, historial y cuarentena del perfil. '
+                   'Los libros guardados en otras carpetas necesitan su propia copia. La restauración no sustituye el perfil activo.',
+    'state_saved': 'Estado de lectura guardado.', 'backup_done': 'Copia creada y comprobada.',
+    'restore_done': 'Copia restaurada y comprobada en una carpeta nueva. El perfil activo no cambió.',
+    'export_done': 'Catálogo exportado. El archivo contiene rutas y datos de tu biblioteca; no lo publiques.',
+})
+TEXT['en'].update({
+    'reading_state': 'Reading status', 'unread': 'To read', 'reading': 'Reading', 'read': 'Read',
+    'filters': 'Filters', 'pending_review': 'Needs review', 'save_filter': 'Save current filter',
+    'backup': 'Back up profile', 'restore': 'Restore to new folder', 'export_catalog': 'Export catalog JSON',
+    'backup_help': 'Includes profile catalog, settings, plans, history and quarantine. Books stored elsewhere '
+                   'need their own backup. Restoring does not replace the active profile.',
+    'state_saved': 'Reading status saved.', 'backup_done': 'Backup created and verified.',
+    'restore_done': 'Restored and verified in a new folder. The active profile is unchanged.',
+    'export_done': 'Catalog exported. It contains library paths and personal data; do not publish it.',
+})
+TEXT['fr'].update({'reading_state': 'État de lecture', 'unread': 'À lire', 'reading': 'En cours', 'read': 'Lu',
+                   'theme_contrast': 'Contraste élevé',
+                   'filters': 'Filtres', 'pending_review': 'À vérifier', 'save_filter': 'Enregistrer le filtre',
+                   'backup': 'Sauvegarder le profil', 'restore': 'Restaurer dans un nouveau dossier',
+                   'export_catalog': 'Exporter le catalogue JSON'})
+TEXT['zh'].update({'reading_state': '阅读状态', 'unread': '待读', 'reading': '正在阅读', 'read': '已读',
+                   'theme_contrast': '高对比度',
+                   'filters': '筛选', 'pending_review': '待审核', 'save_filter': '保存筛选',
+                   'backup': '备份配置', 'restore': '恢复到新文件夹', 'export_catalog': '导出目录 JSON'})
+TEXT['en']['theme_contrast'] = 'High contrast'
+
 
 def _text(key: str, **params) -> str:
     language = core.IDIOMA_ACTUAL if core.IDIOMA_ACTUAL in TEXT else "en"
@@ -366,6 +399,8 @@ class Workspace:
         self.nav_icon_names = {}
         self.current_page = "library"
         self.library_scope = "library"
+        self.entity_key = ''
+        self.entity_rows = []
         self.view_mode = "covers"
         self.grid_page = 0
         self.filtered_items = []
@@ -397,6 +432,7 @@ class Workspace:
         self._refresh_after = None
         self.search_placeholder_active = False
         self.active_format = "all"
+        self.read_filter = 'all'
         self._cover_columns = 0
         self._cover_resize_after = None
         self._cover_scroll_after = None
@@ -417,6 +453,11 @@ class Workspace:
         self._tooltip_widgets = set()
         self.detail_metadata_buttons = []
         self.detail_tag_buttons = []
+        if getattr(app, 'initial_view', None) is not None:
+            self._view_index = app.initial_view
+            self._view_index_records = app.indice['archivos']
+            self._view_index_count = len(app.indice['archivos'])
+            app.initial_view = None
 
     def build(self):
         self.root.geometry("1280x820")
@@ -904,6 +945,22 @@ class Workspace:
             pass
 
     def _build_library_views(self):
+        self.entity_view = tk.Frame(self.library_content, bd=0)
+        self.frames.append(self.entity_view)
+        self.entity_tree = ttk.Treeview(self.entity_view, columns=('name', 'count'), show='headings', selectmode='browse')
+        self.entity_tree.heading('name', text=_text('authors'))
+        self.entity_tree.heading('count', text=_text('books'))
+        self.entity_tree.column('name', width=320, stretch=True)
+        self.entity_tree.column('count', width=90, stretch=False)
+        entity_scroll = ttk.Scrollbar(self.entity_view, orient='vertical', command=self.entity_tree.yview)
+        entity_scroll.pack(side='right', fill='y')
+        self.entity_tree.configure(yscrollcommand=entity_scroll.set)
+        self.entity_tree.pack(fill='both', expand=True)
+        self.entity_tree.bind('<Double-1>', self._open_entity)
+        self.entity_tree.bind('<Return>', self._open_entity)
+        self.entity_open = self._button(self.entity_view, _text('open'), self._open_entity, primary=True)
+        self.entity_open.pack(side='bottom', pady=6)
+        self.entity_breadcrumb = self._button(self.library_content, '← ' + _text('all'), self._all_entities)
         self.cover_view = tk.Frame(self.library_content, bd=0)
         self.frames.append(self.cover_view)
         self.cover_canvas = tk.Canvas(self.cover_view, highlightthickness=0, bd=0)
@@ -944,15 +1001,24 @@ class Workspace:
         self.pagination.pack(side="bottom", fill="x", pady=(8, 0))
         self.frames.append(self.pagination)
         self.page_previous = self._button(self.pagination, _text("previous"), lambda: self.change_page(-1))
-        self.page_previous.pack(side="left")
+        self.page_previous.grid(row=0, column=0, sticky='w')
         self.page_label = tk.Label(self.pagination, text="", font=("Segoe UI", 9), bd=0)
-        self.page_label.pack(side="left", padx=12)
+        self.page_label.grid(row=0, column=1, padx=6)
         self.muted_labels.append(self.page_label)
         self.page_next = self._button(self.pagination, _text("next"), lambda: self.change_page(1))
-        self.page_next.pack(side="left")
+        self.page_next.grid(row=0, column=2, sticky='w')
+        self.filters_button = self._button(self.pagination, _text('filters'), self._show_filters_menu)
+        self.filters_button.grid(row=1, column=0, columnspan=3, sticky='w', pady=(4, 0))
+        self.pagination.bind('<Configure>', self._fit_pagination, add='+')
 
     def _build_details_panel(self):
-        self.details_heading = tk.Label(self.details_panel, text=_text("details"), font=("Segoe UI", 9), anchor="w", bd=0)
+        # Reserve action geometry before packing the expandable information.
+        self.detail_actions = tk.Frame(self.details_panel, bd=0)
+        self.detail_actions.pack(side="bottom", fill="x", pady=(8, 0))
+        self.cards.append(self.detail_actions)
+        self.details_heading = tk.Button(self.details_panel, text=_text("details") + '…', font=("Segoe UI", 9),
+                                         anchor="w", bd=0, relief='flat', cursor='hand2', takefocus=True,
+                                         command=lambda: self._show_detail_group('details'))
         self.details_heading.pack(fill="x")
         self.muted_labels.append(self.details_heading)
         self.details_cover = tk.Label(
@@ -964,14 +1030,16 @@ class Workspace:
             bd=0,
             anchor="center",
         )
-        self.details_cover.pack(pady=(12, 14))
+        self.details_cover.pack(pady=(6, 6))
         self.details_cover._item_path = ""
         self.labels.append(self.details_cover)
-        self.detail_title = tk.Label(self.details_panel, text=_text("no_selection"), font=("Georgia", 16), wraplength=280, justify="left", anchor="w", bd=0)
+        self.detail_title = tk.Label(self.details_panel, text=_text("no_selection"), font=("Georgia", 16),
+                                     height=2, wraplength=280, justify="left", anchor="w", bd=0)
         self.detail_title.pack(fill="x")
         self.labels.append(self.detail_title)
 
         primary_metadata = tk.Frame(self.details_panel, bd=0)
+        self.detail_primary_metadata = primary_metadata
         primary_metadata.pack(fill="x", pady=(7, 5))
         primary_metadata.grid_columnconfigure(0, weight=1)
         self.cards.append(primary_metadata)
@@ -983,6 +1051,12 @@ class Workspace:
             primary_metadata, "favorite", self.toggle_selected_favorite,
         )
         self.detail_favorite.grid(row=0, column=1, sticky="e")
+        self.read_status_var = tk.StringVar(value=_text('unread'))
+        self.read_status_combo = ttk.Combobox(primary_metadata, textvariable=self.read_status_var,
+                                              values=tuple(_text(key) for key in ('unread', 'reading', 'read')),
+                                              state='disabled', style='Library.TCombobox', width=16)
+        self.read_status_combo.grid(row=1, column=0, columnspan=2, sticky='ew', pady=(5, 0))
+        self.read_status_combo.bind('<<ComboboxSelected>>', self._change_read_status)
 
         self.detail_series = self._detail_metadata_button(
             self.details_panel, "series", lambda: self._filter_selected_metadata("series", "serie_mostrar"),
@@ -999,15 +1073,25 @@ class Workspace:
             self.detail_tag_buttons.append(button)
 
         self.detail_separator = tk.Frame(self.details_panel, height=1, bd=0)
-        self.detail_separator.pack(fill="x", pady=(0, 14))
+        self.detail_separator.pack(fill="x", pady=(0, 4))
         self.frames.append(self.detail_separator)
+        self.detail_compact_relations = tk.Frame(self.details_panel, bd=0)
+        self.cards.append(self.detail_compact_relations)
+        self.detail_compact_relations.grid_columnconfigure(0, weight=1)
+        self.detail_compact_relations.grid_columnconfigure(1, weight=1)
+        self.compact_series = self._detail_metadata_button(self.detail_compact_relations, 'series',
+            lambda: self._filter_selected_metadata('series', 'serie_mostrar'))
+        self.compact_series.grid(row=0, column=0, sticky='ew', padx=(0, 4))
+        self.compact_tags = self._detail_metadata_button(self.detail_compact_relations, 'tag', self._show_selected_tags)
+        self.compact_tags.grid(row=0, column=1, sticky='ew')
 
         self.detail_group_headings = {}
         self.detail_group_values = {}
         for key in ("edition", "file_data", "provenance"):
-            heading = tk.Label(
+            heading = tk.Button(
                 self.details_panel, text=_text(key), font=("Segoe UI", 9, "bold"),
-                justify="left", anchor="w", bd=0,
+                justify="left", anchor="w", bd=0, relief="flat", cursor="hand2",
+                command=lambda group=key: self._show_detail_group(group), takefocus=True,
             )
             heading.pack(fill="x", pady=(0 if key == "identity" else 9, 3))
             self.labels.append(heading)
@@ -1015,29 +1099,73 @@ class Workspace:
                 self.details_panel, text="", font=("Segoe UI", 8),
                 justify="left", anchor="nw", wraplength=286, bd=0,
             )
-            value.pack(fill="x")
+            # Full metadata is available in an accessible dialog, without
+            # clipping actions or adding a scrolling sidebar.
             self.muted_labels.append(value)
             self.detail_group_headings[key] = heading
             self.detail_group_values[key] = value
 
-        path_actions = tk.Frame(self.details_panel, bd=0)
+        self.detail_path_var = tk.StringVar()
+        self.detail_path_entry = ttk.Entry(self.detail_actions, textvariable=self.detail_path_var, state="readonly", style="Library.TEntry")
+        self.detail_path_entry.pack(fill="x", pady=4)
+        self.detail_path_entry.bind("<Control-a>", lambda event: (event.widget.selection_range(0, "end"), "break")[-1])
+        path_actions = tk.Frame(self.detail_actions, bd=0)
         path_actions.pack(fill="x", pady=(7, 12))
         self.cards.append(path_actions)
         self.copy_path_button = self._button(path_actions, _text("copy_path"), self.copy_selected_path, icon="more")
         self.copy_path_button.pack(side="left", padx=(0, 6))
         self.show_folder_button = self._button(path_actions, _text("show_folder"), self.show_selected_folder, icon="folder")
         self.show_folder_button.pack(side="left")
-        self.open_button = self._button(self.details_panel, _text("open"), self.open_selected, primary=True, icon="open")
+        self.open_button = self._button(self.detail_actions, _text("open"), self.open_selected, primary=True, icon="open")
         self.open_button.pack(fill="x", pady=(0, 6))
-        self.metadata_button = self._button(self.details_panel, _text("edit_metadata"), self.edit_selected_metadata, icon="edit")
+        self.metadata_button = self._button(self.detail_actions, _text("edit_metadata"), self.edit_selected_metadata, icon="edit")
         self.metadata_button.pack(fill="x", pady=(0, 6))
-        self.lookup_metadata_button = self._button(self.details_panel, _text("lookup_metadata"), self.review_selected_metadata, icon="search")
+        self.lookup_metadata_button = self._button(self.detail_actions, _text("lookup_metadata"), self.review_selected_metadata, icon="search")
         self.lookup_metadata_button.pack(fill="x")
         self.open_button.configure(state="disabled")
         self.metadata_button.configure(state="disabled")
         self.lookup_metadata_button.configure(state="disabled")
         self.copy_path_button.configure(state="disabled")
         self.show_folder_button.configure(state="disabled")
+
+    def _show_detail_group(self, group):
+        if not self.selected_item:
+            return
+        window = tk.Toplevel(self.root)
+        window.title(_text(group))
+        window.geometry("600x420")
+        window.transient(self.root)
+        colors = self.app.tema_actual
+        text = tk.Text(window, wrap="word", padx=16, pady=16, bg=colors['card'], fg=colors['text'],
+                       insertbackground=colors['text'], font=("Segoe UI", 11))
+        text.pack(fill="both", expand=True)
+        if group == 'details':
+            contents = self.selected_item.get('titulo', '') + '\n\n' + '\n\n'.join(
+                f"{_text(key)}\n{value.cget('text')}" for key, value in self.detail_group_values.items())
+        else:
+            contents = self.detail_group_values[group].cget("text")
+        text.insert("1.0", contents)
+        text.configure(state="disabled")
+        text.focus_set()
+        window.bind("<Escape>", lambda _event: window.destroy())
+
+    def _show_selected_tags(self):
+        if not self.selected_item:
+            return
+        previous = getattr(self, '_selected_tags_menu', None)
+        if previous is not None:
+            previous.destroy()
+        colors = self.app.tema_actual
+        menu = tk.Menu(self.root, tearoff=False, bg=colors['card'], fg=colors['text'],
+                       activebackground=colors['primary_bg'], activeforeground=colors['primary_text'])
+        self._selected_tags_menu = menu
+        for position, tag in enumerate(self.selected_item.get('tags_mostrar') or []):
+            menu.add_command(label=tag, command=lambda index=position: self._filter_selected_tag(index))
+        try:
+            menu.tk_popup(self.compact_tags.winfo_rootx(),
+                          self.compact_tags.winfo_rooty() + self.compact_tags.winfo_height())
+        finally:
+            menu.grab_release()
 
     def _build_import_page(self):
         page = self._new_scrollable_page("import")
@@ -1076,7 +1204,7 @@ class Workspace:
         self.app.entry_biblioteca.pack(side="left", fill="x", expand=True, ipady=8)
         self.app.entry_biblioteca.bind("<Return>", self.app.aplicar_ruta_desde_cuadro)
         self.entries.append(self.app.entry_biblioteca)
-        self.app.btn_elegir_biblioteca = self._button(route_row, "…", self.app.elegir_biblioteca)
+        self.app.btn_elegir_biblioteca = self._button(route_row, _text("choose_library"), self.app.elegir_biblioteca)
         self.app.btn_elegir_biblioteca.pack(side="left", padx=(8, 0))
         self.app.label_indice = self._muted(route_card, "")
         self.app.label_indice.pack(anchor="w", pady=(10, 0))
@@ -1111,6 +1239,7 @@ class Workspace:
         self.resume_reviews_button.pack(side="left", padx=(0, 8))
         self.app.btn_dobles_carpeta = self._button(row, _text("compare_folders"), self.app.comprobar_dobles_en_carpeta, icon="folder")
         self.app.btn_dobles_carpeta.pack(side="left")
+        self._button(duplicate_card, _text('pending_review'), lambda: self._set_read_filter('review')).pack(anchor='w', pady=(10, 0))
         self.review_result_label = self._muted(row, "")
         self.review_result_label.pack(side="right")
 
@@ -1153,9 +1282,9 @@ class Workspace:
         self.offline_check.grid(row=2, column=0, columnspan=2, sticky="w", pady=7)
         self.theme_label = self._label(settings_card, _text("theme"), bold=False)
         self.theme_label.grid(row=3, column=0, sticky="w", pady=7, padx=(0, 24))
-        theme_values = (_text("theme_system"), _text("theme_light"), _text("theme_dark"))
+        theme_values = tuple(_text('theme_' + mode) for mode in ('system', 'light', 'dark', 'contrast'))
         theme_key = getattr(self.app, "theme_preference", config.get("theme", "system"))
-        theme_index = {"system": 0, "light": 1, "dark": 2}.get(theme_key, 0)
+        theme_index = {"system": 0, "light": 1, "dark": 2, 'contrast': 3}.get(theme_key, 0)
         self.theme_var = tk.StringVar(value=theme_values[theme_index])
         self.theme_combo = ttk.Combobox(
             settings_card,
@@ -1180,6 +1309,117 @@ class Workspace:
         self.app.btn_ia_local = self._button(ai_card, core.tr("ai_reinforce"), self.app.abrir_panel_ia_local)
         self.app.btn_ia_local.pack(anchor="w")
         self.refresh_provider_health()
+        backup_card = self._card(page)
+        backup_card.pack(fill='x', pady=(10, 0))
+        self._label(backup_card, _text('backup'), bold=True).pack(anchor='w')
+        self._muted(backup_card, _text('backup_help'), wrap=760).pack(anchor='w', pady=8)
+        for mode, key in [('backup', 'backup'), ('restore', 'restore'), ('export', 'export_catalog')]:
+            self._button(backup_card, _text(key), lambda selected=mode: self._profile_action(selected)).pack(anchor='w', pady=3)
+
+    def _profile_action(self, mode):
+        if self.app.trabajando:
+            return
+        from core.profile_backup import create_backup, restore_backup
+        source = None
+        if mode == 'restore':
+            source = filedialog.askopenfilename(parent=self.root, title=_text('restore'), filetypes=[('Profile ZIP', '*.zip')])
+            if not source:
+                return
+            folder = filedialog.askdirectory(parent=self.root, title=_text('restore'))
+            if not folder:
+                return
+            target = Path(folder) / time.strftime('MYL-restored-%Y%m%d-%H%M%S')
+        else:
+            target = filedialog.asksaveasfilename(parent=self.root, title=_text('backup' if mode == 'backup' else 'export_catalog'),
+                initialfile=time.strftime('MYL-profile-%Y%m%d-%H%M%S.zip') if mode == 'backup' else 'library-export.json',
+                defaultextension='.zip' if mode == 'backup' else '.json')
+            if not target:
+                return
+        self.app.bloquear(True)
+
+        def task():
+            try:
+                if mode == 'backup':
+                    create_backup(core.APP_DATA, target)
+                    # Restore into a disposable folder as a full verification,
+                    # without activating it or touching any referenced books.
+                    import tempfile
+                    with tempfile.TemporaryDirectory(prefix='myl_verify_backup_') as directory:
+                        restore_backup(target, directory)
+                elif mode == 'restore':
+                    restore_backup(source, target)
+                else:
+                    core.repositorio_catalogo().export_json(target)
+                self.app._encolar_ui(messagebox.showinfo, _text('backup'), _text(mode + '_done') + '\n' + str(target))
+            except Exception as exc:
+                self.app._encolar_ui(messagebox.showerror, core.tr('error_title'), str(exc))
+            finally:
+                self.app._encolar_ui(self.app.bloquear, False)
+        self.app._start_worker(task)
+
+    def _set_read_filter(self, value):
+        self.read_filter = value
+        self.show_page('library')
+        self.refresh_library(reset_page=True)
+
+    def _show_filters_menu(self):
+        previous = getattr(self, '_filters_menu', None)
+        if previous is not None:
+            previous.destroy()
+        colors = self.app.tema_actual
+        menu = tk.Menu(self.root, tearoff=False, bg=colors['card'], fg=colors['text'],
+                       activebackground=colors['primary_bg'], activeforeground=colors['primary_text'])
+        self._filters_menu = menu
+        for code, key in [('all', 'all'), ('unread', 'unread'), ('reading', 'reading'), ('read', 'read'), ('review', 'pending_review')]:
+            menu.add_command(label=('✓ ' if self.read_filter == code else '') + _text(key),
+                             command=lambda value=code: self._set_read_filter(value))
+        menu.add_separator()
+        menu.add_command(label=_text('save_filter'), command=self._save_filter)
+        try:
+            from core.saved_views import load_views
+            saved = load_views(core.APP_DATA / 'saved_views.json')
+            for name, settings in list(saved.items())[:30]:
+                if isinstance(settings, dict):
+                    menu.add_command(label=str(name), command=lambda value=settings: self._load_filter(value))
+            menu.tk_popup(self.filters_button.winfo_rootx(), self.filters_button.winfo_rooty())
+        except IndexRecoveryError as exc:
+            messagebox.showerror(core.tr('error_title'), str(exc), parent=self.root)
+        finally:
+            menu.grab_release()
+
+    def _save_filter(self):
+        name = simpledialog.askstring(_text('save_filter'), _text('save_filter'), parent=self.root)
+        if not name or self.app.trabajando:
+            return
+        target = core.APP_DATA / 'saved_views.json'
+        settings = {'query': '' if self.search_placeholder_active else self.search_var.get(),
+                                   'format': self.active_format, 'read': self.read_filter,
+                                   'scope': self.library_scope, 'entity': self.entity_key,
+                                   'sort': self.sort_var.get(), 'view': self.view_mode}
+        from core.saved_views import save_view
+        try:
+            save_view(target, name.strip()[:100], settings)
+        except (IndexRecoveryError, OSError) as exc:
+            messagebox.showerror(core.tr('error_title'), str(exc), parent=self.root)
+
+    def _load_filter(self, settings):
+        self._clear_search_placeholder()
+        self.search_var.set(str(settings.get('query', '')))
+        self.active_format = settings.get('format', 'all')
+        self.read_filter = settings.get('read', 'all')
+        self.sort_var.set(settings.get('sort', _text('sort_recent')))
+        scope = settings.get('scope', 'library')
+        self.show_page(scope if scope in self.LIBRARY_SCOPES else 'library')
+        self.entity_key = str(settings.get('entity') or '')
+        self.set_view(settings.get('view', 'covers'))
+        self.refresh_library(reset_page=True)
+
+    def _change_read_status(self, _event=None):
+        if not self.selected_item or self.app.trabajando:
+            return
+        code = next((key for key in ('unread', 'reading', 'read') if _text(key) == self.read_status_var.get()), None)
+        if code:
+            self._save_record_changes(self.selected_item, {'read_status': code}, _text('state_saved'))
 
     def _build_activity_strip(self):
         self.page_host.pack_forget()
@@ -1330,6 +1570,8 @@ class Workspace:
             self.release_cover_images()
         self.current_page = name
         if name in self.LIBRARY_SCOPES:
+            if self.library_scope != name:
+                self.entity_key = ''
             self.library_scope = name
         if target_page == "library":
             self.topbar.pack_forget()
@@ -1344,11 +1586,13 @@ class Workspace:
         if name in {"reviews", "activity"}:
             self._update_review_count()
 
-    def _update_review_count(self):
-        try:
-            count = core.duplicate_review_store().pending_count()
-        except Exception:
-            count = 0
+    def _update_review_count(self, refresh=True):
+        count = getattr(self, 'pending_review_count', 0)
+        if refresh:
+            try:
+                count = core.duplicate_review_store().pending_count()
+            except Exception:
+                pass
         self.pending_review_count = count
         button = self.nav_buttons.get("reviews")
         if button is not None:
@@ -1426,7 +1670,7 @@ class Workspace:
             text=("" if self._sidebar_compact else (core.tr("light_mode") if self.app.modo_oscuro else core.tr("dark_mode"))),
             image=self._icon_photo(theme_icon),
         )
-        self._update_review_count()
+        self._update_review_count(refresh=False)
 
     def _set_details_visible(self, visible):
         panes = {str(value) for value in self.library_panes.panes()}
@@ -1459,8 +1703,75 @@ class Workspace:
                 self.detail_title.configure(wraplength=wrap)
                 for value in self.detail_group_values.values():
                     value.configure(wraplength=wrap)
+            self._schedule_details_fit()
         except (AttributeError, tk.TclError):
             pass
+
+    def _fit_pagination(self, event=None):
+        compact = self.pagination.winfo_width() < 520
+        self.page_previous.configure(text='‹' if compact else _text('previous'),
+                                     width=38 if compact else 30 + 8 * len(_text('previous')))
+        self.page_next.configure(text='›' if compact else _text('next'),
+                                 width=38 if compact else 30 + 8 * len(_text('next')))
+
+    def _schedule_details_fit(self):
+        if getattr(self, '_details_fit_after', None) is None:
+            self._details_fit_after = self.root.after(1, self._fit_details_content)
+
+    def _fit_details_content(self):
+        self._details_fit_after = None
+        # Prefer controls and metadata over a decorative cover at high text DPI.
+        # No scrolling sidebar and no image decoding during pane dragging.
+        def vertical_padding(widget):
+            padding = widget.pack_info().get('pady', 0)
+            return sum(map(int, padding)) if isinstance(padding, (tuple, list)) else 2 * int(padding)
+        groups = tuple(self.detail_group_headings.values())
+        relations = (self.detail_series, self.detail_tags, self.detail_compact_relations)
+        self.detail_title.configure(height=2)
+        required = 2 * int(self.details_panel.cget('pady'))
+        for child in self.details_panel.pack_slaves():
+            if child is not self.details_cover and child not in groups and child not in relations:
+                required += child.winfo_reqheight() + vertical_padding(child)
+        item = self.selected_item or {}
+        series, tags = item.get('serie_mostrar'), item.get('tags_mostrar')
+        full_relations_height = ((self.detail_series.winfo_reqheight() + 5 if series else 0)
+                                 + (self.detail_tags.winfo_reqheight() + 1 if tags else 0))
+        compact = required + full_relations_height > self.details_panel.winfo_height()
+        if compact and (series or tags):
+            self.detail_series.pack_forget()
+            self.detail_tags.pack_forget()
+            interactive = not self.app.trabajando
+            self.compact_series.configure(text=_text('series'), state='normal' if series and interactive else 'disabled')
+            self.compact_tags.configure(text=f"{_text('tags')} ({len(tags or [])})",
+                                        state='normal' if tags and interactive else 'disabled')
+            if not self.detail_compact_relations.winfo_manager():
+                self.detail_compact_relations.pack(fill='x', pady=(0, 3), before=self.detail_separator)
+            required += self.detail_compact_relations.winfo_reqheight() + 3
+        else:
+            self.detail_compact_relations.pack_forget()
+            if series and not self.detail_series.winfo_manager():
+                self.detail_series.pack(fill='x', pady=(0, 5), before=self.detail_separator)
+            if tags and not self.detail_tags.winfo_manager():
+                self.detail_tags.pack(fill='x', pady=(0, 1), before=self.detail_separator)
+            required += full_relations_height
+        if required > self.details_panel.winfo_height():
+            title_height = self.detail_title.winfo_reqheight()
+            self.detail_title.configure(height=1)
+            required -= title_height - self.detail_title.winfo_reqheight()
+        groups_height = sum(child.winfo_reqheight() + 12 for child in groups)
+        collapse_groups = required + groups_height > self.details_panel.winfo_height()
+        for child in groups:
+            if collapse_groups and child.winfo_manager():
+                child.pack_forget()
+            elif not collapse_groups and not child.winfo_manager():
+                child.pack(fill='x', pady=(9, 3))
+        if not collapse_groups:
+            required += groups_height
+        show_cover = self.details_panel.winfo_height() >= required + self.details_cover.winfo_reqheight() + 12
+        if show_cover and not self.details_cover.winfo_manager():
+            self.details_cover.pack(pady=(6, 6), before=self.detail_title)
+        elif not show_cover and self.details_cover.winfo_manager():
+            self.details_cover.pack_forget()
 
     def _wheel_candidates(self, event):
         try:
@@ -1682,9 +1993,14 @@ class Workspace:
             getattr(self, "_view_index_records", None) is not records
             or getattr(self, "_view_index_count", -1) != len(records)
         ):
+            if len(records) >= 1000 and getattr(self, '_view_index', None) is not None:
+                self._prepare_view_in_background(records)
+                return
             self._view_index = LibraryViewIndex(records)
             self._view_index_records = records
             self._view_index_count = len(records)
+            if getattr(self.app, 'catalog_gc', None) is not None:
+                self.app.catalog_gc.include_new_snapshot()
         stats = self._view_index.stats
         stat_keys = {"books": "books", "authors": "authors", "formats": "formats", "missing": "missing_author"}
         for key, (value, label) in self.stat_values.items():
@@ -1698,36 +2014,100 @@ class Workspace:
             self.format_var.set(values[0])
         selected_format = self.active_format if self.active_format not in {"other"} else "all"
         query = "" if self.search_placeholder_active else self.search_var.get()
-        self.filtered_items = self._view_index.filter(query, selected_format)
+        self.filtered_items = self._view_index.filter(query, selected_format, recent=self.sort_var.get() == _text('sort_recent'))
         if self.active_format == "other":
             self.filtered_items = [item for item in self.filtered_items if item["formato"] not in {"EPUB", "PDF"}]
-        if self.sort_var.get() == _text("sort_recent"):
-            self.filtered_items.sort(key=lambda item: float(item.get("mtime") or 0), reverse=True)
+        read_filter = getattr(self, 'read_filter', 'all')
+        if read_filter == 'review':
+            self.filtered_items = [item for item in self.filtered_items if item.get('review_required') or item.get('scan_error')]
+        elif read_filter != 'all':
+            self.filtered_items = [item for item in self.filtered_items if item.get('read_status', 'unread') == read_filter]
         self.filtered_items = self._apply_library_scope(self.filtered_items)
         max_page = max(0, (len(self.filtered_items) - 1) // self.PAGE_SIZE)
         self.grid_page = min(self.grid_page, max_page)
         self._update_filter_state()
         self._render_library_view()
 
+    def _prepare_view_in_background(self, records):
+        if getattr(self, '_view_pending', None) is records:
+            return
+        from core.cancellation import CancellationToken, OperationCancelled
+        previous = getattr(self, '_view_token', None)
+        if previous:
+            previous.cancel()
+        token = self._view_token = CancellationToken()
+        self._view_pending = records
+
+        def accept(prepared):
+            if token.cancelled or records is not self.app.indice.get('archivos'):
+                return
+            self._view_index = prepared
+            self._view_index_records = records
+            self._view_index_count = len(records)
+            self._view_pending = None
+            guard = getattr(self.app, 'catalog_gc', None)
+            if guard:
+                guard.include_new_snapshot()
+            self.refresh_library()
+
+        def build():
+            try:
+                prepared = LibraryViewIndex(records, cancellation=token)
+                if not token.cancelled:
+                    self.app._encolar_ui(accept, prepared)
+            except OperationCancelled:
+                pass
+            except Exception as exc:
+                self.app._encolar_ui(failed, str(exc))
+            finally:
+                with self.app.worker_threads_lock:
+                    self.app.worker_threads.discard(threading.current_thread())
+        def failed(message):
+            if token is self._view_token and not token.cancelled:
+                self._view_pending = None
+                messagebox.showerror(core.tr('error_title'), message)
+        worker = threading.Thread(target=build, name='catalog-view', daemon=True)
+        with self.app.worker_threads_lock:
+            self.app.worker_threads.add(worker)
+        worker.start()
+
     def _apply_library_scope(self, items):
         scope = self.library_scope
-        if scope == "authors":
-            shown = [item for item in items if item["autor_mostrar"] != "Autor desconocido"]
-            return sorted(shown, key=lambda item: (item["autor_mostrar"].casefold(), item["titulo"].casefold()))
-        if scope == "series":
-            shown = [item for item in items if item.get("serie_mostrar")]
-            return sorted(shown, key=lambda item: (item["serie_mostrar"].casefold(), item["titulo"].casefold()))
-        if scope == "tags":
-            shown = [item for item in items if item.get("tags_mostrar")]
-            return sorted(
-                shown,
-                key=lambda item: (str(item["tags_mostrar"][0]).casefold(), item["titulo"].casefold()),
-            )
+        if scope in {'authors', 'series', 'tags'}:
+            if self.entity_key:
+                return self._view_index.entity_books(scope, self.entity_key, items)
+            query = '' if self.search_placeholder_active else self.search_var.get()
+            restricted = self.active_format != 'all' or getattr(self, 'read_filter', 'all') != 'all'
+            self.entity_rows = self._view_index.entities(scope, query,
+                visible_paths={item['ruta'] for item in items} if restricted else None)
+            # Counts describe the catalog, not substring matches in book titles.
+            return list(self.entity_rows)
         if scope == "favorites":
             return [item for item in items if item_is_favorite(item)]
         return list(items)
 
     def _render_library_view(self):
+        self.entity_view.pack_forget()
+        self.entity_breadcrumb.pack_forget()
+        if self.library_scope in {'authors', 'series', 'tags'}:
+            if not self.entity_key:
+                self.cover_view.pack_forget()
+                self.table_view.pack_forget()
+                self.release_cover_images()
+                self.pagination.pack(side='bottom', fill='x', pady=(8, 0))
+                self.entity_view.pack(fill='both', expand=True)
+                self.entity_tree.heading('name', text=_text(self.library_scope))
+                self.entity_tree.delete(*self.entity_tree.get_children())
+                start = self.grid_page * self.PAGE_SIZE
+                for position, row in enumerate(self.entity_rows[start:start + self.PAGE_SIZE], start):
+                    self.entity_tree.insert('', 'end', iid=str(position), values=(row['name'], row['count']))
+                total = len(self.entity_rows)
+                self.page_label.configure(text=_text('showing', shown=min(start + self.PAGE_SIZE, total), total=total))
+                self.page_previous.configure(state='normal' if self.grid_page else 'disabled')
+                self.page_next.configure(state='normal' if start + self.PAGE_SIZE < total else 'disabled')
+                return
+            self.entity_breadcrumb.configure(text='← ' + _text(self.library_scope))
+            self.entity_breadcrumb.pack(side='top', anchor='w', pady=(0, 6))
         if self.view_mode == "covers":
             self.table_view.pack_forget()
             self.cover_view.pack(fill="both", expand=True)
@@ -1735,9 +2115,22 @@ class Workspace:
             self._render_covers()
         else:
             self.cover_view.pack_forget()
-            self.pagination.pack_forget()
+            self.pagination.pack(side="bottom", fill="x", pady=(8, 0))
             self.table_view.pack(fill="both", expand=True)
             self._render_table()
+
+    def _open_entity(self, _event=None):
+        selected = self.entity_tree.selection()
+        if not selected:
+            return
+        self.entity_key = self.entity_rows[int(selected[0])]['key']
+        self._clear_search_placeholder()
+        self.search_var.set('')
+        self.refresh_library(reset_page=True)
+
+    def _all_entities(self):
+        self.entity_key = ''
+        self.refresh_library(reset_page=True)
 
     def _render_covers(self):
         total = len(self.filtered_items)
@@ -1907,7 +2300,12 @@ class Workspace:
             pass
 
     def _render_table(self):
-        items = tuple(self.filtered_items)
+        start = self.grid_page * self.PAGE_SIZE
+        items = tuple(self.filtered_items[start:start + self.PAGE_SIZE])
+        shown = min(len(self.filtered_items), start + len(items))
+        self.page_label.configure(text=_text("showing", shown=shown, total=len(self.filtered_items)))
+        self.page_previous.configure(state="normal" if self.grid_page > 0 else "disabled")
+        self.page_next.configure(state="normal" if shown < len(self.filtered_items) else "disabled")
         if items == self._table_items:
             return
         self._table_items = items
@@ -1991,16 +2389,19 @@ class Workspace:
             widget.configure(image=photo, text="", width=144, height=206)
             if self.selected_item and self.selected_item.get("ruta") == item_path:
                 with Image.open(thumbnail) as detail_source:
-                    detail_photo = ImageTk.PhotoImage(detail_source.resize((174, 249), Image.Resampling.LANCZOS))
+                    available = max(72, min(170, self.details_panel.winfo_height() - 490))
+                    detail_size = (max(50, round(available * 144 / 206)), available)
+                    detail_photo = ImageTk.PhotoImage(detail_source.resize(detail_size, Image.Resampling.LANCZOS))
                 self.cover_images[("details", item_path)] = detail_photo
-                self.details_cover.configure(image=detail_photo, text="", width=174, height=249)
+                self.details_cover.configure(image=detail_photo, text="", width=detail_size[0], height=detail_size[1])
+                self._schedule_details_fit()
         except Exception:
             return
 
     def change_page(self, delta):
         max_page = max(0, (len(self.filtered_items) - 1) // self.PAGE_SIZE)
         self.grid_page = max(0, min(max_page, self.grid_page + delta))
-        self._render_covers()
+        self._render_library_view()
 
     def _on_tree_select(self, _event=None):
         selection = self.tree.selection()
@@ -2014,8 +2415,11 @@ class Workspace:
         if not value or value == "Autor desconocido":
             return
         self._clear_search_placeholder()
-        self.search_var.set(value)
         self.show_page(scope)
+        from core.library_view_model import _fold
+        self.entity_key = _fold(value)
+        self.search_var.set('')
+        self.refresh_library(reset_page=True)
 
     def _filter_selected_tag(self, position):
         if not self.selected_item:
@@ -2024,12 +2428,21 @@ class Workspace:
         if position < 0 or position >= len(tags):
             return
         self._clear_search_placeholder()
-        self.search_var.set(str(tags[position]))
         self.show_page("tags")
+        from core.library_view_model import _fold
+        self.entity_key = _fold(tags[position])
+        self.search_var.set('')
+        self.refresh_library(reset_page=True)
 
     def _refresh_detail_metadata_controls(self):
         item = self.selected_item or {}
         interactive = bool(item) and not self.app.trabajando
+        for heading in (self.details_heading, *self.detail_group_headings.values()):
+            heading.configure(state='normal' if item else 'disabled', cursor=interactive_cursor(bool(item)))
+        if hasattr(self, 'read_status_combo'):
+            self.read_status_var.set(_text(item.get('read_status', 'unread')))
+            self.read_status_combo.configure(state='readonly' if interactive else 'disabled',
+                                              values=tuple(_text(key) for key in ('unread', 'reading', 'read')))
         author = str(item.get("autor_mostrar") or "").strip()
         author_known = bool(author and author != "Autor desconocido")
         author_enabled = interactive and author_known
@@ -2080,6 +2493,7 @@ class Workspace:
         else:
             self.detail_tags.pack_forget()
         self._apply_detail_metadata_theme(getattr(self.app, "tema_actual", {}))
+        self._schedule_details_fit()
 
     def toggle_selected_favorite(self):
         if not self.selected_item or self.app.trabajando:
@@ -2094,21 +2508,44 @@ class Workspace:
             ]
             if tags != list(item.get("tags_mostrar") or []):
                 changes["tags"] = tags
-        try:
-            self.app.indice = core.aplicar_correccion_manual_indice(item["ruta"], changes, self.app.indice)
+        self._save_record_changes(item, changes, _text("favorite_removed" if favorite else "favorite_added"))
+
+    def _save_record_changes(self, item, changes, message, on_success=None):
+        if self.app.trabajando:
+            return
+        snapshot = self.app.indice
+
+        def apply_result(index):
+            self.app.indice = index
             updated = next(
                 (
                     row for row in self.app.indice.get("archivos", [])
-                    if core.clave_ruta_resuelta(row.get("ruta", "")) == core.clave_ruta_resuelta(item["ruta"])
+                    if row.get("ruta") == item["ruta"]
                 ),
                 None,
             )
+            if updated and getattr(self, '_view_index', None) is not None:
+                self._view_index.update_record(updated)
+                self._view_index_records = index['archivos']
+                self._view_index_count = len(index['archivos'])
             self.refresh_library()
             if updated:
                 self.select_item(display_item(updated))
-            self.app.estado(_text("favorite_removed" if favorite else "favorite_added"))
-        except Exception as exc:
-            messagebox.showerror(core.tr("error_title"), str(exc))
+            self.app.estado(message)
+            if on_success:
+                on_success()
+
+        def task():
+            try:
+                index = core.aplicar_correccion_manual_indice(item['ruta'], changes, snapshot)
+                self.app._encolar_ui(apply_result, index)
+            except Exception as exc:
+                self.app._encolar_ui(messagebox.showerror, core.tr('error_title'), str(exc))
+            finally:
+                self.app._encolar_ui(self.app.bloquear, False)
+
+        self.app.bloquear(True)
+        self.app._start_worker(task)
 
     def select_item(self, item):
         if not item:
@@ -2129,8 +2566,9 @@ class Workspace:
                 if catalog.get(source) and not merged.get(target):
                     merged[target] = catalog[source]
             for key in ("isbn", "cover_url", "provenance", "confidence"):
-                if catalog.get(key) not in (None, "", {}):
-                    merged[key if key != "confidence" else "confianza_global"] = catalog[key]
+                target = key if key != 'confidence' else 'confianza_global'
+                if merged.get(target) in (None, '', {}) and catalog.get(key) not in (None, "", {}):
+                    merged[target] = catalog[key]
         item = display_item(merged)
         self.selected_item = item
         self._update_selected_card()
@@ -2141,6 +2579,7 @@ class Workspace:
             self.copy_path_button.configure(state="normal")
             self.show_folder_button.configure(state="normal")
         self.detail_title.configure(text=item["titulo"])
+        self.detail_path_var.set(full_display_path(item['ruta']))
         self._refresh_detail_metadata_controls()
         edition = []
         for label, key in [
@@ -2165,14 +2604,19 @@ class Workspace:
         self.detail_group_values["provenance"].configure(
             text="\n".join(provenance) if provenance else _text("no_provenance")
         )
-        self.details_cover.configure(image="", text=item["formato"], width=16, height=7)
+        self.details_cover.configure(image="", text=item["formato"], width=16, height=2)
         self.details_cover._item_path = item["ruta"]
         self._request_cover(self.details_cover, item["ruta"], item.get("cover_url", ""))
 
     def shutdown(self):
+        if getattr(self, '_view_token', None):
+            self._view_token.cancel()
+        if getattr(self.app, 'catalog_gc', None) is not None:
+            self.app.catalog_gc.close()
+        self.cover_service.cancellation.cancel()
         self._hide_tooltip()
         self._table_generation += 1
-        for name in ("_table_after", "_refresh_after", "_cover_resize_after", "_cover_scroll_after"):
+        for name in ("_table_after", "_refresh_after", "_cover_resize_after", "_cover_scroll_after", '_details_fit_after'):
             pending = getattr(self, name, None)
             if pending is not None:
                 self.root.after_cancel(pending)
@@ -2312,25 +2756,8 @@ class Workspace:
         actions.pack(fill="x", pady=(14, 0))
 
         def save():
-            try:
-                changes = {field: variable.get().strip() for field, variable in variables.items()}
-                self.app.indice = core.aplicar_correccion_manual_indice(
-                    item["ruta"], changes, self.app.indice,
-                )
-                self.refresh_library()
-                updated = next(
-                    (
-                        row for row in self.app.indice.get("archivos", [])
-                        if core.clave_ruta_resuelta(row.get("ruta", "")) == core.clave_ruta_resuelta(item["ruta"])
-                    ),
-                    None,
-                )
-                if updated:
-                    self.select_item(display_item(updated))
-                self.app.estado(_text("saved_metadata"))
-                window.destroy()
-            except Exception as exc:
-                messagebox.showerror(core.tr("error_title"), str(exc), parent=window)
+            changes = {field: variable.get().strip() for field, variable in variables.items()}
+            self._save_record_changes(item, changes, _text("saved_metadata"), window.destroy)
 
         save_button = RoundedButton(
             actions, text=_text("save_metadata"), command=save, width=170, height=40,
@@ -2399,6 +2826,7 @@ class Workspace:
             _text("theme_system"): "system",
             _text("theme_light"): "light",
             _text("theme_dark"): "dark",
+            _text('theme_contrast'): 'contrast',
         }
         saved = core.guardar_configuracion_operacion(
             {
@@ -2483,9 +2911,9 @@ class Workspace:
         self.safe_import_label.configure(text=_text("safe_import"))
         self.resume_reviews_button.configure(text=_text("resume_reviews"))
         self.theme_label.configure(text=_text("theme"))
-        theme_values = (_text("theme_system"), _text("theme_light"), _text("theme_dark"))
+        theme_values = tuple(_text('theme_' + mode) for mode in ('system', 'light', 'dark', 'contrast'))
         self.theme_combo.configure(values=theme_values)
-        theme_index = {"system": 0, "light": 1, "dark": 2}.get(getattr(self.app, "theme_preference", "system"), 0)
+        theme_index = {"system": 0, "light": 1, "dark": 2, 'contrast': 3}.get(getattr(self.app, "theme_preference", "system"), 0)
         self.theme_var.set(theme_values[theme_index])
         for _card, title, help_label, title_key, help_key in self.import_steps:
             title.configure(text=_text(title_key))
@@ -2601,6 +3029,18 @@ class Workspace:
         except Exception:
             pass
         self._refresh_bound_icons(colors)
+        # RoundedCard updates its inner surface after the first label pass.
+        for label in self.labels + self.muted_labels:
+            try:
+                label.configure(bg=label.master.cget('bg'))
+            except tk.TclError:
+                pass
+        self.search_shortcut.configure(bg=colors['entry_bg'])
+        self.app.style.configure('Library.TEntry', fieldbackground=colors['entry_bg'], foreground=colors['text'])
+        self.app.style.map('Library.TEntry', fieldbackground=[('readonly', colors['entry_bg'])],
+                           foreground=[('readonly', colors['text'])])
+        for heading in (self.details_heading, *self.detail_group_headings.values()):
+            heading.configure(activebackground=colors['quiet_active'], activeforeground=colors['text'])
         self._apply_detail_metadata_theme(colors)
         self._update_navigation_state()
         self._update_filter_state()
@@ -2650,6 +3090,8 @@ class Workspace:
         self.root.option_add("*TCombobox*Listbox.selectBackground", colors["primary_bg"])
         self.root.option_add("*TCombobox*Listbox.selectForeground", colors["primary_text"])
         combos = [self.format_combo, self.sort_combo]
+        if hasattr(self, 'read_status_combo'):
+            combos.append(self.read_status_combo)
         if hasattr(self, "theme_combo"):
             combos.append(self.theme_combo)
         for combo in combos:

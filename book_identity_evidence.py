@@ -183,6 +183,21 @@ def normalize_for_field(field_name: str, value: str) -> str:
         return normalize_author(value)
     if field_name == "isbn":
         return canonical_isbn(value)
+    if field_name == "language":
+        language = normalize_comparison_text(value)
+        for code, aliases in {
+            'en': {'en', 'eng', 'english', 'ingles'},
+            'es': {'es', 'spa', 'spanish', 'espanol', 'castellano'},
+            'fr': {'fr', 'fra', 'fre', 'french', 'francais', 'frances'},
+            'nl': {'nl', 'nld', 'dut', 'dutch', 'nederlands', 'neerlandes'},
+            'de': {'de', 'deu', 'ger', 'german', 'deutsch', 'aleman'},
+            'zh': {'zh', 'zho', 'chi', 'chinese', 'chino'},
+            'pt': {'pt', 'por', 'portuguese', 'portugues'},
+            'it': {'it', 'ita', 'italian', 'italiano'},
+        }.items():
+            if language in aliases:
+                return code
+        return language
     if field_name == "year":
         match = re.search(r"\b(1[4-9]\d{2}|20\d{2})\b", str(value or ""))
         return match.group(1) if match else ""
@@ -301,6 +316,9 @@ def evidence_from_existing_data(datos: dict, filename: str = "") -> list[Identit
     add("author", "autor_local", "metadata", 82, location="structured metadata")
     add("publisher", "editorial_local", "metadata", 50)
     add("year", "anio_local", "metadata", 55)
+    add('language', 'idioma_local', 'metadata', 70)
+    add('volume', 'volumen_local', 'metadata', 75)
+    add('edition', 'edicion_local', 'metadata', 70)
     add("title", "titulo_texto", "front_matter", 70, location="first blocks")
     add("author", "autor_texto", "front_matter", 68, location="near title")
     add("publisher", "editorial_texto", "front_matter", 42)

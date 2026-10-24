@@ -1,0 +1,144 @@
+"""Check Tk widget geometry in a disposable profile (not OS DPI/accessibility certification)."""
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import sys
+import tempfile
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+
+def visible_rectangle(widget):
+    if not widget.winfo_ismapped():
+        return False
+    left, top = widget.winfo_rootx(), widget.winfo_rooty()
+    right, bottom = left + widget.winfo_width(), top + widget.winfo_height()
+    ancestor = widget.master
+    while ancestor is not None:
+        x, y = ancestor.winfo_rootx(), ancestor.winfo_rooty()
+        if left < x or top < y or right > x + ancestor.winfo_width() or bottom > y + ancestor.winfo_height():
+            return False
+        ancestor = ancestor.master
+    return widget.winfo_width() > 2 and widget.winfo_height() > 2
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--output', type=Path)
+    args = parser.parse_args()
+    results, errors, interactions = [], [], {}
+    with tempfile.TemporaryDirectory(prefix='myl_geometry_') as directory:
+        os.environ['MANAGE_YOUR_LIBRARY_PROFILE'] = str(Path(directory) / 'profile')
+        import tkinter as tk
+        from tkinter import ttk
+        from unittest.mock import patch
+        import library_core as core
+        from library_app import App
+        rows = [{'ruta': str(Path(directory) / f'book_{i}.epub'), 'titulo': f'Libro sintético {i}',
+                 'autor': 'Autora de ejemplo', 'extension': '.epub', 'tags': ['Prueba'], 'serie': 'Serie'}
+                for i in range(12)]
+        rows[0]['read_status'] = 'reading'
+        # A fresh interpreter/Tk root per scale avoids mixing already-created font metrics.
+        for scale in (1.0, 1.25, 1.5, 2.0):
+            root = tk.Tk()
+            root.tk.call('tk', 'scaling', (96 / 72) * scale)
+            app = App(root, initial_index={'archivos': rows})
+            workspace = app.workspace
+            root.report_callback_exception = lambda kind, value, tb: errors.append(f'{kind.__name__}: {value}')
+            workspace.select_item(workspace.filtered_items[0])
+            if scale == 1:
+                root.update()
+                # Exercise menu lifetime/commands without waiting in the native
+                # Windows popup loop; real popup colors are checked visually.
+                with patch.object(tk.Menu, 'tk_popup', return_value=None):
+                    workspace._show_filters_menu()
+                root.update()
+                interactions['filter_menu_survives_posting'] = bool(workspace._filters_menu.winfo_exists())
+                workspace._filters_menu.invoke(2)
+                workspace._filters_menu.unpost()
+                interactions['reading_filter'] = len(workspace.filtered_items) == 1
+                with patch('ui.workspace.simpledialog.askstring', return_value='Synthetic reading view'):
+                    workspace._save_filter()
+                saved = core.cargar_json(core.APP_DATA / 'saved_views.json', {})
+                workspace._set_read_filter('all')
+                workspace._load_filter(saved['Synthetic reading view'])
+                interactions['saved_filter_round_trip'] = workspace.read_filter == 'reading' and len(workspace.filtered_items) == 1
+                workspace._set_read_filter('all')
+                workspace.show_page('authors')
+                root.update()
+                groups = workspace.entity_tree.get_children()
+                interactions['authors_entity_directory'] = len(groups) == 1 and workspace.entity_view.winfo_ismapped()
+                workspace.entity_tree.selection_set(groups[0])
+                workspace._open_entity()
+                root.update()
+                interactions['author_exact_membership'] = len(workspace.filtered_items) == 12 and bool(workspace.entity_key)
+                workspace.show_page('library')
+                app.establecer_preferencia_tema('contrast')
+                root.update()
+                interactions['high_contrast'] = app.tema_actual['bg'] == '#000000' and app.tema_actual['text'] == '#ffffff'
+                app.establecer_preferencia_tema('light')
+                plan = {'metadata': {'library': str(Path(directory) / 'library'), 'prepared_metadata': {}},
+                        'items': [{'source': str(Path(directory) / f'preview-{i}.epub'), 'state': 'pending'} for i in range(1005)]}
+                preview = app._mostrar_previsualizacion(plan)
+                root.update()
+                def descendants(widget):
+                    for child in widget.winfo_children():
+                        yield child
+                        yield from descendants(child)
+                children = list(descendants(preview))
+                table = next(child for child in children if isinstance(child, ttk.Treeview))
+                following = next(child for child in children if getattr(child, 'text', None) == 'Siguiente')
+                for _ in range(10):
+                    following.command()
+                interactions['preview_all_pages_accessible'] = len(table.get_children()) == 5 and table.get_children()[-1] == '1004'
+                interactions['preview_originals_untouched'] = not (Path(directory) / 'library').exists()
+                compare = next(child for child in children if getattr(child, 'text', None) == 'Comparar campos…')
+                compare.command()
+                root.update()
+                comparison = next(child for child in descendants(preview) if isinstance(child, ttk.Treeview) and child is not table)
+                interactions['field_comparison_eight_fields'] = len(comparison.get_children()) == 8
+                preview.destroy()
+            for width, height in ((1024, 768), (1366, 768), (1920, 1080)):
+                root.geometry(f'{width}x{height}+0+0')
+                root.update()
+                workspace._apply_responsive_layout()
+                workspace._set_details_visible(True)
+                root.update()
+                root.after(250, root.quit)
+                root.mainloop()
+                widgets = {key: getattr(workspace, key) for key in (
+                    'search_entry', 'detail_path_entry', 'copy_path_button', 'show_folder_button',
+                    'open_button', 'metadata_button', 'lookup_metadata_button', 'detail_author',
+                    'read_status_combo', 'page_next', 'filters_button', 'details_button', 'detail_favorite',
+                    'details_heading')}
+                relations = ('compact_series', 'compact_tags') if workspace.detail_compact_relations.winfo_manager() else ('detail_series', 'detail_tags')
+                widgets.update({key: getattr(workspace, key) for key in relations})
+                # Collapsed metadata groups remain accessible through Details….
+                widgets.update({key: widget for key, widget in workspace.detail_group_headings.items()
+                                if widget.winfo_manager()})
+                checks = {name: visible_rectangle(widget) for name, widget in widgets.items()}
+                results.append({'requested': [width, height], 'actual': [root.winfo_width(), root.winfo_height()],
+                                'tk_scale_percent': int(scale * 100), 'checks': checks,
+                                'failed_geometry': {name: {'actual': [widget.winfo_x(), widget.winfo_y(),
+                                    widget.winfo_width(), widget.winfo_height()],
+                                    'requested': [widget.winfo_reqwidth(), widget.winfo_reqheight()],
+                                    'parent': [widget.master.winfo_width(), widget.master.winfo_height()]}
+                                    for name, widget in widgets.items() if not checks[name]}})
+            workspace.shutdown()
+            for identifier in root.tk.call('after', 'info'):
+                root.after_cancel(identifier)
+            root.destroy()
+        report = {'method': 'Tk scaling + geometry, not Windows display settings or a screen reader',
+                  'results': results, 'interactions': interactions, 'errors': errors}
+        encoded = json.dumps(report, indent=2)
+        print(encoded)
+        if args.output:
+            args.output.write_text(encoded + '\n', encoding='utf-8')
+        return int(bool(errors) or not all(interactions.values()) or any(not all(item['checks'].values()) for item in results))
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())

@@ -24,6 +24,14 @@ class CancellationToken:
         self._event.set()
         with self._lock:
             processes = list(self._processes)
+        if processes:
+            threading.Thread(target=self._terminate_processes, args=(processes,),
+                             name='cancel-readers', daemon=True).start()
+
+    @staticmethod
+    def _terminate_processes(processes):
+        # Cancellation acknowledgement must not wait for taskkill/slow readers
+        # on the Tk thread. The owning worker still waits for actual cleanup.
         for process in processes:
             try:
                 if process.poll() is None:

@@ -25,7 +25,8 @@ class NativeReleaseTests(unittest.TestCase):
     def test_payload_rejects_books_and_personal_state(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            for name in ('config.json', 'library_catalog.sqlite3', 'library_catalog.sqlite3-wal', 'metadata_cache.json', 'my-book.pdf', 'my-book.docx'):
+            for name in ('config.json', 'library_catalog.sqlite3', 'library_catalog.sqlite3-wal', 'metadata_cache.json',
+                         'my-book.pdf', 'my-book.docx', 'saved_views.json', 'profile-manifest.json', '.profile.lock'):
                 path = root / name
                 path.touch()
                 with self.assertRaises(ValueError):

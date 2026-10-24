@@ -395,23 +395,23 @@ def evidencias_desde_resultado_y_candidatos(resultado, candidatos, *, detectar_r
 def score_campo_consenso(valor_final, evidencias, field, *, similitud_func=default_similitud):
     if not valor_final:
         return 0, []
-    total = 0.0
-    razones = []
-    fuentes = set()
+    confirmations = {}
+    contradictions = set()
     max_confianza_confirmada = 0.0
     for ev in evidencias:
         if ev.get("field") != field or not ev.get("value"):
             continue
         sim = similitud_func(str(valor_final), str(ev.get("value", "")))
+        source = normalizar_texto(str(ev.get("source", "") or "unknown"))
+        confidence = max(0.0, min(100.0, float(ev.get("confidence", 0) or 0)))
         if sim >= 0.86 or normalizar_texto(valor_final) == normalizar_texto(ev.get("value", "")):
-            fuentes.add(ev.get("source", ""))
-            max_confianza_confirmada = max(max_confianza_confirmada, float(ev.get("confidence", 0) or 0))
-            aporte = min(24, ev.get("confidence", 0) / 5)
-            total += aporte
-            razones.append(f"{field} confirmado por {ev.get('source')}")
-        elif sim < 0.45 and ev.get("confidence", 0) >= 80:
-            total -= 12
-            razones.append(f"conflicto de {field} con {ev.get('source')}")
+            confirmations[source] = max(confirmations.get(source, 0), confidence / 5)
+            max_confianza_confirmada = max(max_confianza_confirmada, confidence)
+        elif sim < 0.45 and confidence >= 80:
+            contradictions.add(source)
+    # Repeated search hits from one provider are not independent confirmations.
+    fuentes = set(confirmations)
+    total = sum(confirmations.values())
     if len(fuentes) >= 2:
         total += 12
         if max_confianza_confirmada >= 80:
@@ -420,6 +420,10 @@ def score_campo_consenso(valor_final, evidencias, field, *, similitud_func=defau
         total += 5
         if max_confianza_confirmada >= 85:
             total = max(total, 70)
+    # Apply contradictory evidence after the confirmation floor, not before it.
+    total -= 12 * len(contradictions)
+    razones = ([f"conflicto de {field} con {source}" for source in sorted(contradictions)]
+               + [f"{field} confirmado por {source}" for source in sorted(fuentes)])
     return max(0, min(100, round(total, 1))), razones[:6]
 
 

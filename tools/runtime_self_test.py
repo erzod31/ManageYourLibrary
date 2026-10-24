@@ -62,6 +62,33 @@ def run_checks(version: str) -> dict:
         with pillow() as image:
             recognize(image)
 
+    def reader_isolation():
+        import os
+        from core.reader_worker import run_reader, decode_image_result
+        result = run_reader('probe', {}, timeout=20)
+        if not result['isolated'] or result['pid'] == os.getpid():
+            raise RuntimeError('Reader did not run in an isolated process')
+        from core.document_readers import extract_document
+        with tempfile.TemporaryDirectory(prefix='myl_reader_probe_') as directory:
+            fixture = Path(directory) / 'fixture.txt'
+            fixture.write_text(FIXTURE_TEXT, encoding='utf-8')
+            if FIXTURE_TEXT not in extract_document(fixture)['text']:
+                raise RuntimeError('Isolated reader output mismatch')
+            # Exercise the bundled native libraries inside the actual worker,
+            # including the OCR descendant's Job membership, not just in main.
+            for suffix in ('png', 'pdf'):
+                fixture = Path(directory) / f'fixture.{suffix}'
+                with pillow() as image:
+                    image.save(fixture)
+                result = run_reader('ocr_file', {'path': str(fixture), 'kwargs': {'max_paginas': 1}}, timeout=90)
+                if result.get('error') or FIXTURE_TEXT not in result.get('texto', '').upper():
+                    raise RuntimeError(f'Isolated {suffix} OCR mismatch: {result.get("error")}')
+            decoded = decode_image_result(run_reader('cover', {'path': str(fixture), 'size': [120, 172]},
+                                                    timeout=20, memory_mb=512))
+            if decoded is None:
+                raise RuntimeError('Isolated PDF cover was not decoded')
+            decoded.close()
+
     def pdf_ocr():
         import pypdfium2 as pdfium
         with pillow() as image, io.BytesIO() as stream:
@@ -87,6 +114,7 @@ def run_checks(version: str) -> dict:
         check("bundled_languages", bundled_languages)
         check("image_ocr", image_ocr)
         check("pdfium_ocr", pdf_ocr)
+        check("reader_isolation", reader_isolation)
     report["passed"] = all(value == "passed" for value in checks.values())
     report["manual_installed_ui"] = "not_run"
     return report

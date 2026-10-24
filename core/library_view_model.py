@@ -120,12 +120,14 @@ class LibraryViewIndex:
     replaced, then reuses folded search text and sort keys.
     """
 
-    def __init__(self, items) -> None:
+    def __init__(self, items, *, cancellation=None) -> None:
         prepared: list[dict[str, Any]] = []
         authors: set[str] = set()
         formats: set[str] = set()
         missing_author = 0
-        for raw in items or []:
+        for position, raw in enumerate(items or []):
+            if cancellation and position % 256 == 0:
+                cancellation.raise_if_cancelled()
             item = display_item(dict(raw))
             author_folded = _fold(item["autor_mostrar"])
             format_folded = _fold(item["formato"])
@@ -135,6 +137,7 @@ class LibraryViewIndex:
                 author_folded,
                 _fold(item["ruta"]),
             )
+            item['_view_recent_key'] = (-float(item.get('mtime') or 0), item['_view_sort_key'])
             item["_view_search_folded"] = _fold(
                 " ".join(
                     [
@@ -160,6 +163,12 @@ class LibraryViewIndex:
                 formats.add(item["formato"])
 
         self._items = sorted(prepared, key=lambda item: item["_view_sort_key"])
+        self._recent_items = sorted(prepared, key=lambda item: item['_view_recent_key'])
+        self._by_path = {item['ruta']: item for item in prepared}
+        self._entity_groups = {scope: {} for scope in ('authors', 'series', 'tags')}
+        for item in prepared:
+            self._index_entities(item)
+        self._entity_lists = {}
         self.formats = tuple(sorted(formats))
         self.stats = {
             "books": len(prepared),
@@ -168,16 +177,87 @@ class LibraryViewIndex:
             "missing_author": missing_author,
         }
 
-    def filter(self, query: str = "", extension: str = "all") -> list[dict]:
+    @staticmethod
+    def entity_values(item, scope):
+        if scope == 'authors':
+            value = item['autor_mostrar']
+            return [value] if value != 'Autor desconocido' else []
+        if scope == 'series':
+            return [item['serie_mostrar']] if item.get('serie_mostrar') else []
+        return [str(value) for value in item.get('tags_mostrar', []) if str(value).strip()]
+
+    def _index_entities(self, item, remove=False):
+        for scope, groups in self._entity_groups.items():
+            for name in self.entity_values(item, scope):
+                key = _fold(name)
+                if remove:
+                    group = groups.get(key)
+                    if group:
+                        group['paths'].discard(item['ruta'])
+                        if not group['paths']:
+                            del groups[key]
+                else:
+                    group = groups.setdefault(key, {'key': key, 'name': name, 'paths': set()})
+                    group['paths'].add(item['ruta'])
+
+    def entities(self, scope, query='', visible_paths=None):
+        if scope not in self._entity_groups:
+            return []
+        if scope not in self._entity_lists:
+            self._entity_lists[scope] = [{'key': key, 'name': group['name'], 'count': len(group['paths'])}
+                                         for key, group in sorted(self._entity_groups[scope].items())]
+        query = _fold(query)
+        result = [group for group in self._entity_lists[scope] if not query or query in group['key']]
+        if visible_paths is not None:
+            result = [{**group, 'count': len(self._entity_groups[scope][group['key']]['paths'] & visible_paths)}
+                      for group in result]
+            result = [group for group in result if group['count']]
+        return result
+
+    def entity_books(self, scope, key, items):
+        group = self._entity_groups.get(scope, {}).get(key)
+        paths = group['paths'] if group else set()
+        return [item for item in items if item['ruta'] in paths]
+
+    def filter(self, query: str = "", extension: str = "all", *, recent=False) -> list[dict]:
         query_folded = _fold(query)
         extension_folded = _fold(extension).lstrip(".")
         filter_extension = extension_folded not in {"", "all", "todos"}
+        items = self._recent_items if recent else self._items
+        if not filter_extension and not query_folded:
+            return list(items)
         return [
             item
-            for item in self._items
+            for item in items
             if (not filter_extension or item["_view_format_folded"] == extension_folded)
             and (not query_folded or query_folded in item["_view_search_folded"])
         ]
+
+    def update_record(self, record):
+        """Normalize one changed row; preserve all other prepared objects."""
+        from bisect import bisect_left, insort
+        replacement = LibraryViewIndex([record])._items[0]
+        old = self._by_path.get(replacement['ruta'])
+        if old is None:
+            raise KeyError(replacement['ruta'])
+        index = bisect_left(self._items, old['_view_sort_key'], key=lambda item: item['_view_sort_key'])
+        while self._items[index] is not old:
+            index += 1
+        self._items.pop(index)
+        insort(self._items, replacement, key=lambda item: item['_view_sort_key'])
+        recent_index = bisect_left(self._recent_items, old['_view_recent_key'], key=lambda item: item['_view_recent_key'])
+        while self._recent_items[recent_index] is not old:
+            recent_index += 1
+        self._recent_items.pop(recent_index)
+        insort(self._recent_items, replacement, key=lambda item: item['_view_recent_key'])
+        self._by_path[replacement['ruta']] = replacement
+        self._index_entities(old, remove=True)
+        self._index_entities(replacement)
+        self._entity_lists.clear()
+        if old['autor_mostrar'] != replacement['autor_mostrar'] or old['formato'] != replacement['formato']:
+            self.stats = library_stats(self._items)
+            self.formats = tuple(sorted({item['formato'] for item in self._items if item['formato']}))
+        return replacement
 
 
 def provenance_lines(item: dict) -> list[str]:

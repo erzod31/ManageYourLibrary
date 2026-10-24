@@ -360,6 +360,10 @@ def _run_tesseract_tsv_bytes(image_bytes: bytes, lang: str, psm="6", timeout=45,
         return [], str(exc)
 
 
+from core.pdf_runtime import serialized_pdfium
+
+
+@serialized_pdfium
 def _render_pdf_page(path: Path, page_index: int, dpi: int):
     import pypdfium2 as pdfium
 
@@ -368,11 +372,21 @@ def _render_pdf_page(path: Path, page_index: int, dpi: int):
         if page_index >= len(doc):
             return None
         page = doc[page_index]
-        bitmap = page.render(scale=dpi / 72)
-        image = bitmap.to_pil()
-        out = BytesIO()
-        image.save(out, format="PNG")
-        return out.getvalue()
+        try:
+            width, height = page.get_size()
+            if width <= 0 or height <= 0:
+                return None
+            scale = min(dpi / 72, (40_000_000 / (width * height)) ** .5)
+            bitmap = page.render(scale=scale)
+            try:
+                image = bitmap.to_pil()
+                out = BytesIO()
+                image.save(out, format="PNG")
+                return out.getvalue()
+            finally:
+                bitmap.close()
+        finally:
+            page.close()
     finally:
         try:
             doc.close()
@@ -995,6 +1009,10 @@ def extraer_texto_imagen_bytes_ocr(image_bytes: bytes, callback=None, cancellati
     return _finish_result(text, "image_ocr", lang, 1, DEFAULT_DPI, error=error, candidates=candidates)
 
 
+from core.reader_worker import isolated as _isolated_reader
+
+
+@_isolated_reader('ocr_file', timeout=180)
 def extraer_texto_documento_ocr(archivo, max_paginas=12, callback=None, cancellation=None):
     path = Path(archivo)
     suffix = path.suffix.lower()

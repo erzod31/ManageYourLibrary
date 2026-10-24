@@ -15,7 +15,8 @@ from tools.write_build_manifest import sha256, source_tree_fingerprint
 from tools.first_use_self_test import REQUIRED_CHECKS as FIRST_USE_CHECKS
 
 PRIVATE_NAMES = {"config.json", "library_index.json", "library_history.csv", "historial.csv",
-                 "undo_log.jsonl", "file_transactions.jsonl", "trash_manifest.jsonl"}
+                 "undo_log.jsonl", "file_transactions.jsonl", "trash_manifest.jsonl",
+                 "saved_views.json", "profile-manifest.json", ".profile.lock"}
 PRIVATE_SUFFIXES = {".db", ".jsonl", ".csv", ".log", ".gguf", ".part",
                     ".epub", ".pdf", ".mobi", ".azw", ".azw3", ".djvu",
                     ".fb2", ".rtf", ".doc", ".docx", ".odt", ".cbr", ".cbz"}
@@ -36,7 +37,7 @@ def validate_payload(folder: Path, *, version: str, fingerprint: dict) -> dict:
                  "frozen_smoke", "runtime_self_test", "first_use_self_test"):
         if manifest["validation"].get(gate) != "passed":
             raise ValueError(f"Missing automated build gate: {gate}")
-    expected_checks = {"tk_init", "bundled_languages", "image_ocr", "pdfium_ocr"}
+    expected_checks = {"tk_init", "bundled_languages", "image_ocr", "pdfium_ocr", "reader_isolation"}
     if (runtime.get("passed") is not True or runtime.get("frozen") is not True
             or set(runtime.get("checks", {})) != expected_checks
             or any(value != "passed" for value in runtime["checks"].values())):
@@ -56,20 +57,30 @@ def validate_payload(folder: Path, *, version: str, fingerprint: dict) -> dict:
     return manifest
 
 
-def package(root: Path = ROOT) -> list[Path]:
+def package(root: Path = ROOT, *, folder=None, installer=None, release=None, development=False) -> list[Path]:
     version = (root / "VERSION").read_text(encoding="utf-8").strip()
-    folder = root / "dist" / "windows" / "ManageYourLibrary"
-    installer = root / "dist" / "installer" / f"ManageYourLibrary-{version}-Setup-x64.exe"
+    folder = Path(folder) if folder else root / "dist" / "windows" / "ManageYourLibrary"
+    installer = Path(installer) if installer else root / "dist" / "installer" / f"ManageYourLibrary-{version}-Setup-x64.exe"
     manifest = validate_payload(folder, version=version, fingerprint=source_tree_fingerprint())
+    if not development and manifest.get('validation', {}).get('redistribution_review') != 'passed':
+        raise ValueError('Redistribution review is incomplete; only an explicit --development package is allowed')
+    label = version + ('-development' if development else '')
     if not installer.is_file():
         raise ValueError("Compile the matching installer with BUILD_INSTALLER.bat first")
     if installer.stat().st_mtime < (folder / "ManageYourLibrary.exe").stat().st_mtime:
         raise ValueError("Installer is older than the application; rebuild the installer")
-    release = root / "dist" / "release"
+    release = Path(release) if release else root / "dist" / "release"
     release.mkdir(parents=True, exist_ok=True)
-    archive = release / f"ManageYourLibrary-{version}-Windows-x64-portable.zip"
+    if any(release.iterdir()):
+        raise FileExistsError('Release output must be empty; existing packages will not be replaced')
+    archive = release / f"ManageYourLibrary-{label}-Windows-x64-portable.zip"
     temporary = archive.with_suffix(".zip.tmp")
     with zipfile.ZipFile(temporary, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6) as target:
+        if development:
+            target.writestr('DEVELOPMENT-ONLY.txt',
+                'Local validation build, not approved for public redistribution.\n'
+                'Use a new --profile directory; do not open migrated profiles with older versions.\n'
+                'See THIRD_PARTY_NOTICES.md for the incomplete native dependency review.\n')
         for path in sorted(folder.rglob("*")):
             if path.is_file():
                 target.write(path, (Path(folder.name) / path.relative_to(folder)).as_posix())
@@ -78,22 +89,27 @@ def package(root: Path = ROOT) -> list[Path]:
         if bad:
             raise ValueError(f"Portable CRC failed: {bad}")
     os.replace(temporary, archive)
-    copied_installer = release / installer.name
+    copied_installer = release / (installer.name.replace('-Setup-', '-development-Setup-') if development else installer.name)
     shutil.copy2(installer, copied_installer)
-    provenance = release / f"build-manifest-{version}.json"
+    provenance = release / f"build-manifest-{label}.json"
     shutil.copy2(folder / "build-manifest.json", provenance)
     artifacts = [archive, copied_installer, provenance]
-    checksums = release / f"SHA256SUMS-{version}.txt"
+    checksums = release / f"SHA256SUMS-{label}.txt"
     checksums.write_text("".join(f"{sha256(path)}  {path.name}\n" for path in artifacts), encoding="utf-8")
     print(json.dumps({"version": version, "source_commit": manifest["git_commit"],
                       "artifacts": [str(path) for path in artifacts + [checksums]],
-                      "manual_installed_ui": "not_run"}, indent=2))
+                      "manual_installed_ui": "not_run", "development": development}, indent=2))
     return artifacts + [checksums]
 
 
 def main():
-    argparse.ArgumentParser(description=__doc__).parse_args()
-    package()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--payload', type=Path)
+    parser.add_argument('--installer', type=Path)
+    parser.add_argument('--output', type=Path)
+    parser.add_argument('--development', action='store_true', help='Local test packages, not public release approval')
+    args = parser.parse_args()
+    package(folder=args.payload, installer=args.installer, release=args.output, development=args.development)
 
 
 if __name__ == "__main__":

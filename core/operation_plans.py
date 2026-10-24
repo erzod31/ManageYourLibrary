@@ -8,7 +8,8 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from .cancellation import CancellationToken, OperationCancelled
-from .file_transactions import calcular_sha256_archivo
+from .file_identity import validated_sha256_file
+from .process_identity import process_is_alive
 
 SCHEMA_VERSION = 2
 FINAL_PLAN_STATES = {"completed", "cancelled"}
@@ -26,6 +27,7 @@ class OperationPlanStore:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self._lock = threading.RLock()
+        self._owner = uuid.uuid4().hex
         self._initialize()
 
     def _connect(self):
@@ -54,6 +56,9 @@ class OperationPlanStore:
     def _initialize(self):
         with self._lock:  # noqa: SIM117 - lock must outlive transaction cleanup
             with self._db() as con:
+                con.execute("BEGIN IMMEDIATE")
+                if con.execute('PRAGMA user_version').fetchone()[0] > SCHEMA_VERSION:
+                    raise PlanValidationError('El plan pertenece a una versión más reciente. No se modificará.')
                 con.execute(
                     """
                     CREATE TABLE IF NOT EXISTS plans (
@@ -113,11 +118,18 @@ class OperationPlanStore:
                 # A process may have stopped after claiming an item. No file is
                 # repeated automatically: it returns to pending and is
                 # revalidated against its preview signature before execution.
-                con.execute("UPDATE plan_items SET state='pending' WHERE state='running'")
-                con.execute("UPDATE plans SET state='paused', updated_at=? WHERE state='applying'", (time.time(),))
+                con.execute("""CREATE TABLE IF NOT EXISTS plan_owners
+                            (plan_id TEXT PRIMARY KEY, pid INTEGER NOT NULL, token TEXT NOT NULL)""")
+                for owner in con.execute("SELECT * FROM plan_owners").fetchall():
+                    if not process_is_alive(owner["pid"]):
+                        con.execute("DELETE FROM plan_owners WHERE plan_id=?", (owner["plan_id"],))
+                con.execute("""UPDATE plan_items SET state='pending' WHERE state='running'
+                            AND plan_id NOT IN (SELECT plan_id FROM plan_owners)""")
+                con.execute("""UPDATE plans SET state='paused', updated_at=? WHERE state='applying'
+                            AND id NOT IN (SELECT plan_id FROM plan_owners)""", (time.time(),))
                 con.execute(f"PRAGMA user_version={SCHEMA_VERSION}")
 
-    def create_plan(self, kind, items, metadata=None, *, capture_hashes=True):
+    def create_plan(self, kind, items, metadata=None, *, capture_hashes=True, cancellation=None):
         now = time.time()
         plan_id = uuid.uuid4().hex
         prepared = []
@@ -127,8 +139,10 @@ class OperationPlanStore:
             expected_size = item.get("expected_size")
             expected_hash = str(item.get("expected_hash", "") or "")
             if capture_hashes and source.exists() and source.is_file():
-                expected_size = source.stat().st_size
-                expected_hash = calcular_sha256_archivo(source)
+                try:
+                    expected_size, expected_hash = validated_sha256_file(source, cancellation=cancellation)
+                except OSError as exc:
+                    raise PlanValidationError(f"No se pudo fijar una firma estable: {source}") from exc
             prepared.append((
                 plan_id, ordinal, str(item.get("action", "")), str(source),
                 str(item.get("destination", "") or ""), expected_size,
@@ -177,6 +191,13 @@ class OperationPlanStore:
             ).fetchall()
         return [self.get_plan(row["id"]) for row in rows]
 
+    def update_metadata(self, plan_id, metadata):
+        with self._lock, self._db() as con:
+            con.execute('BEGIN IMMEDIATE')
+            self._check_owner(con, str(plan_id))
+            con.execute('UPDATE plans SET metadata_json=?, updated_at=? WHERE id=?',
+                        (json.dumps(metadata, ensure_ascii=False), time.time(), str(plan_id)))
+
     def reconcile_from_journal(self, records):
         """Complete stranded plan rows only when a committed move is verifiable.
 
@@ -219,6 +240,9 @@ class OperationPlanStore:
                 touched_plans = set()
                 for row in rows:
                     item = dict(row)
+                    owner = con.execute("SELECT token FROM plan_owners WHERE plan_id=?", (item['plan_id'],)).fetchone()
+                    if owner and owner['token'] != self._owner:
+                        continue
                     source = Path(item["source"])
                     if source.exists():
                         continue
@@ -228,8 +252,13 @@ class OperationPlanStore:
                         journal_hash = str(record.get("hash", "") or "")
                         if expected_hash and journal_hash and expected_hash != journal_hash:
                             continue
-                        if expected_hash and calcular_sha256_archivo(destination) != expected_hash:
-                            continue
+                        if expected_hash:
+                            try:
+                                _size, digest = validated_sha256_file(destination)
+                            except OSError:
+                                continue
+                            if digest != expected_hash:
+                                continue
                         con.execute(
                             """
                             UPDATE plan_items
@@ -260,12 +289,23 @@ class OperationPlanStore:
         return reconciled
 
     def _set_plan_state(self, con, plan_id, state):
+        self._check_owner(con, plan_id, claim=state == "applying")
         con.execute("UPDATE plans SET state=?, updated_at=? WHERE id=?", (state, time.time(), plan_id))
+        if state != "applying":
+            con.execute("DELETE FROM plan_owners WHERE plan_id=? AND token=?", (plan_id, self._owner))
+
+    def _check_owner(self, con, plan_id, *, claim=False):
+        owner = con.execute("SELECT * FROM plan_owners WHERE plan_id=?", (plan_id,)).fetchone()
+        if owner and owner["token"] != self._owner:
+            raise PlanValidationError("El plan pertenece a otra sesión activa. No se modificará.")
+        if claim and not owner:
+            con.execute("INSERT INTO plan_owners VALUES (?, ?, ?)", (plan_id, os.getpid(), self._owner))
 
     def set_plan_state(self, plan_id, state):
         if state not in {"preview", "applying", "paused", "failed", "completed", "cancelled"}:
             raise PlanValidationError(f"Estado de plan no válido: {state}")
         with self._lock, self._db() as con:
+            con.execute("BEGIN IMMEDIATE")
             self._set_plan_state(con, str(plan_id), state)
         return self.get_plan(plan_id)
 
@@ -275,6 +315,8 @@ class OperationPlanStore:
         attempts_increment = 1 if state == "running" else 0
         with self._lock:  # noqa: SIM117 - lock must outlive transaction cleanup
             with self._db() as con:
+                con.execute("BEGIN IMMEDIATE")
+                self._check_owner(con, str(plan_id), claim=state == "running")
                 cursor = con.execute(
                     """
                     UPDATE plan_items
@@ -292,6 +334,8 @@ class OperationPlanStore:
     def finalize_tracked_plan(self, plan_id, *, cancelled=False):
         with self._lock:  # noqa: SIM117 - lock must outlive transaction cleanup
             with self._db() as con:
+                con.execute("BEGIN IMMEDIATE")
+                self._check_owner(con, str(plan_id))
                 counts = {
                     row["state"]: row["count"]
                     for row in con.execute(
@@ -310,16 +354,21 @@ class OperationPlanStore:
                 self._set_plan_state(con, str(plan_id), state)
         return self.get_plan(plan_id)
 
-    def _validate_item_source(self, item):
+    def _validate_item_source(self, item, cancellation=None):
         source = Path(item["source"])
         if not source.exists() or not source.is_file():
             raise PlanValidationError(f"Ya no existe el origen del plan: {source}")
         if item["expected_size"] is not None and source.stat().st_size != item["expected_size"]:
             raise PlanValidationError(f"Cambió el tamaño desde la previsualización: {source}")
-        if item["expected_hash"] and calcular_sha256_archivo(source) != item["expected_hash"]:
-            raise PlanValidationError(f"Cambió el contenido desde la previsualización: {source}")
+        if item["expected_hash"]:
+            try:
+                size, digest = validated_sha256_file(source, cancellation=cancellation)
+            except OSError as exc:
+                raise PlanValidationError(f"Cambió el archivo durante su validación: {source}") from exc
+            if digest != item["expected_hash"] or (item["expected_size"] is not None and size != item["expected_size"]):
+                raise PlanValidationError(f"Cambió el contenido desde la previsualización: {source}")
 
-    def validate_item(self, plan_id, ordinal):
+    def validate_item(self, plan_id, ordinal, cancellation=None):
         with self._db() as con:
             row = con.execute(
                 "SELECT * FROM plan_items WHERE plan_id=? AND ordinal=?",
@@ -327,7 +376,7 @@ class OperationPlanStore:
             ).fetchone()
         if not row:
             raise PlanValidationError(f"No existe el elemento {ordinal} del plan {plan_id}")
-        self._validate_item_source(dict(row))
+        self._validate_item_source(dict(row), cancellation=cancellation)
         return True
 
     def apply(self, plan_id, executor, cancellation=None, *, retry_failed=True, stop_on_error=True):
@@ -335,11 +384,13 @@ class OperationPlanStore:
         plan_id = str(plan_id)
         with self._lock:
             with self._db() as con:
+                con.execute("BEGIN IMMEDIATE")
                 plan = con.execute("SELECT state FROM plans WHERE id=?", (plan_id,)).fetchone()
                 if not plan:
                     raise PlanValidationError(f"No existe el plan {plan_id}")
                 if plan["state"] in FINAL_PLAN_STATES:
                     return self.get_plan(plan_id)
+                self._check_owner(con, plan_id, claim=True)
                 if retry_failed:
                     con.execute(
                         "UPDATE plan_items SET state='pending', error='' WHERE plan_id=? AND state='failed'",
@@ -378,7 +429,7 @@ class OperationPlanStore:
 
                 try:
                     cancellation.raise_if_cancelled()
-                    self._validate_item_source(item)
+                    self._validate_item_source(item, cancellation=cancellation)
                     result = executor(dict(item), cancellation) or {}
                     with self._db() as con:
                         con.execute(
@@ -402,7 +453,8 @@ class OperationPlanStore:
                             "UPDATE plan_items SET state='failed', error=?, updated_at=? WHERE id=?",
                             (str(exc), time.time(), item["id"]),
                         )
-                        self._set_plan_state(con, plan_id, "failed")
+                        if stop_on_error:
+                            self._set_plan_state(con, plan_id, "failed")
                     if stop_on_error:
                         break
         return self.get_plan(plan_id)

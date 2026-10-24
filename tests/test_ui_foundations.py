@@ -90,10 +90,18 @@ class VisualFoundationTests(unittest.TestCase):
         ]
 
         workspace.library_scope = "authors"
+        from core.library_view_model import LibraryViewIndex
+        workspace._view_index = LibraryViewIndex([
+            {'ruta': 'a.epub', 'titulo': 'A', 'autor': 'Autora', 'serie': 'Saga', 'tags': ['favorito']},
+            {'ruta': 'b.epub', 'titulo': 'B'}])
+        items = workspace._view_index.filter()
+        workspace.entity_key = 'autora'
         self.assertEqual([item["titulo"] for item in workspace._apply_library_scope(items)], ["A"])
         workspace.library_scope = "series"
+        workspace.entity_key = 'saga'
         self.assertEqual([item["titulo"] for item in workspace._apply_library_scope(items)], ["A"])
         workspace.library_scope = "tags"
+        workspace.entity_key = 'favorito'
         self.assertEqual([item["titulo"] for item in workspace._apply_library_scope(items)], ["A"])
         workspace.library_scope = "favorites"
         self.assertEqual([item["titulo"] for item in workspace._apply_library_scope(items)], ["A"])

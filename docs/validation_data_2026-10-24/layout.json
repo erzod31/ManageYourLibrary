@@ -1,0 +1,385 @@
+{
+  "method": "Tk scaling + geometry, not Windows display settings or a screen reader",
+  "results": [
+    {
+      "requested": [
+        1024,
+        768
+      ],
+      "actual": [
+        1024,
+        768
+      ],
+      "tk_scale_percent": 100,
+      "checks": {
+        "search_entry": true,
+        "detail_path_entry": true,
+        "copy_path_button": true,
+        "show_folder_button": true,
+        "open_button": true,
+        "metadata_button": true,
+        "lookup_metadata_button": true,
+        "detail_author": true,
+        "read_status_combo": true,
+        "page_next": true,
+        "filters_button": true,
+        "details_button": true,
+        "detail_favorite": true,
+        "details_heading": true,
+        "detail_series": true,
+        "detail_tags": true
+      },
+      "failed_geometry": {}
+    },
+    {
+      "requested": [
+        1366,
+        768
+      ],
+      "actual": [
+        1366,
+        768
+      ],
+      "tk_scale_percent": 100,
+      "checks": {
+        "search_entry": true,
+        "detail_path_entry": true,
+        "copy_path_button": true,
+        "show_folder_button": true,
+        "open_button": true,
+        "metadata_button": true,
+        "lookup_metadata_button": true,
+        "detail_author": true,
+        "read_status_combo": true,
+        "page_next": true,
+        "filters_button": true,
+        "details_button": true,
+        "detail_favorite": true,
+        "details_heading": true,
+        "detail_series": true,
+        "detail_tags": true
+      },
+      "failed_geometry": {}
+    },
+    {
+      "requested": [
+        1920,
+        1080
+      ],
+      "actual": [
+        1920,
+        1080
+      ],
+      "tk_scale_percent": 100,
+      "checks": {
+        "search_entry": true,
+        "detail_path_entry": true,
+        "copy_path_button": true,
+        "show_folder_button": true,
+        "open_button": true,
+        "metadata_button": true,
+        "lookup_metadata_button": true,
+        "detail_author": true,
+        "read_status_combo": true,
+        "page_next": true,
+        "filters_button": true,
+        "details_button": true,
+        "detail_favorite": true,
+        "details_heading": true,
+        "detail_series": true,
+        "detail_tags": true,
+        "edition": true,
+        "file_data": true,
+        "provenance": true
+      },
+      "failed_geometry": {}
+    },
+    {
+      "requested": [
+        1024,
+        768
+      ],
+      "actual": [
+        1024,
+        768
+      ],
+      "tk_scale_percent": 125,
+      "checks": {
+        "search_entry": true,
+        "detail_path_entry": true,
+        "copy_path_button": true,
+        "show_folder_button": true,
+        "open_button": true,
+        "metadata_button": true,
+        "lookup_metadata_button": true,
+        "detail_author": true,
+        "read_status_combo": true,
+        "page_next": true,
+        "filters_button": true,
+        "details_button": true,
+        "detail_favorite": true,
+        "details_heading": true,
+        "detail_series": true,
+        "detail_tags": true
+      },
+      "failed_geometry": {}
+    },
+    {
+      "requested": [
+        1366,
+        768
+      ],
+      "actual": [
+        1366,
+        768
+      ],
+      "tk_scale_percent": 125,
+      "checks": {
+        "search_entry": true,
+        "detail_path_entry": true,
+        "copy_path_button": true,
+        "show_folder_button": true,
+        "open_button": true,
+        "metadata_button": true,
+        "lookup_metadata_button": true,
+        "detail_author": true,
+        "read_status_combo": true,
+        "page_next": true,
+        "filters_button": true,
+        "details_button": true,
+        "detail_favorite": true,
+        "details_heading": true,
+        "detail_series": true,
+        "detail_tags": true
+      },
+      "failed_geometry": {}
+    },
+    {
+      "requested": [
+        1920,
+        1080
+      ],
+      "actual": [
+        1920,
+        1080
+      ],
+      "tk_scale_percent": 125,
+      "checks": {
+        "search_entry": true,
+        "detail_path_entry": true,
+        "copy_path_button": true,
+        "show_folder_button": true,
+        "open_button": true,
+        "metadata_button": true,
+        "lookup_metadata_button": true,
+        "detail_author": true,
+        "read_status_combo": true,
+        "page_next": true,
+        "filters_button": true,
+        "details_button": true,
+        "detail_favorite": true,
+        "details_heading": true,
+        "detail_series": true,
+        "detail_tags": true,
+        "edition": true,
+        "file_data": true,
+        "provenance": true
+      },
+      "failed_geometry": {}
+    },
+    {
+      "requested": [
+        1024,
+        768
+      ],
+      "actual": [
+        1024,
+        768
+      ],
+      "tk_scale_percent": 150,
+      "checks": {
+        "search_entry": true,
+        "detail_path_entry": true,
+        "copy_path_button": true,
+        "show_folder_button": true,
+        "open_button": true,
+        "metadata_button": true,
+        "lookup_metadata_button": true,
+        "detail_author": true,
+        "read_status_combo": true,
+        "page_next": true,
+        "filters_button": true,
+        "details_button": true,
+        "detail_favorite": true,
+        "details_heading": true,
+        "compact_series": true,
+        "compact_tags": true
+      },
+      "failed_geometry": {}
+    },
+    {
+      "requested": [
+        1366,
+        768
+      ],
+      "actual": [
+        1366,
+        768
+      ],
+      "tk_scale_percent": 150,
+      "checks": {
+        "search_entry": true,
+        "detail_path_entry": true,
+        "copy_path_button": true,
+        "show_folder_button": true,
+        "open_button": true,
+        "metadata_button": true,
+        "lookup_metadata_button": true,
+        "detail_author": true,
+        "read_status_combo": true,
+        "page_next": true,
+        "filters_button": true,
+        "details_button": true,
+        "detail_favorite": true,
+        "details_heading": true,
+        "compact_series": true,
+        "compact_tags": true
+      },
+      "failed_geometry": {}
+    },
+    {
+      "requested": [
+        1920,
+        1080
+      ],
+      "actual": [
+        1920,
+        1080
+      ],
+      "tk_scale_percent": 150,
+      "checks": {
+        "search_entry": true,
+        "detail_path_entry": true,
+        "copy_path_button": true,
+        "show_folder_button": true,
+        "open_button": true,
+        "metadata_button": true,
+        "lookup_metadata_button": true,
+        "detail_author": true,
+        "read_status_combo": true,
+        "page_next": true,
+        "filters_button": true,
+        "details_button": true,
+        "detail_favorite": true,
+        "details_heading": true,
+        "detail_series": true,
+        "detail_tags": true,
+        "edition": true,
+        "file_data": true,
+        "provenance": true
+      },
+      "failed_geometry": {}
+    },
+    {
+      "requested": [
+        1024,
+        768
+      ],
+      "actual": [
+        1024,
+        768
+      ],
+      "tk_scale_percent": 200,
+      "checks": {
+        "search_entry": true,
+        "detail_path_entry": true,
+        "copy_path_button": true,
+        "show_folder_button": true,
+        "open_button": true,
+        "metadata_button": true,
+        "lookup_metadata_button": true,
+        "detail_author": true,
+        "read_status_combo": true,
+        "page_next": true,
+        "filters_button": true,
+        "details_button": true,
+        "detail_favorite": true,
+        "details_heading": true,
+        "compact_series": true,
+        "compact_tags": true
+      },
+      "failed_geometry": {}
+    },
+    {
+      "requested": [
+        1366,
+        768
+      ],
+      "actual": [
+        1366,
+        768
+      ],
+      "tk_scale_percent": 200,
+      "checks": {
+        "search_entry": true,
+        "detail_path_entry": true,
+        "copy_path_button": true,
+        "show_folder_button": true,
+        "open_button": true,
+        "metadata_button": true,
+        "lookup_metadata_button": true,
+        "detail_author": true,
+        "read_status_combo": true,
+        "page_next": true,
+        "filters_button": true,
+        "details_button": true,
+        "detail_favorite": true,
+        "details_heading": true,
+        "compact_series": true,
+        "compact_tags": true
+      },
+      "failed_geometry": {}
+    },
+    {
+      "requested": [
+        1920,
+        1080
+      ],
+      "actual": [
+        1920,
+        1080
+      ],
+      "tk_scale_percent": 200,
+      "checks": {
+        "search_entry": true,
+        "detail_path_entry": true,
+        "copy_path_button": true,
+        "show_folder_button": true,
+        "open_button": true,
+        "metadata_button": true,
+        "lookup_metadata_button": true,
+        "detail_author": true,
+        "read_status_combo": true,
+        "page_next": true,
+        "filters_button": true,
+        "details_button": true,
+        "detail_favorite": true,
+        "details_heading": true,
+        "detail_series": true,
+        "detail_tags": true,
+        "edition": true,
+        "file_data": true,
+        "provenance": true
+      },
+      "failed_geometry": {}
+    }
+  ],
+  "interactions": {
+    "filter_menu_survives_posting": true,
+    "reading_filter": true,
+    "saved_filter_round_trip": true,
+    "preview_all_pages_accessible": true,
+    "preview_originals_untouched": true
+  },
+  "errors": []
+}

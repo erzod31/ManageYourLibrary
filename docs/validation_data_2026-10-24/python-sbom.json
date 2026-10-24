@@ -1,0 +1,122 @@
+{
+  "components": [
+    {
+      "bom-ref": "BomRef.06645742015876865.6246848534032912",
+      "name": "altgraph",
+      "type": "library",
+      "version": "0.17.5"
+    },
+    {
+      "bom-ref": "BomRef.7578489680875682.8614619029511349",
+      "name": "ftfy",
+      "type": "library",
+      "version": "6.3.1"
+    },
+    {
+      "bom-ref": "BomRef.9917154946870944.4701622773084566",
+      "name": "packaging",
+      "type": "library",
+      "version": "26.2"
+    },
+    {
+      "bom-ref": "BomRef.8585316793265199.2777935650371349",
+      "name": "pefile",
+      "type": "library",
+      "version": "2024.8.26"
+    },
+    {
+      "bom-ref": "BomRef.46847323183705036.3763594885115764",
+      "name": "pillow",
+      "type": "library",
+      "version": "13.0.0"
+    },
+    {
+      "bom-ref": "BomRef.7469758806170704.260017207670442",
+      "name": "pyinstaller",
+      "type": "library",
+      "version": "6.21.0"
+    },
+    {
+      "bom-ref": "BomRef.07417952058301247.201671579477831",
+      "name": "pyinstaller-hooks-contrib",
+      "type": "library",
+      "version": "2026.6"
+    },
+    {
+      "bom-ref": "BomRef.6178698177383184.02488839902830564",
+      "name": "pypdf",
+      "type": "library",
+      "version": "6.21.2"
+    },
+    {
+      "bom-ref": "BomRef.3692540612436884.9709064808686819",
+      "name": "pypdfium2",
+      "type": "library",
+      "version": "5.14.0"
+    },
+    {
+      "bom-ref": "BomRef.18435129288140373.8406797270993466",
+      "name": "pywin32-ctypes",
+      "type": "library",
+      "version": "0.2.3"
+    },
+    {
+      "bom-ref": "BomRef.9189589118783056.6185189089881816",
+      "name": "setuptools",
+      "type": "library",
+      "version": "84.2.1"
+    },
+    {
+      "bom-ref": "BomRef.7336198841221587.06296266188641453",
+      "name": "wcwidth",
+      "type": "library",
+      "version": "0.7.0"
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "BomRef.06645742015876865.6246848534032912"
+    },
+    {
+      "ref": "BomRef.07417952058301247.201671579477831"
+    },
+    {
+      "ref": "BomRef.18435129288140373.8406797270993466"
+    },
+    {
+      "ref": "BomRef.3692540612436884.9709064808686819"
+    },
+    {
+      "ref": "BomRef.46847323183705036.3763594885115764"
+    },
+    {
+      "ref": "BomRef.6178698177383184.02488839902830564"
+    },
+    {
+      "ref": "BomRef.7336198841221587.06296266188641453"
+    },
+    {
+      "ref": "BomRef.7469758806170704.260017207670442"
+    },
+    {
+      "ref": "BomRef.7578489680875682.8614619029511349"
+    },
+    {
+      "ref": "BomRef.8585316793265199.2777935650371349"
+    },
+    {
+      "ref": "BomRef.9189589118783056.6185189089881816"
+    },
+    {
+      "ref": "BomRef.9917154946870944.4701622773084566"
+    }
+  ],
+  "metadata": {
+    "timestamp": "2026-10-24T20:10:14.080777+00:00"
+  },
+  "serialNumber": "urn:uuid:c73e4e52-9c74-4562-a909-317a6bf85a1d",
+  "version": 1,
+  "$schema": "http://cyclonedx.org/schema/bom-1.4.schema.json",
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.4"
+}

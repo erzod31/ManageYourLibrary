@@ -7,7 +7,11 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from contextlib import contextmanager
+from contextvars import ContextVar
+from email.utils import parsedate_to_datetime
 from datetime import datetime
+from core.cancellation import OperationCancelled
 
 
 WEB_CACHE = {}
@@ -20,6 +24,33 @@ USER_AGENT = "ManageYourLibrary/0.5 (desktop metadata lookup; +https://github.co
 MAX_RESPONSE_BYTES = 5 * 1024 * 1024
 CIRCUIT_FAILURE_LIMIT = 3
 CIRCUIT_COOLDOWN_SECONDS = 60
+PROVIDER_RATE_LOCK = threading.Lock()
+PROVIDER_NEXT_REQUEST = {}
+PROVIDER_INTERVALS = {'openlibrary.org': 1.0}
+REQUEST_CANCELLATION = ContextVar('metadata_cancellation', default=None)
+
+
+@contextmanager
+def request_context(cancellation):
+    token = REQUEST_CANCELLATION.set(cancellation)
+    try:
+        yield
+    finally:
+        REQUEST_CANCELLATION.reset(token)
+
+
+def _wait_for_provider(provider, pause, cancellation=None, deadline=None):
+    interval = max(float(pause or 0), PROVIDER_INTERVALS.get(provider, 0))
+    with PROVIDER_RATE_LOCK:
+        now = time.monotonic()
+        slot = max(now, PROVIDER_NEXT_REQUEST.get(provider, now))
+        if deadline is not None and slot >= deadline:
+            raise TimeoutError('provider deadline')
+        PROVIDER_NEXT_REQUEST[provider] = slot + interval
+    while time.monotonic() < slot:
+        if cancellation:
+            cancellation.raise_if_cancelled()
+        time.sleep(min(.05, max(0, slot - time.monotonic())))
 OPENLIBRARY_SEARCH_FIELDS = (
     "title,author_name,author_key,first_publish_year,isbn,key,language,edition_count,cover_i,"
     "editions,editions.key,editions.title,editions.publish_date,editions.publisher,"
@@ -73,27 +104,39 @@ def _record_health(provider, status, error=""):
         current = PROVIDER_HEALTH.setdefault(provider, {"failures": 0})
         if status == "ok":
             current["failures"] = 0
+            current.pop("opened_at", None)
+            current.pop("half_open", None)
+        elif status == "no_result":
+            current.update(failures=0, half_open=False)
+            current.pop("opened_at", None)
         elif status not in {"no_result", "offline", "circuit_open"}:
             current["failures"] = int(current.get("failures", 0)) + 1
+            if current["failures"] >= CIRCUIT_FAILURE_LIMIT:
+                current["opened_at"] = time.monotonic()
+                current['half_open'] = False
         current.update({"status": status, "error": str(error or "")[:500], "updated_at": time.time()})
 
 
 def _circuit_is_open(provider):
     with WEB_CACHE_LOCK:
         state = PROVIDER_HEALTH.get(provider, {})
-        return (
-            int(state.get("failures", 0)) >= CIRCUIT_FAILURE_LIMIT
-            and time.time() - float(state.get("updated_at", 0)) < CIRCUIT_COOLDOWN_SECONDS
-        )
+        if int(state.get('failures', 0)) < CIRCUIT_FAILURE_LIMIT:
+            return False
+        if time.monotonic() - float(state.get('opened_at', -CIRCUIT_COOLDOWN_SECONDS)) < CIRCUIT_COOLDOWN_SECONDS:
+            return True
+        if state.get('half_open'):
+            return True
+        state['half_open'] = True
+        return False
 
 
-def http_get(url, accept="application/json", *, timeout=HTTP_TIMEOUT_SECONDS, pause=PAUSA_WEB, max_cache_entries=MAX_WEB_CACHE_ENTRIES, retries=2):
+def http_get(url, accept="application/json", *, timeout=HTTP_TIMEOUT_SECONDS, pause=PAUSA_WEB, max_cache_entries=MAX_WEB_CACHE_ENTRIES, retries=2, cancellation=None, total_timeout=30):
+    cancellation = cancellation or REQUEST_CANCELLATION.get()
+    if cancellation:
+        cancellation.raise_if_cancelled()
     provider = urllib.parse.urlparse(url).netloc or "unknown"
     if os.environ.get("MANAGE_YOUR_LIBRARY_OFFLINE", "").strip().lower() in {"1", "true", "yes", "on"}:
         _record_health(provider, "offline", "Modo sin conexión activado")
-        return None
-    if _circuit_is_open(provider):
-        _record_health(provider, "circuit_open", "Proveedor pausado tras fallos consecutivos")
         return None
     with WEB_CACHE_LOCK:
         if url in WEB_CACHE:
@@ -111,14 +154,23 @@ def http_get(url, accept="application/json", *, timeout=HTTP_TIMEOUT_SECONDS, pa
     except Exception:
         pass
 
+    if _circuit_is_open(provider):
+        _record_health(provider, "circuit_open", "Proveedor pausado tras fallos consecutivos")
+        return None
+
     headers = {"User-Agent": USER_AGENT, "Accept": accept}
     req = urllib.request.Request(url, headers=headers)
     last_error = ""
+    deadline = time.monotonic() + max(.1, float(total_timeout))
     for attempt in range(max(0, int(retries)) + 1):
-        if pause:
-            time.sleep(float(pause) * (attempt + 1))
         try:
-            with urllib.request.urlopen(req, timeout=timeout) as resp:
+            if cancellation:
+                cancellation.raise_if_cancelled()
+            _wait_for_provider(provider, float(pause) * (attempt + 1), cancellation, deadline)
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise TimeoutError('provider deadline')
+            with urllib.request.urlopen(req, timeout=min(timeout, remaining)) as resp:
                 if resp.status == 404:
                     _record_health(provider, "no_result")
                     return None
@@ -149,6 +201,20 @@ def http_get(url, accept="application/json", *, timeout=HTTP_TIMEOUT_SECONDS, pa
             last_error = f"HTTP {exc.code}"
             if exc.code not in {408, 429, 500, 502, 503, 504}:
                 break
+            if exc.code in {429, 503}:
+                retry_after = (exc.headers or {}).get('Retry-After', '')
+                try:
+                    delay = max(0, float(retry_after))
+                except (TypeError, ValueError):
+                    try:
+                        delay = max(0, parsedate_to_datetime(retry_after).timestamp() - time.time())
+                    except (TypeError, ValueError, OverflowError):
+                        delay = min(8, 2 ** attempt)
+                with PROVIDER_RATE_LOCK:
+                    PROVIDER_NEXT_REQUEST[provider] = max(PROVIDER_NEXT_REQUEST.get(provider, 0), time.monotonic() + delay)
+        except OperationCancelled:
+            _record_health(provider, 'error', 'cancelled')
+            raise
         except urllib.error.URLError as exc:
             last_error = f"network: {exc.reason}"
         except TimeoutError:

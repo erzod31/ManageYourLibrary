@@ -1,17 +1,23 @@
 from pathlib import Path
+import sys
 
-from PyInstaller.utils.hooks import collect_all
+from PyInstaller.utils.hooks import collect_all, copy_metadata
 
 
 ROOT = Path.cwd()
 datas = [
     (str(ROOT / "app_icon.ico"), "."),
     (str(ROOT / "VERSION"), "."),
+    (str(ROOT / "LICENSE"), "."),
+    (str(ROOT / "THIRD_PARTY_NOTICES.md"), "."),
+    (str(Path(sys.base_prefix) / "LICENSE.txt"), "licenses/python"),
     (str(ROOT / "data"), "data"),
     (str(ROOT / "tesseract"), "tesseract"),
 ]
 binaries = []
 hiddenimports = ["pypdf", "pypdfium2", "PIL", "ftfy"]
+for package in ("Pillow", "pypdf", "wcwidth", "pyinstaller"):
+    datas += copy_metadata(package)
 for package in ("pypdfium2", "ftfy"):
     package_datas, package_binaries, package_hidden = collect_all(package)
     datas += package_datas

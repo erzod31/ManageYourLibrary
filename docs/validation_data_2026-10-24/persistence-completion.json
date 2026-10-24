@@ -1,0 +1,37 @@
+{
+  "python": "3.12.10",
+  "results": [
+    {
+      "size": 1000,
+      "samples": 100,
+      "initial_save_ms": 96.49,
+      "edit_median_ms": 11.43,
+      "edit_p95_ms": 12.44,
+      "files": 1000
+    },
+    {
+      "size": 10000,
+      "samples": 100,
+      "initial_save_ms": 1346.05,
+      "edit_median_ms": 12.61,
+      "edit_p95_ms": 14.34,
+      "files": 10000
+    },
+    {
+      "size": 50000,
+      "samples": 100,
+      "initial_save_ms": 9126.15,
+      "edit_median_ms": 15.1,
+      "edit_p95_ms": 19.07,
+      "files": 50000
+    },
+    {
+      "size": 100000,
+      "samples": 100,
+      "initial_save_ms": 21062.8,
+      "edit_median_ms": 18.58,
+      "edit_p95_ms": 26.11,
+      "files": 100000
+    }
+  ]
+}

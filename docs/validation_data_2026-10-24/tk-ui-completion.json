@@ -1,0 +1,74 @@
+{
+  "size": 50000,
+  "callbacks": {
+    "cover_refresh": {
+      "median_ms": 9.25,
+      "p95_ms": 11.13,
+      "max_ms": 11.76
+    },
+    "next_page": {
+      "median_ms": 15.85,
+      "p95_ms": 18.26,
+      "max_ms": 19.75
+    },
+    "previous_page": {
+      "median_ms": 15.43,
+      "p95_ms": 17.05,
+      "max_ms": 164.82
+    },
+    "relayout": {
+      "median_ms": 0.19,
+      "p95_ms": 0.21,
+      "max_ms": 0.23
+    },
+    "sash": {
+      "median_ms": 0.02,
+      "p95_ms": 0.03,
+      "max_ms": 0.07
+    },
+    "table_render": {
+      "median_ms": 5.38,
+      "p95_ms": 5.93,
+      "max_ms": 6.8
+    },
+    "covers_view": {
+      "median_ms": 11.66,
+      "p95_ms": 13.1,
+      "max_ms": 14.26
+    },
+    "theme": {
+      "median_ms": 21.03,
+      "p95_ms": 22.5,
+      "max_ms": 28.8
+    },
+    "selection": {
+      "median_ms": 3.75,
+      "p95_ms": 4.13,
+      "max_ms": 4.39
+    },
+    "favorite_dispatch": {
+      "median_ms": 1.05,
+      "p95_ms": 1.25,
+      "max_ms": 1.3
+    },
+    "favorite_end_to_end": {
+      "median_ms": 80.84,
+      "p95_ms": 86.95,
+      "max_ms": 212.81
+    }
+  },
+  "errors": [],
+  "heartbeat_max_ms": 184.85,
+  "startup_heartbeat_max_ms": 258.22,
+  "registered_frames": 25,
+  "repetitions": 100,
+  "construct_ms": 3431.62,
+  "memory": {
+    "rss_mib": 322.14,
+    "peak_rss_mib": 325.0
+  },
+  "process_cpu_seconds": 71.02,
+  "interaction_seconds": 125.9,
+  "cover_pool_size": 30,
+  "table_rows_loaded": 30
+}

@@ -8,6 +8,15 @@ macOS and Linux packages include local OCR and do not require Python.
 
 Published Windows release: [`0.5.3`](docs/release_notes_windows_0.5.3.md).
 
+Development branch: catalog transactions, non-moving import previews, profile
+backup/restore, reading states and saved filters are being validated for the next
+release. They are **not included in the published 0.5.3 downloads** below.
+See the [implementation and validation record](docs/IMPLEMENTACION_Y_VALIDACION_2026-10-24.md)
+for measured results, migration precautions, and work that remains open.
+
+Project source is licensed under [MIT](LICENSE), copyright 2026 erzod31.
+Bundled third-party components retain their [own licenses](THIRD_PARTY_NOTICES.md).
+
 [Download the latest release](https://github.com/erzod31/ManageYourLibrary/releases/latest)
 and [primer uso en español](docs/FIRST_USE_ES.md).
 
@@ -229,11 +238,28 @@ operation merely to reproduce an issue.
 
 ## Source and builds
 
+The local audit branch also contains development changes **not included in the
+published 0.5.3 packages**: SQLite-first persistence, verified profile backups,
+resumable catalog-only/copy import, field-by-field preview, author/series/tag
+directories, reading states, saved filters and a high-contrast theme. Local
+document readers run in bounded disposable processes; a timeout or crash requires
+review and never authorizes moving the original. See the
+[implementation and validation report](docs/IMPLEMENTACION_Y_VALIDACION_2026-10-24.md)
+for completed checks and remaining platform/accessibility limitations.
+The new Windows development packages are **not approved for public redistribution**:
+the legacy OCR DLL bundle still needs its exact provenance, notices and security
+review completed. The packaging tool requires `--development` until that release
+gate is closed. This is separate from the MIT license of the project's own code.
+
+For a separate test profile, run `python -B main.py --profile PATH_TO_NEW_PROFILE`.
+Do not open a migrated profile with an older application; its legacy JSON is a
+backup, not the updated SQLite catalog. Test with synthetic books or copies first.
+
 Use Python 3.12 for the Windows build:
 
 ```text
 python -m pip install --require-hashes -r requirements.lock
-python -m unittest discover -s tests
+python -B tools/run_tests.py
 python main.py
 ```
 

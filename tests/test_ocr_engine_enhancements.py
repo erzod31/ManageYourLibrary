@@ -201,7 +201,9 @@ class OcrEngineEnhancementTests(unittest.TestCase):
 
             with patch.object(library_core, "imagenes_portada_cbz", return_value=[b"cover"]), \
                     patch("ocr_engine.extraer_texto_imagen_bytes_ocr", return_value=ocr_result):
-                datos = library_core.extraer_datos_locales(cbz_path, permitir_ocr=True)
+                # Unit-test the parser body with mocked OCR. Integration tests
+                # exercise the separate process and its real resource limits.
+                datos = library_core.extraer_datos_locales.__wrapped__(cbz_path, permitir_ocr=True)
 
         self.assertEqual(datos["titulo_texto"], "Sand Land")
         self.assertEqual(datos["autor_texto"], "Akira Toriyama")

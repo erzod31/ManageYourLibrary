@@ -241,6 +241,12 @@ quedaron aislados; ni el respaldo ni los datos personales se incluyen aquí.
 
 ## Límites pendientes que requieren otra validación o decisión
 
+El listado siguiente conserva el estado al cierre del 24 de octubre. La
+[continuación del 25 de octubre](VALIDACION_NATIVA_Y_ACCESIBILIDAD_2026-10-25.md)
+registra la autorización de la rama de pruebas, validaciones nativas ejecutadas
+y el alcance pendiente de accesibilidad. La
+[revisión por DLL](LICENCIAS_OCR_2026-10-25.md) actualiza la procedencia y licencias.
+
 1. Ejecutar los nuevos builds y pruebas de proceso/OCR en hosts reales macOS/Linux.
    Los workflows están preparados; no se han subido ni ejecutado desde esta rama.
 2. Accesibilidad completa: alto contraste, geometría y navegación comprobables no

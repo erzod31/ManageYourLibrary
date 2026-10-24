@@ -3,6 +3,10 @@ name: Native macOS and Linux packages
 on:
   push:
     branches: [codex/audit-optimizations]
+    paths-ignore:
+      - 'docs/**'
+      - 'README.md'
+      - 'THIRD_PARTY_NOTICES.md'
   workflow_dispatch:
     inputs:
       native_revision:
@@ -16,6 +20,10 @@ on:
 
 permissions:
   contents: read
+
+concurrency:
+  group: native-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: ${{ github.event_name == 'push' }}
 
 jobs:
   native-build:

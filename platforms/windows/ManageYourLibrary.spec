@@ -20,6 +20,13 @@ if os.environ.get('TK_LIBRARY'):
     # Tk 9.1's Windows library is extracted from its embedded ZIP by the
     # reproducible GUI builder; collect that exact directory, not an old guess.
     datas += [(os.environ['TK_LIBRARY'], '_tk_data')]
+    if os.environ.get('TCL_LIBRARY'):
+        datas += [(os.environ['TCL_LIBRARY'], '_tcl_data')]
+    gui_prefix = Path(os.environ['TK_LIBRARY']).parent.parent
+    # CPython's custom bridge does not live alongside these DLLs. The generic
+    # hook cannot infer this private runtime from the system Python directory.
+    gui_bin = gui_prefix / 'bin'
+    binaries += [(str(path), '.') for path in sorted(gui_bin.glob('*.dll'))]
     gui_licenses = Path(os.environ['TK_LIBRARY']).parent.parent / 'licenses'
     if gui_licenses.is_dir():
         datas += [(str(gui_licenses), 'licenses/tcltk')]

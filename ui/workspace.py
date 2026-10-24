@@ -508,6 +508,7 @@ class Workspace:
         self.root.after_idle(self._restore_details_width)
         self._name_accessible_controls()
         self.root.bind('<F6>', self._cycle_pane_focus, add='+')
+        self.root.bind('<Shift-F6>', self._cycle_pane_focus, add='+')
 
     def _name_accessible_controls(self):
         fields = {'search_entry': 'search', 'format_combo': 'format', 'sort_combo': 'sort_by',
@@ -520,11 +521,12 @@ class Workspace:
 
     def _cycle_pane_focus(self, _event=None):
         center = self.entity_tree if self.entity_view.winfo_ismapped() else self.tree if self.view_mode == 'table' else self.search_entry
-        controls = [self.nav_buttons['library'], center, self.details_heading]
+        controls = [self.nav_buttons['library'], center, self.detail_path_entry]
         current = self.root.focus_get()
         index = controls.index(current) if current in controls else -1
+        step = -1 if _event is not None and getattr(_event, 'state', 0) & 1 else 1
         for offset in range(1, len(controls) + 1):
-            candidate = controls[(index + offset) % len(controls)]
+            candidate = controls[(index + step * offset) % len(controls)]
             if candidate.winfo_ismapped():
                 candidate.focus_set()
                 break
@@ -2953,6 +2955,7 @@ class Workspace:
             title.configure(text=_text(title_key))
             help_label.configure(text=_text(help_key))
         self._update_heading()
+        self._name_accessible_controls()
         self.refresh_library()
 
     def apply_theme(self, colors):

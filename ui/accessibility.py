@@ -22,12 +22,16 @@ def expose(widget, *, role, name, description='', value=None, action=None, state
         return True
     try:
         values = {'role': role, 'name': name, 'description': description, 'state': state}
-        if widget.tk.call('tk', 'windowingsystem') == 'win32':
-            # Tk 9.1's MSAA get_accName returns the description slot (its own
-            # Button bindings also use that slot for visible labels). Keep the
-            # actual label there and put optional explanatory text in help.
+        platform = widget.tk.call('tk', 'windowingsystem')
+        if platform in {'win32', 'aqua'}:
+            # Tk 9.1's MSAA get_accName and macOS accessibilityLabel return the
+            # description slot. Keep the actual label there and optional
+            # explanatory text in help. ATK uses the name slot normally.
             values['description'] = name
             values['help'] = description
+            if platform == 'aqua' and role in {'Table', 'Listbox', 'Tree'}:
+                # AX groups use their hint rather than description as a label.
+                values['help'] = str(name) + ('. ' + str(description) if description else '')
         if value is not None:
             values['value'] = value
         if action:

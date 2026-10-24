@@ -54,6 +54,20 @@ def validate_report(path, checks, version):
     return report
 
 
+def validate_accessibility_api_report(path):
+    report = json.loads(path.read_text(encoding='utf-8'))
+    required = {'search_name', 'icon_button_names', 'registered_navigation_action',
+                'selected_row_value', 'full_path_value', 'disabled_action_guard',
+                'metadata_fields_named', 'metadata_initial_focus',
+                'native_provider_errors', 'no_callback_errors'}
+    checks = report.get('checks', {})
+    if (report.get('passed') is not True or report.get('backend') != 'tk_native'
+            or not required.issubset(checks) or not all(value is True for value in checks.values())
+            or report.get('errors')):
+        raise ValueError('Native accessibility API report is incomplete or failed')
+    return report
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--platform', choices=('linux', 'macos'), required=True)
@@ -65,6 +79,8 @@ def main():
     payload = base / ('ManageYourLibrary.app' if name == 'macos' else 'ManageYourLibrary')
     executable = payload / ('Contents/MacOS/ManageYourLibrary' if name == 'macos' else 'ManageYourLibrary')
     evidence = base if name == 'macos' else payload
+    api_report = ROOT / 'dist/accessibility-self-test.json'
+    validate_accessibility_api_report(api_report)
     validate_report(evidence / 'runtime-self-test.json', RUNTIME_CHECKS, version)
     validate_report(evidence / 'first-use-self-test.json', FIRST_CHECKS, version)
     manifest = json.loads((evidence / 'build-manifest.json').read_text(encoding='utf-8'))
@@ -126,6 +142,7 @@ def main():
         'github_run_id': os.environ.get('GITHUB_RUN_ID', ''),
         'minimum_tested_os': 'macOS 15' if name == 'macos' else 'Ubuntu 22.04 x64 (glibc 2.35)',
         'payload_sha256': files,
+        'accessibility_scope': 'source native API properties/actions; not external client or speech certification',
     })
     (release / (label + '-manifest.json')).write_text(json.dumps(manifest, indent=2), encoding='utf-8')
     for filename in ('runtime-self-test.json', 'first-use-self-test.json'):
@@ -133,6 +150,8 @@ def main():
     shutil.copy2(ROOT / 'dist/native-dependencies/requirements.lock', release / (label + '-requirements.lock'))
     shutil.copy2(ROOT / 'platforms' / name / 'tesseract/native-ocr-manifest.json', release / (label + '-ocr-manifest.json'))
     shutil.copy2(ROOT / 'docs/NATIVE_FIRST_USE.md', release / (label + '-README.md'))
+    shutil.copy2(api_report, release / (label + '-source-accessibility-api.json'))
+    shutil.copy2(ROOT / 'tools/tk_sources.json', release / (label + '-gui-sources.json'))
     checksums = release / (label + '-SHA256SUMS.txt')
     checksums.write_text(''.join(f'{sha256(p)}  {p.name}\n' for p in sorted(release.glob(label + '*')) if p != checksums), encoding='utf-8')
     print(archive)

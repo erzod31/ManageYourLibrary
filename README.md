@@ -238,7 +238,8 @@ operation merely to reproduce an issue.
 
 ## Source and builds
 
-The local audit branch also contains development changes **not included in the
+The [audit test branch](https://github.com/erzod31/ManageYourLibrary/tree/codex/audit-optimizations)
+also contains development changes **not included in the
 published 0.5.3 packages**: SQLite-first persistence, verified profile backups,
 resumable catalog-only/copy import, field-by-field preview, author/series/tag
 directories, reading states, saved filters and a high-contrast theme. Local
@@ -247,8 +248,10 @@ review and never authorizes moving the original. See the
 [implementation and validation report](docs/IMPLEMENTACION_Y_VALIDACION_2026-10-24.md)
 for completed checks and remaining platform/accessibility limitations.
 The new Windows development packages are **not approved for public redistribution**:
-the legacy OCR DLL bundle still needs its exact provenance, notices and security
-review completed. The packaging tool requires `--development` until that release
+the [individual OCR review](docs/LICENCIAS_OCR_2026-10-25.md) confirms exact upstream
+installer provenance, but complete notices, corresponding source/combination
+obligations and native security review remain open. The packaging tool requires
+`--development` until that release
 gate is closed. This is separate from the MIT license of the project's own code.
 
 For a separate test profile, run `python -B main.py --profile PATH_TO_NEW_PROFILE`.
@@ -266,8 +269,11 @@ python main.py
 Run `BUILD_EXE.bat`, then `platforms\windows\BUILD_INSTALLER.bat` (Inno Setup 6)
 and `python tools/package_windows_release.py`. Outputs are in `dist/release/`.
 Linux/macOS scripts require native OCR runtimes. Source CI does not certify
-native Unix release packages; the separate manually dispatched native release
-workflow builds and exercises those artifacts. See [platform builds](platforms/README.md).
+native Unix release packages. The native workflow also runs on the audit branch
+to build and exercise test artifacts; publishing remains a separate explicit
+dispatch choice. [Native/accessibility validation and isolated Tk 9.1 build](docs/VALIDACION_NATIVA_Y_ACCESIBILIDAD_2026-10-25.md).
+External screen-reader interoperability/speech and real-DPI validation are not
+certified by the internal native API checks. See [platform builds](platforms/README.md).
 
 ## Documentation
 

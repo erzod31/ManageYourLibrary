@@ -5,10 +5,10 @@ Speech output from NVDA/VoiceOver/Orca is a separate manual validation.
 """
 import argparse
 import json
-from pathlib import Path
 import sys
 import tempfile
 import time
+from pathlib import Path
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -19,12 +19,12 @@ def run():
     with tempfile.TemporaryDirectory(prefix='myl_accessibility_') as directory, \
             patch.object(config_store, 'app_data_dir', return_value=Path(directory)):
         import tkinter as tk
-        import library_core as core
+
         from library_app import App
-        from tools.benchmark_catalog import synthetic_catalog
-        from ui.accessibility import available, annotate, name_control
-        from ui.workspace import _text
         from rounded_widgets import RoundedButton
+        from tools.benchmark_catalog import synthetic_catalog
+        from ui.accessibility import annotate, available, name_control
+        from ui.workspace import _text
         checks, errors = {}, []
         root = tk.Tk()
         root.report_callback_exception = lambda kind, value, tb: errors.append(f'{kind.__name__}: {value}')

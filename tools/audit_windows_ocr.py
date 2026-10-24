@@ -7,8 +7,8 @@ that publisher's transitive dependencies. Reports contain no local profile paths
 import argparse
 import hashlib
 import json
-from pathlib import Path
 import urllib.request
+from pathlib import Path
 
 UPSTREAM_INSTALLER = ('https://github.com/tesseract-ocr/tesseract/releases/download/'
                       '5.5.0/tesseract-ocr-w64-setup-5.5.0.20241111.exe')

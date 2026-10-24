@@ -8,7 +8,6 @@ import argparse
 import hashlib
 import json
 import os
-from pathlib import Path
 import shutil
 import subprocess
 import sys
@@ -16,6 +15,7 @@ import sysconfig
 import tarfile
 import urllib.request
 import zipfile
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -94,7 +94,11 @@ def build(destination, resume=False):
             run(args, cwd=work, env=env)
             run(['make', '-j', str(min(os.cpu_count() or 2, 4))], cwd=work, env=env)
             run(['make', 'install'], cwd=work, env=env)
-    from setuptools import Extension, Distribution
+            # Unix installs may embed the ZIP only in the shared library.
+            # CPython and PyInstaller also need ordinary script directories.
+            for archive in work.glob('libt*9*.zip'):
+                shutil.copy2(archive, prefix / 'lib' / archive.name)
+    from setuptools import Distribution, Extension
     lib = prefix / 'lib'
     # Tk 9.1 installs script archives on Unix as well as Windows. Explicit
     # directories also let PyInstaller collect the complete script library.
@@ -138,11 +142,13 @@ def build(destination, resume=False):
         notices = prefix / 'licenses' / name
         notices.mkdir(parents=True, exist_ok=resume)
         shutil.copy2(license_path, notices / license_path.name)
-    for relative in ('libtommath', 'compat/zlib', 'zlib'):
-        directory = roots['tcl'] / relative
+    for owner, relative in (('tcl', 'libtommath'), ('tcl', 'compat/zlib'),
+                            ('tcl', 'zlib'), ('tcl', 'utf8proc'), ('tk', 'unix/bidi')):
+        directory = roots[owner] / relative
         if directory.is_dir():
             for notice in directory.iterdir():
-                if notice.is_file() and notice.name.lower() in {'license', 'license.terms', 'readme', 'copying'}:
+                if notice.is_file() and (notice.name.lower() in {'license', 'license.terms', 'readme', 'copying', 'license.md'}
+                                        or notice.name.startswith('LICENSE_')):
                     target = prefix / 'licenses' / relative.replace('/', '-')
                     target.mkdir(parents=True, exist_ok=True)
                     shutil.copy2(notice, target / notice.name)
@@ -159,9 +165,14 @@ def build(destination, resume=False):
         raise FileExistsError('Virtual environment already contains a custom Tk activation')
     activation.write_text(str(bridge) + '\nimport myl_tk_runtime_bootstrap\n', encoding='utf-8')
     (destination / 'build-provenance.json').write_text(json.dumps(lock, indent=2))
+    if sys.platform.startswith('linux'):
+        run(['ldd', next(bridge.glob('_tkinter*.so'))], cwd=ROOT, env=env)
+        # Setup-python can export a library search path. Keep the source probe
+        # on the exact runtime just built; frozen packages use their own loader.
+        env['LD_LIBRARY_PATH'] = str(lib) + os.pathsep + env.get('LD_LIBRARY_PATH', '')
     run([sys.executable, '-B', '-c',
-         'import tkinter as t; r=t.Tk(); print(r.tk.call("package", "present", "Tk")); '
-         'assert r.tk.call("info", "commands", "::tk::accessible::set_acc_role"); r.destroy()'], cwd=ROOT, env=env)
+         ('import tkinter as t; r=t.Tk(); print(r.tk.call("package", "present", "Tk")); '
+          'assert r.tk.call("info", "commands", "::tk::accessible::set_acc_role"); r.destroy()')], cwd=ROOT, env=env)
     print('Accessible Tk runtime installed in the selected venv.', flush=True)
 
 

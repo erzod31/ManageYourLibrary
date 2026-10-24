@@ -1,0 +1,3172 @@
+{
+  "review_date": "2026-10-25",
+  "binary_count": 57,
+  "dll_count": 56,
+  "component_count": 44,
+  "json_fingerprint_encoding": "canonical-json-sorted-ascii-compact",
+  "exact_installer_matches": 57,
+  "exact_package_matches": 21,
+  "catalog_sha256": "708a7abe764c557f8c7bf79716ab0b5a503b9016742da6fc1f841ec613bca402",
+  "package_evidence_sha256": "38d94773b29b29e0abe25ff0c867b6f5e427a4064b8513e6df10483060bae79c",
+  "provenance_sha256": "9de7481141f9ff665dfa3449d7cee3af79d43e55b063839de94d7233d8c15855",
+  "redistribution_review": "not_complete",
+  "source_obligations_fulfilled": false,
+  "native_security_review": "not_complete",
+  "findings": [
+    {
+      "file": "libLerc.dll",
+      "sha256": "4ab688c7c5c4afdfee0f519f942759137067a7876a1c1bb825ee575b0a5760b1",
+      "component": "lerc",
+      "reviewed_license": "Apache-2.0",
+      "category": "permissive",
+      "upstream_reference": "https://github.com/Esri/lerc/blob/v4.0.0/LICENSE",
+      "review_note": "Retain Apache license and applicable NOTICE/contributor attributions.",
+      "installer_provenance": "exact_sha256_match",
+      "package_provenance": "exact_sha256_match",
+      "package_version": "4.0.0-1",
+      "redistribution_status": "blocked_pending_notices_sources_and_combination_review"
+    },
+    {
+      "file": "libarchive-13.dll",
+      "sha256": "5f25546a72ea6a78f172d285fff03e11d163383ad2997977c9144201982e1f0c",
+      "component": "libarchive",
+      "reviewed_license": "BSD-2-Clause AND BSD-3-Clause AND LicenseRef-libarchive-contributors",
+      "category": "permissive",
+      "upstream_reference": "https://github.com/libarchive/libarchive/blob/v3.7.7/COPYING",
+      "review_note": "Preserve the full COPYING file, including component-specific notices; the project is not uniformly covered by one BSD paragraph.",
+      "installer_provenance": "exact_sha256_match",
+      "package_provenance": "exact_sha256_match",
+      "package_version": "3.7.7-1",
+      "redistribution_status": "blocked_pending_notices_sources_and_combination_review"
+    },
+    {
+      "file": "libb2-1.dll",
+      "sha256": "7fb8418a1172042dab5227fcd466b1bf293737f5b5cf35359e851516227f109c",
+      "component": "libb2",
+      "reviewed_license": "CC0-1.0",
+      "category": "permissive",
+      "upstream_reference": "https://github.com/BLAKE2/libb2/blob/v0.98.1/COPYING",
+      "review_note": "Check the CC0 dedication and fallback license from this library, not the license of a different BLAKE implementation.",
+      "installer_provenance": "exact_sha256_match",
+      "package_provenance": "exact_sha256_match",
+      "package_version": "0.98.1-2",
+      "redistribution_status": "blocked_pending_notices_sources_and_combination_review"
+    },
+    {
+      "file": "libbrotlicommon.dll",
+      "sha256": "dd6984f7c9d6ac1995aa40862e48b4165b1acf5adeecd95ffdf35e479c73f633",
+      "component": "brotli",
+      "reviewed_license": "MIT",
+      "category": "permissive",
+      "upstream_reference": "https://github.com/google/brotli/blob/v1.1.0/LICENSE",
+      "review_note": "Retain copyright and permission text for both DLLs.",
+      "installer_provenance": "exact_sha256_match",
+      "package_provenance": "candidate_only",
+      "package_version": "1.1.0-3",
+      "redistribution_status": "blocked_pending_notices_sources_and_combination_review"
+    },
+    {
+      "file": "libbrotlidec.dll",
+      "sha256": "3005ec619e34e436e31d41c2a329f272d8f97422e2304563771bdf75cf411b23",
+      "component": "brotli",
+      "reviewed_license": "MIT",
+      "category": "permissive",
+      "upstream_reference": "https://github.com/google/brotli/blob/v1.1.0/LICENSE",
+      "review_note": "Retain copyright and permission text for both DLLs.",
+      "installer_provenance": "exact_sha256_match",
+      "package_provenance": "candidate_only",
+      "package_version": "1.1.0-3",
+      "redistribution_status": "blocked_pending_notices_sources_and_combination_review"
+    },
+    {
+      "file": "libbz2-1.dll",
+      "sha256": "b79cd3a7102e359ef6324e98966a67939e58ec2b651ae2847cae84a4dfa453f7",
+      "component": "bzip2",
+      "reviewed_license": "bzip2-1.0.6",
+      "category": "permissive",
+      "upstream_reference": "https://sourceware.org/git/?p=bzip2.git;a=blob;f=LICENSE;hb=bzip2-1.0.8",
+      "review_note": "The custom bzip2 license includes attribution and altered-source identification requirements; it is not MIT.",
+      "installer_provenance": "exact_sha256_match",
+      "package_provenance": "exact_sha256_match",
+      "package_version": "1.0.8-3",
+      "redistribution_status": "blocked_pending_notices_sources_and_combination_review"
+    },
+    {
+      "file": "libcairo-2.dll",
+      "sha256": "987dbebbfb2de844ab0e7bdd95e4c5ec913adc62f8f0fe8332c0cbe06c967ed9",
+      "component": "cairo",
+      "reviewed_license": "LGPL-2.1-or-later OR MPL-1.1",
+      "category": "weak_copyleft",
+      "upstream_reference": "https://gitlab.freedesktop.org/cairo/cairo/-/blob/1.18.2/COPYING",
+      "review_note": "Choose and document a valid license route. Dynamic linking does not remove source/notice obligations. Review the specific source components and dependencies.",
+      "installer_provenance": "exact_sha256_match",
+      "package_provenance": "candidate_only",
+      "package_version": "1.18.2-1",
+      "redistribution_status": "blocked_pending_notices_sources_and_combination_review"
+    },
+    {
+      "file": "libcrypto-3-x64.dll",
+      "sha256": "9e94b4f9b03099b29f2ab33ff01b107ecd62625bd60a3b752c32cd7aa1e351b1",
+      "component": "openssl",
+      "reviewed_license": "Apache-2.0",
+      "category": "permissive",
+      "upstream_reference": "https://github.com/openssl/openssl/blob/openssl-3.4.0/LICENSE.txt",
+      "review_note": "Retain license and applicable NOTICE/third-party texts for OpenSSL 3.4.0; do not apply the pre-3.0 OpenSSL license.",
+      "installer_provenance": "exact_sha256_match",
+      "package_provenance": "candidate_only",
+      "package_version": "3.4.0-1",
+      "redistribution_status": "blocked_pending_notices_sources_and_combination_review"
+    },
+    {
+      "file": "libcurl-4.dll",
+      "sha256": "5bb95c8c98c69ab14be7e30a6287e5f86a9af3e97ab1c8ea70842f63967b396d",
+      "component": "curl",
+      "reviewed_license": "curl",
+      "category": "permissive",
+      "upstream_reference": "https://github.com/curl/curl/blob/curl-8_11_0/COPYING",
+      "review_note": "Use curl's own permission text, not a generic MIT substitute. Audit its imported DLLs separately.",
+      "installer_provenance": "exact_sha256_match",
+      "package_provenance": "candidate_only",
+      "package_version": "8.11.0-2",
+      "redistribution_status": "blocked_pending_notices_sources_and_combination_review"
+    },
+    {
+      "file": "libdatrie-1.dll",
+      "sha256": "f760aef8a31b7c3670484ca4eabab1ab8e95c14052167e191463f6371c3f0850",
+      "component": "libdatrie",
+      "reviewed_license": "LGPL-2.1-or-later",
+      "category": "weak_copyleft",
+      "upstream_reference": "https://github.com/tlwg/libdatrie/blob/v0.2.13/COPYING",
+      "review_note": "Supply the library license, corresponding source and applicable linking/replacement permissions.",
+      "installer_provenance": "exact_sha256_match",
+      "package_provenance": "exact_sha256_match",
+      "package_version": "0.2.13-3",
+      "redistribution_status": "blocked_pending_notices_sources_and_combination_review"
+    },
+    {
+      "file": "libdeflate.dll",
+      "sha256": "f40014fed434c4d35f118d934aee9e5c8d6cf55879747ca35755a0d241a56669",
+      "component": "libdeflate",
+      "reviewed_license": "MIT",
+      "category": "permissive",
+      "upstream_reference": "https://github.com/ebiggers/libdeflate/blob/v1.22/COPYING",
+      "review_note": "Retain the original copyright/permission notice.",
+      "installer_provenance": "exact_sha256_match",
+      "package_provenance": "candidate_only",
+      "package_version": "1.22-1",
+      "redistribution_status": "blocked_pending_notices_sources_and_combination_review"
+    },
+    {
+      "file": "libexpat-1.dll",
+      "sha256": "38cf1ace5a8f227675f589c81300d48d575270291b6012da51a30bee87bc5a8e",
+      "component": "expat",
+      "reviewed_license": "MIT",
+      "category": "permissive",
+      "upstream_reference": "https://github.com/libexpat/libexpat/blob/R_2_6_4/expat/COPYING",
+      "review_note": "Retain the complete Expat contributor notice.",
+      "installer_provenance": "exact_sha256_match",
+      "package_provenance": "exact_sha256_match",
+      "package_version": "2.6.4-1",
+      "redistribution_status": "blocked_pending_notices_sources_and_combination_review"
+    },
+    {
+      "file": "libffi-8.dll",
+      "sha256": "f1ed51652b3746c1b4bce497b7041e677e5d80c5ab8198efebb8fc6f75329ae8",
+      "component": "libffi",
+      "reviewed_license": "MIT",
+      "category": "permissive",
+      "upstream_reference": "https://github.com/libffi/libffi/blob/v3.4.6/LICENSE",
+      "review_note": "Retain the library's permission and copyright notice.",
+      "installer_provenance": "exact_sha256_match",
+      "package_provenance": "exact_sha256_match",
+      "package_version": "3.4.6-1",
+      "redistribution_status": "blocked_pending_notices_sources_and_combination_review"
+    },
+    {
+      "file": "libfontconfig-1.dll",
+      "sha256": "d6c70b7e205f24ff96b29a80849b59c84f8701b311434f64f2bf93bd36bdb163",
+      "component": "fontconfig",
+      "reviewed_license": "LicenseRef-Fontconfig",
+      "category": "permissive",
+      "upstream_reference": "https://gitlab.freedesktop.org/fontconfig/fontconfig/-/blob/2.15.0/COPYING",
+      "review_note": "Preserve the full fontconfig notice, including its restrictions on use of contributor names in advertising.",
+      "installer_provenance": "exact_sha256_match",
+      "package_provenance": "candidate_only",
+      "package_version": "2.15.0-2",
+      "redistribution_status": "blocked_pending_notices_sources_and_combination_review"
+    },
+    {
+      "file": "libfreetype-6.dll",
+      "sha256": "67434ed595661d1029850d52578c3068d8d23bfdb4c73c300a446dbac7b1e151",
+      "component": "freetype",
+      "reviewed_license": "FTL OR GPL-2.0-or-later",
+      "category": "permissive_option",
+      "upstream_reference": "https://gitlab.freedesktop.org/freetype/freetype/-/blob/VER-2-13-3/docs/FTL.TXT",
+      "review_note": "Prefer the FTL route and include the required FreeType acknowledgement and license text; preserve additional module notices as applicable.",
+      "installer_provenance": "exact_sha256_match",
+      "package_provenance": "exact_sha256_match",
+      "package_version": "2.13.3-1",
+      "redistribution_status": "blocked_pending_notices_sources_and_combination_review"
+    },
+    {
+      "file": "libfribidi-0.dll",
+      "sha256": "84930fd86a3b46b62794a3bbaff21fbbaeaade5ff7cdc70be7f717ad29af87ed",
+      "component": "fribidi",
+      "reviewed_license": "LGPL-2.1-or-later",
+      "category": "weak_copyleft",
+      "upstream_reference": "https://github.com/fribidi/fribidi/blob/v1.0.16/COPYING",
+      "review_note": "Corresponding source, license and applicable library replacement/relinking obligations remain.",
+      "installer_provenance": "exact_sha256_match",
+      "package_provenance": "exact_sha256_match",
+      "package_version": "1.0.16-1",
+      "redistribution_status": "blocked_pending_notices_sources_and_combination_review"
+    },
+    {
+      "file": "libgcc_s_seh-1.dll",
+      "sha256": "00194fb242d0d7a731343c29accdc5f6b60cc42771224312134a9d4aa8a8c00a",
+      "component": "gcc",
+      "reviewed_license": "GPL-3.0-or-later WITH GCC-exception-3.1",
+      "category": "runtime_exception",
+      "upstream_reference": "https://github.com/gcc-mirror/gcc/blob/releases/gcc-14.2.0/COPYING.RUNTIME",
+      "review_note": "The Runtime Library Exception permits qualifying combinations; it does not turn GCC's own runtime source into MIT or eliminate its source obligations. Verify exact build and eligible compilation.",
+      "installer_provenance": "exact_sha256_match",
+      "package_provenance": "exact_sha256_match",
+      "package_version": "14.2.0-2",
+      "redistribution_status": "blocked_pending_notices_sources_and_combination_review"
+    },
+    {
+      "file": "libgif-7.dll",
+      "sha256": "a1a179853ae6fad8eb045b8e9f12c55e6fc99929446b02fa345512354cf5e582",
+      "component": "giflib",
+      "reviewed_license": "MIT",
+      "category": "permissive",
+      "upstream_reference": "https://sourceforge.net/p/giflib/code/ci/5.2.2/tree/COPYING",
+      "review_note": "Retain the GIFLIB copyright and permission notice.",
+      "installer_provenance": "exact_sha256_match",
+      "package_provenance": "exact_sha256_match",
+      "package_version": "5.2.2-1",
+      "redistribution_status": "blocked_pending_notices_sources_and_combination_review"
+    },
+    {
+      "file": "libgio-2.0-0.dll",
+      "sha256": "e4203279ad017c6290c8225c4aacaa8150f95426e3a4f902134cea9c836a134e",
+      "component": "glib2",
+      "reviewed_license": "LGPL-2.1-or-later",
+      "category": "weak_copyleft",
+      "upstream_reference": "https://gitlab.gnome.org/GNOME/glib/-/blob/2.82.2/LICENSES/LGPL-2.1-or-later.txt",
+      "review_note": "Review the library and included third-party portions, supply corresponding source and license, preserve users' LGPL rights. The four DLLs belong to one source project. COPYING is a symlink to the versioned LICENSES text.",
+      "installer_provenance": "exact_sha256_match",
+      "package_provenance": "candidate_only",
+      "package_version": "2.82.2-1",
+      "redistribution_status": "blocked_pending_notices_sources_and_combination_review"
+    },
+    {
+      "file": "libglib-2.0-0.dll",
+      "sha256": "e8c0bcf60f6176acf107cce2969a49843a4665d5916d91e08988375ed12c22d5",
+      "component": "glib2",
+      "reviewed_license": "LGPL-2.1-or-later",
+      "category": "weak_copyleft",
+      "upstream_reference": "https://gitlab.gnome.org/GNOME/glib/-/blob/2.82.2/LICENSES/LGPL-2.1-or-later.txt",
+      "review_note": "Review the library and included third-party portions, supply corresponding source and license, preserve users' LGPL rights. The four DLLs belong to one source project. COPYING is a symlink to the versioned LICENSES text.",
+      "installer_provenance": "exact_sha256_match",
+      "package_provenance": "candidate_only",
+      "package_version": "2.82.2-1",
+      "redistribution_status": "blocked_pending_notices_sources_and_combination_review"
+    },
+    {
+      "file": "libgmodule-2.0-0.dll",
+      "sha256": "d6d82704153aeafc777a2b81896b70e66516cbbe4a2a9985d8599c36824358d9",
+      "component": "glib2",
+      "reviewed_license": "LGPL-2.1-or-later",
+      "category": "weak_copyleft",
+      "upstream_reference": "https://gitlab.gnome.org/GNOME/glib/-/blob/2.82.2/LICENSES/LGPL-2.1-or-later.txt",
+      "review_note": "Review the library and included third-party portions, supply corresponding source and license, preserve users' LGPL rights. The four DLLs belong to one source project. COPYING is a symlink to the versioned LICENSES text.",
+      "installer_provenance": "exact_sha256_match",
+      "package_provenance": "candidate_only",
+      "package_version": "2.82.2-1",
+      "redistribution_status": "blocked_pending_notices_sources_and_combination_review"
+    },
+    {
+      "file": "libgobject-2.0-0.dll",
+      "sha256": "7e04e11eebf13f03e76afbae7a61fbd6cb6fd1cf12a15c52de5540c41ad3acbd",
+      "component": "glib2",
+      "reviewed_license": "LGPL-2.1-or-later",
+      "category": "weak_copyleft",
+      "upstream_reference": "https://gitlab.gnome.org/GNOME/glib/-/blob/2.82.2/LICENSES/LGPL-2.1-or-later.txt",
+      "review_note": "Review the library and included third-party portions, supply corresponding source and license, preserve users' LGPL rights. The four DLLs belong to one source project. COPYING is a symlink to the versioned LICENSES text.",
+      "installer_provenance": "exact_sha256_match",
+      "package_provenance": "candidate_only",
+      "package_version": "2.82.2-1",
+      "redistribution_status": "blocked_pending_notices_sources_and_combination_review"
+    },
+    {
+      "file": "libgraphite2.dll",
+      "sha256": "f927efecd958f0e54a24ae297f86cd6aed05e7fc20e5da0882050ab9ec464395",
+      "component": "graphite2",
+      "reviewed_license": "LGPL-2.1-or-later OR MPL-1.1 OR GPL-2.0-or-later",
+      "category": "weak_copyleft",
+      "upstream_reference": "https://github.com/silnrsi/graphite/blob/1.3.14/COPYING",
+      "review_note": "The exact matching package's COPYING offers LGPL, MPL or GPL alternatives, not MIT. Choose a valid route and satisfy its source and notice obligations.",
+      "installer_provenance": "exact_sha256_match",
+      "package_provenance": "exact_sha256_match",
+      "package_version": "1.3.14-3",
+      "redistribution_status": "blocked_pending_notices_sources_and_combination_review"
+    },
+    {
+      "file": "libharfbuzz-0.dll",
+      "sha256": "a60c5d19f816c2a9720c94c38c2e1673fa0133da0100811fc2008d5a5edffb68",
+      "component": "harfbuzz",
+      "reviewed_license": "MIT",
+      "category": "permissive",
+      "upstream_reference": "https://github.com/harfbuzz/harfbuzz/blob/10.1.0/COPYING",
+      "review_note": "Preserve the full HarfBuzz copyright notice and separately audit FreeType/Graphite dependencies.",
+      "installer_provenance": "exact_sha256_match",
+      "package_provenance": "candidate_only",
+      "package_version": "10.1.0-1",
+      "redistribution_status": "blocked_pending_notices_sources_and_combination_review"
+    },
+    {
+      "file": "libiconv-2.dll",
+      "sha256": "967189adfbc889fde89aafc867f7a1f02731f8592cf6fd5a4ace1929213e2e13",
+      "component": "libiconv",
+      "reviewed_license": "LGPL-2.1-or-later",
+      "category": "weak_copyleft",
+      "upstream_reference": "https://www.gnu.org/software/libiconv/",
+      "review_note": "The conversion library is LGPL; iconv utilities are GPL. Do not apply the whole package's GPL label indiscriminately to the DLL. Source and library replacement obligations remain.",
+      "installer_provenance": "exact_sha256_match",
+      "package_provenance": "candidate_only",
+      "package_version": "1.17-4",
+      "redistribution_status": "blocked_pending_notices_sources_and_combination_review"
+    },
+    {
+      "file": "libicudt75.dll",
+      "sha256": "836bd5cac053329121ba95f8242887633d2f57acc0da61e48dd2c524caa55a0e",
+      "component": "icu",
+      "reviewed_license": "Unicode-3.0 AND ICU AND LicenseRef-ICU-third-party",
+      "category": "permissive",
+      "upstream_reference": "https://github.com/unicode-org/icu/blob/release-75-1/LICENSE",
+      "review_note": "Include ICU's complete license and third-party Unicode/data notices for all three DLLs, including Unicode License V3. icu4c/LICENSE is a symlink, not the permission text.",
+      "installer_provenance": "exact_sha256_match",
+      "package_provenance": "candidate_only",
+      "package_version": "75.1-2",
+      "redistribution_status": "blocked_pending_notices_sources_and_combination_review"
+    },
+    {
+      "file": "libicuin75.dll",
+      "sha256": "225d01fa26c500261a054d931b8a4473ce2197ec7c47867dde808041c4935cba",
+      "component": "icu",
+      "reviewed_license": "Unicode-3.0 AND ICU AND LicenseRef-ICU-third-party",
+      "category": "permissive",
+      "upstream_reference": "https://github.com/unicode-org/icu/blob/release-75-1/LICENSE",
+      "review_note": "Include ICU's complete license and third-party Unicode/data notices for all three DLLs, including Unicode License V3. icu4c/LICENSE is a symlink, not the permission text.",
+      "installer_provenance": "exact_sha256_match",
+      "package_provenance": "candidate_only",
+      "package_version": "75.1-2",
+      "redistribution_status": "blocked_pending_notices_sources_and_combination_review"
+    },
+    {
+      "file": "libicuuc75.dll",
+      "sha256": "ddc63202f2d2f257a5adef3fba2c98e428309373068274050683a8e46aa77070",
+      "component": "icu",
+      "reviewed_license": "Unicode-3.0 AND ICU AND LicenseRef-ICU-third-party",
+      "category": "permissive",
+      "upstream_reference": "https://github.com/unicode-org/icu/blob/release-75-1/LICENSE",
+      "review_note": "Include ICU's complete license and third-party Unicode/data notices for all three DLLs, including Unicode License V3. icu4c/LICENSE is a symlink, not the permission text.",
+      "installer_provenance": "exact_sha256_match",
+      "package_provenance": "candidate_only",
+      "package_version": "75.1-2",
+      "redistribution_status": "blocked_pending_notices_sources_and_combination_review"
+    },
+    {
+      "file": "libidn2-0.dll",
+      "sha256": "621f5bfc24cdae8479a69b56de530ab6cee633352ae0bce01885cc6b1eca0371",
+      "component": "libidn2",
+      "reviewed_license": "(LGPL-3.0-or-later OR GPL-2.0-or-later) AND LicenseRef-Libidn2-Unicode",
+      "category": "weak_copyleft",
+      "upstream_reference": "https://github.com/libidn/libidn2/blob/v2.3.7/COPYING",
+      "review_note": "The library offers LGPLv3+ or GPLv2+, unlike the GPLv3+ tools. Review COPYING.unicode, included gnulib portions and dependency obligations; prefer the LGPL route.",
+      "installer_provenance": "exact_sha256_match",
+      "package_provenance": "exact_sha256_match",
+      "package_version": "2.3.7-2",
+      "redistribution_status": "blocked_pending_notices_sources_and_combination_review"
+    },
+    {
+      "file": "libintl-8.dll",
+      "sha256": "42a63cb4c3c28a683d9f6c3510de5ec17849eb18c097fa02cd78aeb800bff202",
+      "component": "gettext",
+      "reviewed_license": "LGPL-2.1-or-later",
+      "category": "weak_copyleft",
+      "upstream_reference": "https://www.gnu.org/software/gettext/manual/html_node/Licenses.html",
+      "review_note": "libintl has the runtime-library license, not the GPL label of gettext's tools. Match gettext-runtime source, patches and included gnulib notices.",
+      "installer_provenance": "exact_sha256_match",
+      "package_provenance": "candidate_only",
+      "package_version": "0.22.5-2",
+      "redistribution_status": "blocked_pending_notices_sources_and_combination_review"
+    },
+    {
+      "file": "libjbig-0.dll",
+      "sha256": "275a827ba6839d47cfdbe059db1b1b403a92ff26e2b76a29362915487868bef2",
+      "component": "jbigkit",
+      "reviewed_license": "GPL-2.0-or-later",
+      "category": "strong_copyleft",
+      "upstream_reference": "https://www.cl.cam.ac.uk/~mgk25/jbigkit/",
+      "review_note": "High-priority blocker: libtiff imports this GPL library. Verify the source header's 'or later' grant, combined OCR licensing and corresponding source, or rebuild TIFF/OCR without JBIG. A commercial license requires separate permission.",
+      "installer_provenance": "exact_sha256_match",
+      "package_provenance": "exact_sha256_match",
+      "package_version": "2.1-5",
+      "redistribution_status": "blocked_pending_notices_sources_and_combination_review"
+    },
+    {
+      "file": "libjpeg-8.dll",
+      "sha256": "8b39c028e751cc0efb1b08695a9d272967e6e8d33b7ce6720d3a9a9438ec3cb0",
+      "component": "libjpeg-turbo",
+      "reviewed_license": "IJG AND BSD-3-Clause AND Zlib",
+      "category": "permissive",
+      "upstream_reference": "https://github.com/libjpeg-turbo/libjpeg-turbo/blob/3.0.4/LICENSE.md",
+      "review_note": "The full JPEG/Turbo/SIMD license set and IJG acknowledgement apply, not merely a generic BSD license.",
+      "installer_provenance": "exact_sha256_match",
+      "package_provenance": "candidate_only",
+      "package_version": "3.0.4-2",
+      "redistribution_status": "blocked_pending_notices_sources_and_combination_review"
+    },
+    {
+      "file": "libleptonica-6.dll",
+      "sha256": "fdc77910d2f907d6129d929a5d98118a3dd1842198a2de879590dfd5e6413a8c",
+      "component": "leptonica",
+      "reviewed_license": "BSD-2-Clause",
+      "category": "permissive",
+      "upstream_reference": "https://github.com/DanBloomberg/leptonica/blob/1.85.0/leptonica-license.txt",
+      "review_note": "Retain the Leptonica notice; imported codecs have their own licenses.",
+      "installer_provenance": "exact_sha256_match",
+      "package_provenance": "exact_sha256_match",
+      "package_version": "1.85.0-1",
+      "redistribution_status": "blocked_pending_notices_sources_and_combination_review"
+    },
+    {
+      "file": "liblz4.dll",
+      "sha256": "35f917274bca8f19677ba66f1b3cc3c83568c3249fc43215fc16e76439c8e856",
+      "component": "lz4",
+      "reviewed_license": "BSD-2-Clause",
+      "category": "permissive",
+      "upstream_reference": "https://github.com/lz4/lz4/blob/v1.10.0/lib/LICENSE",
+      "review_note": "The library is BSD; the command-line tools have a different GPL route. Audit lib/ rather than labeling this DLL GPL from package metadata.",
+      "installer_provenance": "exact_sha256_match",
+      "package_provenance": "exact_sha256_match",
+      "package_version": "1.10.0-1",
+      "redistribution_status": "blocked_pending_notices_sources_and_combination_review"
+    },
+    {
+      "file": "liblzma-5.dll",
+      "sha256": "49cc69c10ad1f079fc0a86bfd46be62ba6402266995c77e261fff29bbafdd946",
+      "component": "xz",
+      "reviewed_license": "0BSD",
+      "category": "permissive",
+      "upstream_reference": "https://github.com/tukaani-project/xz/blob/v5.6.3/COPYING",
+      "review_note": "The 5.6.3 COPYING explicitly assigns liblzma to 0BSD, not public domain. Distinguish it from GPL tools/LGPL helper scripts. Confirm exact build components; licensing is not a vulnerability clearance.",
+      "installer_provenance": "exact_sha256_match",
+      "package_provenance": "candidate_only",
+      "package_version": "5.6.3-2",
+      "redistribution_status": "blocked_pending_notices_sources_and_combination_review"
+    },
+    {
+      "file": "libopenjp2-7.dll",
+      "sha256": "5ff762ff6d672a06ee502819daf1494aa3aa3acf408805f0429303e026705011",
+      "component": "openjpeg2",
+      "reviewed_license": "BSD-2-Clause",
+      "category": "permissive",
+      "upstream_reference": "https://github.com/uclouvain/openjpeg/blob/v2.5.2/LICENSE",
+      "review_note": "Retain the full OpenJPEG contributor notice.",
+      "installer_provenance": "exact_sha256_match",
+      "package_provenance": "candidate_only",
+      "package_version": "2.5.2-1",
+      "redistribution_status": "blocked_pending_notices_sources_and_combination_review"
+    },
+    {
+      "file": "libpango-1.0-0.dll",
+      "sha256": "3ff3c1105cf4922d18530f3094ddf12996a69e290bd230e7d8ae133b9ae7d217",
+      "component": "pango",
+      "reviewed_license": "LGPL-2.1-or-later",
+      "category": "weak_copyleft",
+      "upstream_reference": "https://gitlab.gnome.org/GNOME/pango/-/blob/1.54.0/COPYING",
+      "review_note": "Corresponding source and LGPL obligations apply to all four DLLs; exact source headers resolve the historical recipe's abbreviated LGPL label.",
+      "installer_provenance": "exact_sha256_match",
+      "package_provenance": "candidate_only",
+      "package_version": "1.54.0-1",
+      "redistribution_status": "blocked_pending_notices_sources_and_combination_review"
+    },
+    {
+      "file": "libpangocairo-1.0-0.dll",
+      "sha256": "8e96bf3954740622e2ee28a6cc725fddf4cfce866405d00475e6a5a1216d023e",
+      "component": "pango",
+      "reviewed_license": "LGPL-2.1-or-later",
+      "category": "weak_copyleft",
+      "upstream_reference": "https://gitlab.gnome.org/GNOME/pango/-/blob/1.54.0/COPYING",
+      "review_note": "Corresponding source and LGPL obligations apply to all four DLLs; exact source headers resolve the historical recipe's abbreviated LGPL label.",
+      "installer_provenance": "exact_sha256_match",
+      "package_provenance": "candidate_only",
+      "package_version": "1.54.0-1",
+      "redistribution_status": "blocked_pending_notices_sources_and_combination_review"
+    },
+    {
+      "file": "libpangoft2-1.0-0.dll",
+      "sha256": "9caf81ecd48a4e896b353c0241e83d5787dcc149b38c2dc7e3935c3e9190b9b8",
+      "component": "pango",
+      "reviewed_license": "LGPL-2.1-or-later",
+      "category": "weak_copyleft",
+      "upstream_reference": "https://gitlab.gnome.org/GNOME/pango/-/blob/1.54.0/COPYING",
+      "review_note": "Corresponding source and LGPL obligations apply to all four DLLs; exact source headers resolve the historical recipe's abbreviated LGPL label.",
+      "installer_provenance": "exact_sha256_match",
+      "package_provenance": "candidate_only",
+      "package_version": "1.54.0-1",
+      "redistribution_status": "blocked_pending_notices_sources_and_combination_review"
+    },
+    {
+      "file": "libpangowin32-1.0-0.dll",
+      "sha256": "40bbb94aee52e886fea46e07d31a326f4941acfedd0306ed7dafd2dbfac2df80",
+      "component": "pango",
+      "reviewed_license": "LGPL-2.1-or-later",
+      "category": "weak_copyleft",
+      "upstream_reference": "https://gitlab.gnome.org/GNOME/pango/-/blob/1.54.0/COPYING",
+      "review_note": "Corresponding source and LGPL obligations apply to all four DLLs; exact source headers resolve the historical recipe's abbreviated LGPL label.",
+      "installer_provenance": "exact_sha256_match",
+      "package_provenance": "candidate_only",
+      "package_version": "1.54.0-1",
+      "redistribution_status": "blocked_pending_notices_sources_and_combination_review"
+    },
+    {
+      "file": "libpcre2-8-0.dll",
+      "sha256": "fbc71bd904a7500a65786f07b17d6ddbee71ad4916be28a46ecf1ade48ef7f27",
+      "component": "pcre2",
+      "reviewed_license": "BSD-3-Clause",
+      "category": "permissive",
+      "upstream_reference": "https://github.com/PCRE2Project/pcre2/blob/pcre2-10.44/LICENCE",
+      "review_note": "Retain all relevant PCRE2 and bundled-source notices, including the JIT portion if compiled.",
+      "installer_provenance": "exact_sha256_match",
+      "package_provenance": "candidate_only",
+      "package_version": "10.44-1",
+      "redistribution_status": "blocked_pending_notices_sources_and_combination_review"
+    },
+    {
+      "file": "libpixman-1-0.dll",
+      "sha256": "24ac9493db8fc50b75f9f48631c73971245ca9de002f549c3b3c18584eb64d6c",
+      "component": "pixman",
+      "reviewed_license": "MIT",
+      "category": "permissive",
+      "upstream_reference": "https://gitlab.freedesktop.org/pixman/pixman/-/blob/pixman-0.44.0/COPYING",
+      "review_note": "Include the complete contributor-specific notice set.",
+      "installer_provenance": "exact_sha256_match",
+      "package_provenance": "candidate_only",
+      "package_version": "0.44.0-1",
+      "redistribution_status": "blocked_pending_notices_sources_and_combination_review"
+    },
+    {
+      "file": "libpng16-16.dll",
+      "sha256": "da78a17bd5228fb957b97d77595cd8d5d75daf86b900cb0742f36a638ac3d31f",
+      "component": "libpng",
+      "reviewed_license": "libpng-2.0",
+      "category": "permissive",
+      "upstream_reference": "https://github.com/pnggroup/libpng/blob/v1.6.44/LICENSE",
+      "review_note": "Retain the full libpng license, including legacy notices; zlib is reviewed separately.",
+      "installer_provenance": "exact_sha256_match",
+      "package_provenance": "candidate_only",
+      "package_version": "1.6.44-1",
+      "redistribution_status": "blocked_pending_notices_sources_and_combination_review"
+    },
+    {
+      "file": "libpsl-5.dll",
+      "sha256": "d516bbc47418475bbbddfdba4da9d38abf6201329f5f7037750c31d5b4bcdc73",
+      "component": "libpsl",
+      "reviewed_license": "MIT AND MPL-2.0",
+      "category": "weak_copyleft",
+      "upstream_reference": "https://github.com/rockdaboot/libpsl/blob/0.21.5/COPYING",
+      "review_note": "Library code is MIT, but embedded Public Suffix List data has MPL-2.0 notices/source requirements. Verify whether this build embeds that data and document its exact revision.",
+      "installer_provenance": "exact_sha256_match",
+      "package_provenance": "candidate_only",
+      "package_version": "0.21.5-2",
+      "redistribution_status": "blocked_pending_notices_sources_and_combination_review"
+    },
+    {
+      "file": "libsharpyuv-0.dll",
+      "sha256": "60bcc87ac64a834e967e9ec9461be37395dbc090c579f3e23497ef69a5d8323e",
+      "component": "libwebp",
+      "reviewed_license": "BSD-3-Clause",
+      "category": "permissive",
+      "upstream_reference": "https://github.com/webmproject/libwebp/blob/v1.4.0/COPYING",
+      "review_note": "Retain the WebP/SharpYUV notice and PATENTS grant for the three DLLs.",
+      "installer_provenance": "exact_sha256_match",
+      "package_provenance": "candidate_only",
+      "package_version": "1.4.0-1",
+      "redistribution_status": "blocked_pending_notices_sources_and_combination_review"
+    },
+    {
+      "file": "libssh2-1.dll",
+      "sha256": "fe29b88792005f3ab3e86a6c9a514a6c04737fbee77b56be9c4fc0acca74b6ab",
+      "component": "libssh2",
+      "reviewed_license": "BSD-3-Clause",
+      "category": "permissive",
+      "upstream_reference": "https://github.com/libssh2/libssh2/blob/libssh2-1.11.0/COPYING",
+      "review_note": "Retain the project's BSD notice; determine the actual cryptographic backend from the build/import evidence.",
+      "installer_provenance": "exact_sha256_match",
+      "package_provenance": "candidate_only",
+      "package_version": "1.11.0-2",
+      "redistribution_status": "blocked_pending_notices_sources_and_combination_review"
+    },
+    {
+      "file": "libstdc++-6.dll",
+      "sha256": "a5f344549ca5dd7cb00f1237deab0ce85366e32bb0b85466fecb26743a14f0cc",
+      "component": "gcc",
+      "reviewed_license": "GPL-3.0-or-later WITH GCC-exception-3.1",
+      "category": "runtime_exception",
+      "upstream_reference": "https://github.com/gcc-mirror/gcc/blob/releases/gcc-14.2.0/COPYING.RUNTIME",
+      "review_note": "The Runtime Library Exception permits qualifying combinations; it does not turn GCC's own runtime source into MIT or eliminate its source obligations. Verify exact build and eligible compilation.",
+      "installer_provenance": "exact_sha256_match",
+      "package_provenance": "exact_sha256_match",
+      "package_version": "14.2.0-2",
+      "redistribution_status": "blocked_pending_notices_sources_and_combination_review"
+    },
+    {
+      "file": "libtesseract-5.dll",
+      "sha256": "7b291a1570cda3f4a218a844bb08ac6eaa94392a459d857da9c685e01e0211ab",
+      "component": "tesseract-ocr",
+      "reviewed_license": "Apache-2.0",
+      "category": "permissive",
+      "upstream_reference": "https://github.com/tesseract-ocr/tesseract/blob/5.5.0/LICENSE",
+      "review_note": "The engine's Apache license does not cover its transitive DLLs or settle a GPL-linked build. Preserve its NOTICE/AUTHORS as applicable.",
+      "installer_provenance": "exact_sha256_match",
+      "package_provenance": "candidate_only",
+      "package_version": "5.5.0-1",
+      "redistribution_status": "blocked_pending_notices_sources_and_combination_review"
+    },
+    {
+      "file": "libthai-0.dll",
+      "sha256": "420e08cedaf9daaabcf8f6c92349d9dadb7b5ad9e4e79d1126bb2a55a7cdbe09",
+      "component": "libthai",
+      "reviewed_license": "LGPL-2.1-or-later",
+      "category": "weak_copyleft",
+      "upstream_reference": "https://github.com/tlwg/libthai/blob/v0.1.29/COPYING",
+      "review_note": "Supply corresponding source, library license and applicable replacement/relinking rights.",
+      "installer_provenance": "exact_sha256_match",
+      "package_provenance": "exact_sha256_match",
+      "package_version": "0.1.29-3",
+      "redistribution_status": "blocked_pending_notices_sources_and_combination_review"
+    },
+    {
+      "file": "libtiff-6.dll",
+      "sha256": "33b46b399327b3bcd7cefb63ca4eff7c0696cdf30de37a7ad20d946261e7cdac",
+      "component": "libtiff",
+      "reviewed_license": "libtiff",
+      "category": "permissive",
+      "upstream_reference": "https://gitlab.com/libtiff/libtiff/-/blob/v4.7.0/LICENSE.md",
+      "review_note": "TIFF itself is permissive, but this binary imports libjbig-0.dll. Its own license text cannot clear that dependency's GPL obligations.",
+      "installer_provenance": "exact_sha256_match",
+      "package_provenance": "exact_sha256_match",
+      "package_version": "4.7.0-1",
+      "redistribution_status": "blocked_pending_notices_sources_and_combination_review"
+    },
+    {
+      "file": "libunistring-5.dll",
+      "sha256": "9267f38109fb1a290c5c0fe28fcf0531909b3135407b57fe398cb6cfa2aa8767",
+      "component": "libunistring",
+      "reviewed_license": "LGPL-3.0-or-later OR GPL-2.0-or-later",
+      "category": "weak_copyleft",
+      "upstream_reference": "https://www.gnu.org/software/libunistring/",
+      "review_note": "Confirm the alternatives against the exact 1.2 source, including included gnulib files; prefer the LGPL route and retain its corresponding-source obligations.",
+      "installer_provenance": "exact_sha256_match",
+      "package_provenance": "candidate_only",
+      "package_version": "1.2-1",
+      "redistribution_status": "blocked_pending_notices_sources_and_combination_review"
+    },
+    {
+      "file": "libwebp-7.dll",
+      "sha256": "687b8859e1f739dad5800fdc293a6ee1fd0dd4b33380ab283681a5a12eb3d4fa",
+      "component": "libwebp",
+      "reviewed_license": "BSD-3-Clause",
+      "category": "permissive",
+      "upstream_reference": "https://github.com/webmproject/libwebp/blob/v1.4.0/COPYING",
+      "review_note": "Retain the WebP/SharpYUV notice and PATENTS grant for the three DLLs.",
+      "installer_provenance": "exact_sha256_match",
+      "package_provenance": "candidate_only",
+      "package_version": "1.4.0-1",
+      "redistribution_status": "blocked_pending_notices_sources_and_combination_review"
+    },
+    {
+      "file": "libwebpmux-3.dll",
+      "sha256": "ad10bacecd37b44c7c2c813da098a8bf6a42a3bf0152f7f33726d216815558f9",
+      "component": "libwebp",
+      "reviewed_license": "BSD-3-Clause",
+      "category": "permissive",
+      "upstream_reference": "https://github.com/webmproject/libwebp/blob/v1.4.0/COPYING",
+      "review_note": "Retain the WebP/SharpYUV notice and PATENTS grant for the three DLLs.",
+      "installer_provenance": "exact_sha256_match",
+      "package_provenance": "candidate_only",
+      "package_version": "1.4.0-1",
+      "redistribution_status": "blocked_pending_notices_sources_and_combination_review"
+    },
+    {
+      "file": "libwinpthread-1.dll",
+      "sha256": "7ea1053b03879d1cf1decfd284627c4b897f9d4198727182113a8ed005968b51",
+      "component": "winpthreads-git",
+      "reviewed_license": "MIT AND BSD-3-Clause-Clear",
+      "category": "permissive",
+      "upstream_reference": "https://github.com/mingw-w64/mingw-w64/blob/0d42217123d3aec0341b79f6d959c76e09648a1e/mingw-w64-libraries/winpthreads/COPYING",
+      "review_note": "Preserve both the MinGW-w64 MIT notice and the derived POSIX Threads BSD-Clear notice; verify exact commit rather than trusting resource version 1,0,0,0.",
+      "installer_provenance": "exact_sha256_match",
+      "package_provenance": "candidate_only",
+      "package_version": "12.0.0.r369.g0d4221712-1",
+      "redistribution_status": "blocked_pending_notices_sources_and_combination_review"
+    },
+    {
+      "file": "libzstd.dll",
+      "sha256": "f216ea8efb5b3bb9ad3d938fb9ac07e3b8f78c2c92faab03d2c468d0b6798a5a",
+      "component": "zstd",
+      "reviewed_license": "BSD-3-Clause OR GPL-2.0-or-later",
+      "category": "permissive_option",
+      "upstream_reference": "https://github.com/facebook/zstd/blob/v1.5.6/LICENSE",
+      "review_note": "Select the BSD route and retain the original license and applicable third-party notices.",
+      "installer_provenance": "exact_sha256_match",
+      "package_provenance": "exact_sha256_match",
+      "package_version": "1.5.6-2",
+      "redistribution_status": "blocked_pending_notices_sources_and_combination_review"
+    },
+    {
+      "file": "tesseract.exe",
+      "sha256": "ccd044d6cf16eaaad151260e1fcc5e3e1504cd1b8644e940b4f7ae3e315dd0d3",
+      "component": "tesseract-ocr",
+      "reviewed_license": "Apache-2.0",
+      "category": "permissive",
+      "upstream_reference": "https://github.com/tesseract-ocr/tesseract/blob/5.5.0/LICENSE",
+      "review_note": "The engine's Apache license does not cover its transitive DLLs or settle a GPL-linked build. Preserve its NOTICE/AUTHORS as applicable.",
+      "installer_provenance": "exact_sha256_match",
+      "package_provenance": "candidate_only",
+      "package_version": "5.5.0-1",
+      "redistribution_status": "blocked_pending_notices_sources_and_combination_review"
+    },
+    {
+      "file": "zlib1.dll",
+      "sha256": "cb7ab3788d10940df874acd97b1821bbb5ee4a91f3eec11982bb5bf7a3c96443",
+      "component": "zlib",
+      "reviewed_license": "Zlib",
+      "category": "permissive",
+      "upstream_reference": "https://github.com/madler/zlib/blob/v1.3.1/LICENSE",
+      "review_note": "Keep the zlib notice and identify altered source if modified.",
+      "installer_provenance": "exact_sha256_match",
+      "package_provenance": "exact_sha256_match",
+      "package_version": "1.3.1-1",
+      "redistribution_status": "blocked_pending_notices_sources_and_combination_review"
+    }
+  ],
+  "package_receipts": [
+    {
+      "component": "libarchive",
+      "recipe": {
+        "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/d69cf6a6c704ce9863d193ec45cbf0b73197d5d5/mingw-w64-libarchive/PKGBUILD",
+        "sha256": "8b65bf981569c2afed521287bb2dc4c6efcec23c937b4f700fc4568d19dcf18b"
+      },
+      "candidate_package": {
+        "url": "https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-libarchive-3.7.7-1-any.pkg.tar.zst",
+        "version": "3.7.7-1",
+        "retrieval": "downloaded",
+        "sha256": "a4d388d40b2cfca2be10e5694b103f186d064b1538154457d72944708f41bbec",
+        "bytes": 877369,
+        "signature_verified": false
+      },
+      "matching_files": [
+        {
+          "file": "libarchive-13.dll",
+          "sha256": "5f25546a72ea6a78f172d285fff03e11d163383ad2997977c9144201982e1f0c",
+          "expected_sha256": "5f25546a72ea6a78f172d285fff03e11d163383ad2997977c9144201982e1f0c"
+        }
+      ],
+      "nonmatching_files": [],
+      "notices": [],
+      "source_obligations_fulfilled": false,
+      "redistribution_cleared": false,
+      "upstream_reference": {
+        "url": "https://raw.githubusercontent.com/libarchive/libarchive/v3.7.7/COPYING",
+        "sha256": "b2cdf763345de2de34cebf54394df3c61a105c3b71288603c251f2fa638200ba",
+        "bytes": 3086,
+        "retrieval": "downloaded",
+        "text_is_html": false
+      },
+      "package_metadata": {
+        "pkgname": [
+          "mingw-w64-x86_64-libarchive"
+        ],
+        "pkgbase": [
+          "mingw-w64-libarchive"
+        ],
+        "pkgver": [
+          "3.7.7-1"
+        ],
+        "url": [
+          "https://www.libarchive.org/"
+        ],
+        "builddate": [
+          "1728882626"
+        ],
+        "license": [
+          "BSD"
+        ],
+        "depend": [
+          "mingw-w64-x86_64-gcc-libs",
+          "mingw-w64-x86_64-bzip2",
+          "mingw-w64-x86_64-expat",
+          "mingw-w64-x86_64-libb2",
+          "mingw-w64-x86_64-libiconv",
+          "mingw-w64-x86_64-lz4",
+          "mingw-w64-x86_64-libsystre",
+          "mingw-w64-x86_64-openssl",
+          "mingw-w64-x86_64-xz",
+          "mingw-w64-x86_64-zlib",
+          "mingw-w64-x86_64-zstd"
+        ],
+        "makedepend": [
+          "mingw-w64-x86_64-cc",
+          "mingw-w64-x86_64-autotools"
+        ]
+      },
+      "build_metadata": {
+        "pkgname": [
+          "mingw-w64-x86_64-libarchive"
+        ],
+        "pkgbase": [
+          "mingw-w64-libarchive"
+        ],
+        "pkgver": [
+          "3.7.7-1"
+        ],
+        "pkgbuild_sha256sum": [
+          "8b65bf981569c2afed521287bb2dc4c6efcec23c937b4f700fc4568d19dcf18b"
+        ],
+        "builddate": [
+          "1728882626"
+        ]
+      }
+    },
+    {
+      "component": "libb2",
+      "recipe": {
+        "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/d69cf6a6c704ce9863d193ec45cbf0b73197d5d5/mingw-w64-libb2/PKGBUILD",
+        "sha256": "a0a4fd283698b56f0eb867fa63aa350e8ee5224c9e64eff076efc4f13617b696"
+      },
+      "candidate_package": {
+        "url": "https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-libb2-0.98.1-2-any.pkg.tar.zst",
+        "version": "0.98.1-2",
+        "retrieval": "downloaded",
+        "sha256": "81ac713e0c58997c75b29a7660e1ee9c8c9b884db9625d79eecec460733246da",
+        "bytes": 24223,
+        "signature_verified": false
+      },
+      "matching_files": [
+        {
+          "file": "libb2-1.dll",
+          "sha256": "7fb8418a1172042dab5227fcd466b1bf293737f5b5cf35359e851516227f109c",
+          "expected_sha256": "7fb8418a1172042dab5227fcd466b1bf293737f5b5cf35359e851516227f109c"
+        }
+      ],
+      "nonmatching_files": [],
+      "notices": [
+        {
+          "package_path": "mingw64/share/licenses/libb2/LICENSE",
+          "sha256": "6a1ee543e5282cd9061881edf462e6fdab181f328da71fc2c9a6950a80e94d01",
+          "bytes": 6556
+        }
+      ],
+      "source_obligations_fulfilled": false,
+      "redistribution_cleared": false,
+      "upstream_reference": {
+        "url": "https://raw.githubusercontent.com/BLAKE2/libb2/v0.98.1/COPYING",
+        "sha256": "6a1ee543e5282cd9061881edf462e6fdab181f328da71fc2c9a6950a80e94d01",
+        "bytes": 6556,
+        "retrieval": "downloaded",
+        "text_is_html": false
+      },
+      "package_metadata": {
+        "pkgname": [
+          "mingw-w64-x86_64-libb2"
+        ],
+        "pkgbase": [
+          "mingw-w64-libb2"
+        ],
+        "pkgver": [
+          "0.98.1-2"
+        ],
+        "url": [
+          "https://blake2.net/"
+        ],
+        "builddate": [
+          "1645196626"
+        ],
+        "license": [
+          "custom:CC0"
+        ],
+        "depend": [
+          "mingw-w64-x86_64-gcc-libs"
+        ],
+        "makedepend": [
+          "mingw-w64-x86_64-autotools",
+          "mingw-w64-x86_64-cc"
+        ]
+      },
+      "build_metadata": {
+        "pkgname": [
+          "mingw-w64-x86_64-libb2"
+        ],
+        "pkgbase": [
+          "mingw-w64-libb2"
+        ],
+        "pkgver": [
+          "0.98.1-2"
+        ],
+        "pkgbuild_sha256sum": [
+          "a0a4fd283698b56f0eb867fa63aa350e8ee5224c9e64eff076efc4f13617b696"
+        ],
+        "builddate": [
+          "1645196626"
+        ]
+      }
+    },
+    {
+      "component": "brotli",
+      "recipe": {
+        "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/d69cf6a6c704ce9863d193ec45cbf0b73197d5d5/mingw-w64-brotli/PKGBUILD",
+        "sha256": "9d2d75e4570d110752bfa990ab0dee424ea69836bc5295ec8d973629b0a4217d"
+      },
+      "candidate_package": {
+        "url": "https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-brotli-1.1.0-3-any.pkg.tar.zst",
+        "version": "1.1.0-3",
+        "retrieval": "http_404"
+      },
+      "matching_files": [],
+      "nonmatching_files": [],
+      "notices": [],
+      "source_obligations_fulfilled": false,
+      "redistribution_cleared": false,
+      "upstream_reference": {
+        "url": "https://raw.githubusercontent.com/google/brotli/v1.1.0/LICENSE",
+        "sha256": "3d180008e36922a4e8daec11c34c7af264fed5962d07924aea928c38e8663c94",
+        "bytes": 1084,
+        "retrieval": "downloaded",
+        "text_is_html": false
+      }
+    },
+    {
+      "component": "bzip2",
+      "recipe": {
+        "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/d69cf6a6c704ce9863d193ec45cbf0b73197d5d5/mingw-w64-bzip2/PKGBUILD",
+        "sha256": "40131efa9802a81168c97d685fdf98c8e24e8f3c6e12477d7a235ef651f60820"
+      },
+      "candidate_package": {
+        "url": "https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-bzip2-1.0.8-3-any.pkg.tar.zst",
+        "version": "1.0.8-3",
+        "retrieval": "downloaded",
+        "sha256": "653ec97c18dc139ca94e2b4b9d161a9b4d9e77ceb18dfb064eb95ef2a71171b6",
+        "bytes": 93091,
+        "signature_verified": false
+      },
+      "matching_files": [
+        {
+          "file": "libbz2-1.dll",
+          "sha256": "b79cd3a7102e359ef6324e98966a67939e58ec2b651ae2847cae84a4dfa453f7",
+          "expected_sha256": "b79cd3a7102e359ef6324e98966a67939e58ec2b651ae2847cae84a4dfa453f7"
+        }
+      ],
+      "nonmatching_files": [],
+      "notices": [
+        {
+          "package_path": "mingw64/share/licenses/bzip2/LICENSE",
+          "sha256": "c6dbbf828498be844a89eaa3b84adbab3199e342eb5cb2ed2f0d4ba7ec0f38a3",
+          "bytes": 1896
+        }
+      ],
+      "source_obligations_fulfilled": false,
+      "redistribution_cleared": false,
+      "upstream_reference": {
+        "url": "https://sourceware.org/git/?p=bzip2.git;a=blob;f=LICENSE;hb=bzip2-1.0.8",
+        "sha256": "0703f436acf597ece7eb7ef24070c20d0e66851332f5a253e15f2f50d440b3a9",
+        "bytes": 11671,
+        "retrieval": "downloaded",
+        "text_is_html": true
+      },
+      "package_metadata": {
+        "pkgname": [
+          "mingw-w64-x86_64-bzip2"
+        ],
+        "pkgbase": [
+          "mingw-w64-bzip2"
+        ],
+        "pkgver": [
+          "1.0.8-3"
+        ],
+        "url": [
+          "https://sourceware.org/bzip2/"
+        ],
+        "builddate": [
+          "1695797836"
+        ],
+        "license": [
+          "custom"
+        ],
+        "depend": [
+          "mingw-w64-x86_64-gcc-libs"
+        ],
+        "makedepend": [
+          "mingw-w64-x86_64-cc",
+          "mingw-w64-x86_64-autotools"
+        ]
+      },
+      "build_metadata": {
+        "pkgname": [
+          "mingw-w64-x86_64-bzip2"
+        ],
+        "pkgbase": [
+          "mingw-w64-bzip2"
+        ],
+        "pkgver": [
+          "1.0.8-3"
+        ],
+        "pkgbuild_sha256sum": [
+          "ee9b625471832b48f743171ee263cfd3d7a856dcc6859b6914ad437d7bbaf2d3"
+        ],
+        "builddate": [
+          "1695797836"
+        ]
+      }
+    },
+    {
+      "component": "cairo",
+      "recipe": {
+        "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/d69cf6a6c704ce9863d193ec45cbf0b73197d5d5/mingw-w64-cairo/PKGBUILD",
+        "sha256": "31afaed84fd353998f430bce3eabbb4e9679eb8472a54aea0879dac300398d95"
+      },
+      "candidate_package": {
+        "url": "https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-cairo-1.18.2-1-any.pkg.tar.zst",
+        "version": "1.18.2-1",
+        "retrieval": "http_404"
+      },
+      "matching_files": [],
+      "nonmatching_files": [],
+      "notices": [],
+      "source_obligations_fulfilled": false,
+      "redistribution_cleared": false,
+      "upstream_reference": {
+        "url": "https://gitlab.freedesktop.org/cairo/cairo/-/raw/1.18.2/COPYING",
+        "sha256": "67228a9f7c5f9b67c58f556f1be178f62da4d9e2e6285318d8c74d567255abdf",
+        "bytes": 1576,
+        "retrieval": "downloaded",
+        "text_is_html": false
+      }
+    },
+    {
+      "component": "openssl",
+      "recipe": {
+        "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/d69cf6a6c704ce9863d193ec45cbf0b73197d5d5/mingw-w64-openssl/PKGBUILD",
+        "sha256": "581d6f9e68c69856734a8194b498265176bc8ae2422dd9df1327f6f9dbf84e38"
+      },
+      "candidate_package": {
+        "url": "https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-openssl-3.4.0-1-any.pkg.tar.zst",
+        "version": "3.4.0-1",
+        "retrieval": "http_404"
+      },
+      "matching_files": [],
+      "nonmatching_files": [],
+      "notices": [],
+      "source_obligations_fulfilled": false,
+      "redistribution_cleared": false,
+      "upstream_reference": {
+        "url": "https://raw.githubusercontent.com/openssl/openssl/openssl-3.4.0/LICENSE.txt",
+        "sha256": "7d5450cb2d142651b8afa315b5f238efc805dad827d91ba367d8516bc9d49e7a",
+        "bytes": 10175,
+        "retrieval": "downloaded",
+        "text_is_html": false
+      }
+    },
+    {
+      "component": "curl",
+      "recipe": {
+        "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/d69cf6a6c704ce9863d193ec45cbf0b73197d5d5/mingw-w64-curl/PKGBUILD",
+        "sha256": "81e7bc339dbb84b310c679268026a60d14663333e23f37d74fd86a43e5b4802f"
+      },
+      "candidate_package": {
+        "url": "https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-curl-8.11.0-2-any.pkg.tar.zst",
+        "version": "8.11.0-2",
+        "retrieval": "http_404"
+      },
+      "matching_files": [],
+      "nonmatching_files": [],
+      "notices": [],
+      "source_obligations_fulfilled": false,
+      "redistribution_cleared": false,
+      "upstream_reference": {
+        "url": "https://raw.githubusercontent.com/curl/curl/curl-8_11_0/COPYING",
+        "sha256": "adb1fc06547fd136244179809f7b7c2d2ae6c4534f160aa513af9b6a12866a32",
+        "bytes": 1088,
+        "retrieval": "downloaded",
+        "text_is_html": false
+      }
+    },
+    {
+      "component": "libdatrie",
+      "recipe": {
+        "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/d69cf6a6c704ce9863d193ec45cbf0b73197d5d5/mingw-w64-libdatrie/PKGBUILD",
+        "sha256": "85c009b4a604326d8f59cccac1ce433081c8e6f2c486f1338704026cda093aab"
+      },
+      "candidate_package": {
+        "url": "https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-libdatrie-0.2.13-3-any.pkg.tar.zst",
+        "version": "0.2.13-3",
+        "retrieval": "downloaded",
+        "sha256": "4e242a868f32a04869a67cf5bbf83325af060b77d76f23fbd85dffa2c8951fa3",
+        "bytes": 77439,
+        "signature_verified": false
+      },
+      "matching_files": [
+        {
+          "file": "libdatrie-1.dll",
+          "sha256": "f760aef8a31b7c3670484ca4eabab1ab8e95c14052167e191463f6371c3f0850",
+          "expected_sha256": "f760aef8a31b7c3670484ca4eabab1ab8e95c14052167e191463f6371c3f0850"
+        }
+      ],
+      "nonmatching_files": [],
+      "notices": [
+        {
+          "package_path": "mingw64/share/licenses/libdatrie/COPYING",
+          "sha256": "a9bdde5616ecdd1e980b44f360600ee8783b1f99b8cc83a2beb163a0a390e861",
+          "bytes": 26527
+        }
+      ],
+      "source_obligations_fulfilled": false,
+      "redistribution_cleared": false,
+      "upstream_reference": {
+        "url": "https://raw.githubusercontent.com/tlwg/libdatrie/v0.2.13/COPYING",
+        "sha256": "a9bdde5616ecdd1e980b44f360600ee8783b1f99b8cc83a2beb163a0a390e861",
+        "bytes": 26527,
+        "retrieval": "downloaded",
+        "text_is_html": false
+      },
+      "package_metadata": {
+        "pkgname": [
+          "mingw-w64-x86_64-libdatrie"
+        ],
+        "pkgbase": [
+          "mingw-w64-libdatrie"
+        ],
+        "pkgver": [
+          "0.2.13-3"
+        ],
+        "url": [
+          "https://linux.thai.net/projects/datrie"
+        ],
+        "builddate": [
+          "1685993718"
+        ],
+        "license": [
+          "LGPL"
+        ],
+        "depend": [
+          "mingw-w64-x86_64-libiconv"
+        ],
+        "makedepend": [
+          "mingw-w64-x86_64-autotools",
+          "mingw-w64-x86_64-cc",
+          "mingw-w64-x86_64-doxygen"
+        ]
+      },
+      "build_metadata": {
+        "pkgname": [
+          "mingw-w64-x86_64-libdatrie"
+        ],
+        "pkgbase": [
+          "mingw-w64-libdatrie"
+        ],
+        "pkgver": [
+          "0.2.13-3"
+        ],
+        "pkgbuild_sha256sum": [
+          "85c009b4a604326d8f59cccac1ce433081c8e6f2c486f1338704026cda093aab"
+        ],
+        "builddate": [
+          "1685993718"
+        ]
+      }
+    },
+    {
+      "component": "libdeflate",
+      "recipe": {
+        "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/d69cf6a6c704ce9863d193ec45cbf0b73197d5d5/mingw-w64-libdeflate/PKGBUILD",
+        "sha256": "6cc9a2be2ad32e88b301dbc7b59c9d2bc7450c2689c61c892e34c4c7c4eb8298"
+      },
+      "candidate_package": {
+        "url": "https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-libdeflate-1.22-1-any.pkg.tar.zst",
+        "version": "1.22-1",
+        "retrieval": "http_404"
+      },
+      "matching_files": [],
+      "nonmatching_files": [],
+      "notices": [],
+      "source_obligations_fulfilled": false,
+      "redistribution_cleared": false,
+      "upstream_reference": {
+        "url": "https://raw.githubusercontent.com/ebiggers/libdeflate/v1.22/COPYING",
+        "sha256": "4ad69099cb4374836fd27583d9991e2838cd86b6e4666ab26b2d32582c91e73a",
+        "bytes": 1078,
+        "retrieval": "downloaded",
+        "text_is_html": false
+      }
+    },
+    {
+      "component": "expat",
+      "recipe": {
+        "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/d69cf6a6c704ce9863d193ec45cbf0b73197d5d5/mingw-w64-expat/PKGBUILD",
+        "sha256": "c7eee32429145720c8025bc130dc0638b431a5bc75a50dfcec56a934bc4b412b"
+      },
+      "candidate_package": {
+        "url": "https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-expat-2.6.4-1-any.pkg.tar.zst",
+        "version": "2.6.4-1",
+        "retrieval": "downloaded",
+        "sha256": "10a0f32a4582c920743f87ee140549fcb9100729e5719d31b5cc160bb0ab5007",
+        "bytes": 168022,
+        "signature_verified": false
+      },
+      "matching_files": [
+        {
+          "file": "libexpat-1.dll",
+          "sha256": "38cf1ace5a8f227675f589c81300d48d575270291b6012da51a30bee87bc5a8e",
+          "expected_sha256": "38cf1ace5a8f227675f589c81300d48d575270291b6012da51a30bee87bc5a8e"
+        }
+      ],
+      "nonmatching_files": [],
+      "notices": [
+        {
+          "package_path": "mingw64/share/licenses/expat/COPYING",
+          "sha256": "122f2c27000472a201d337b9b31f7eb2b52d091b02857061a8880371612d9534",
+          "bytes": 1144
+        }
+      ],
+      "source_obligations_fulfilled": false,
+      "redistribution_cleared": false,
+      "upstream_reference": {
+        "url": "https://raw.githubusercontent.com/libexpat/libexpat/R_2_6_4/expat/COPYING",
+        "sha256": "122f2c27000472a201d337b9b31f7eb2b52d091b02857061a8880371612d9534",
+        "bytes": 1144,
+        "retrieval": "downloaded",
+        "text_is_html": false
+      },
+      "package_metadata": {
+        "pkgname": [
+          "mingw-w64-x86_64-expat"
+        ],
+        "pkgbase": [
+          "mingw-w64-expat"
+        ],
+        "pkgver": [
+          "2.6.4-1"
+        ],
+        "url": [
+          "https://libexpat.github.io/"
+        ],
+        "builddate": [
+          "1731063585"
+        ],
+        "license": [
+          "spdx:MIT"
+        ],
+        "makedepend": [
+          "mingw-w64-x86_64-cc",
+          "mingw-w64-x86_64-autotools"
+        ]
+      },
+      "build_metadata": {
+        "pkgname": [
+          "mingw-w64-x86_64-expat"
+        ],
+        "pkgbase": [
+          "mingw-w64-expat"
+        ],
+        "pkgver": [
+          "2.6.4-1"
+        ],
+        "pkgbuild_sha256sum": [
+          "c7eee32429145720c8025bc130dc0638b431a5bc75a50dfcec56a934bc4b412b"
+        ],
+        "builddate": [
+          "1731063585"
+        ]
+      }
+    },
+    {
+      "component": "libffi",
+      "recipe": {
+        "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/d69cf6a6c704ce9863d193ec45cbf0b73197d5d5/mingw-w64-libffi/PKGBUILD",
+        "sha256": "25a05f75462a316b64676c24beaa34de9b5363035f0253f4cde16333f708df3e"
+      },
+      "candidate_package": {
+        "url": "https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-libffi-3.4.6-1-any.pkg.tar.zst",
+        "version": "3.4.6-1",
+        "retrieval": "downloaded",
+        "sha256": "645b28a6c5224d108b87f41220775d398f1e25ec3a18e62b26a27a5216da1a05",
+        "bytes": 43644,
+        "signature_verified": false
+      },
+      "matching_files": [
+        {
+          "file": "libffi-8.dll",
+          "sha256": "f1ed51652b3746c1b4bce497b7041e677e5d80c5ab8198efebb8fc6f75329ae8",
+          "expected_sha256": "f1ed51652b3746c1b4bce497b7041e677e5d80c5ab8198efebb8fc6f75329ae8"
+        }
+      ],
+      "nonmatching_files": [],
+      "notices": [
+        {
+          "package_path": "mingw64/share/licenses/libffi/LICENSE",
+          "sha256": "67894089811f93fca47a76f85e017da6f8582d4ba0905963c6e0f1ad6df7a195",
+          "bytes": 1132
+        }
+      ],
+      "source_obligations_fulfilled": false,
+      "redistribution_cleared": false,
+      "upstream_reference": {
+        "url": "https://raw.githubusercontent.com/libffi/libffi/v3.4.6/LICENSE",
+        "sha256": "67894089811f93fca47a76f85e017da6f8582d4ba0905963c6e0f1ad6df7a195",
+        "bytes": 1132,
+        "retrieval": "downloaded",
+        "text_is_html": false
+      },
+      "package_metadata": {
+        "pkgname": [
+          "mingw-w64-x86_64-libffi"
+        ],
+        "pkgbase": [
+          "mingw-w64-libffi"
+        ],
+        "pkgver": [
+          "3.4.6-1"
+        ],
+        "url": [
+          "https://sourceware.org/libffi"
+        ],
+        "builddate": [
+          "1708373788"
+        ],
+        "license": [
+          "MIT"
+        ],
+        "makedepend": [
+          "mingw-w64-x86_64-cc",
+          "mingw-w64-x86_64-autotools"
+        ]
+      },
+      "build_metadata": {
+        "pkgname": [
+          "mingw-w64-x86_64-libffi"
+        ],
+        "pkgbase": [
+          "mingw-w64-libffi"
+        ],
+        "pkgver": [
+          "3.4.6-1"
+        ],
+        "pkgbuild_sha256sum": [
+          "8edf46633e08a7b9a5d67a290e82ea6aa6372841b0562dd9953a154d425706dc"
+        ],
+        "builddate": [
+          "1708373788"
+        ]
+      }
+    },
+    {
+      "component": "fontconfig",
+      "recipe": {
+        "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/d69cf6a6c704ce9863d193ec45cbf0b73197d5d5/mingw-w64-fontconfig/PKGBUILD",
+        "sha256": "d589fea777d4f61d9adff63b9a6eb701dc1c3481c383b6e1d4e5b1e3eae2e5ec"
+      },
+      "candidate_package": {
+        "url": "https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-fontconfig-2.15.0-2-any.pkg.tar.zst",
+        "version": "2.15.0-2",
+        "retrieval": "http_404"
+      },
+      "matching_files": [],
+      "nonmatching_files": [],
+      "notices": [],
+      "source_obligations_fulfilled": false,
+      "redistribution_cleared": false,
+      "upstream_reference": {
+        "url": "https://gitlab.freedesktop.org/fontconfig/fontconfig/-/raw/2.15.0/COPYING",
+        "sha256": "51a51aa9823704fd90bccc616cdd17ebabb5b2b3e9cbde886ca02c7002288067",
+        "bytes": 8616,
+        "retrieval": "downloaded",
+        "text_is_html": false
+      }
+    },
+    {
+      "component": "freetype",
+      "recipe": {
+        "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/d69cf6a6c704ce9863d193ec45cbf0b73197d5d5/mingw-w64-freetype/PKGBUILD",
+        "sha256": "a7a0921ee30327860fdae106c6f1c8e07ca15c60531e326059437cae7356cf9e"
+      },
+      "candidate_package": {
+        "url": "https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-freetype-2.13.3-1-any.pkg.tar.zst",
+        "version": "2.13.3-1",
+        "retrieval": "downloaded",
+        "sha256": "89c3d870374c22b91e6445e5a528a11d2245a4f6f42a5bcf61df7261c794a140",
+        "bytes": 628668,
+        "signature_verified": false
+      },
+      "matching_files": [
+        {
+          "file": "libfreetype-6.dll",
+          "sha256": "67434ed595661d1029850d52578c3068d8d23bfdb4c73c300a446dbac7b1e151",
+          "expected_sha256": "67434ed595661d1029850d52578c3068d8d23bfdb4c73c300a446dbac7b1e151"
+        }
+      ],
+      "nonmatching_files": [],
+      "notices": [
+        {
+          "package_path": "mingw64/share/licenses/freetype/FTL.TXT",
+          "sha256": "08c135755dd589039470f1fdbb400daaabaaa50d0b366d19cebff4d22986baa1",
+          "bytes": 6743
+        },
+        {
+          "package_path": "mingw64/share/licenses/freetype/GPLv2.TXT",
+          "sha256": "c4120c6752c910c299e3bd9cb3a46ff262c268303ca2069b61f92f10a5656c18",
+          "bytes": 17994
+        }
+      ],
+      "source_obligations_fulfilled": false,
+      "redistribution_cleared": false,
+      "upstream_reference": {
+        "url": "https://gitlab.freedesktop.org/freetype/freetype/-/raw/VER-2-13-3/docs/FTL.TXT",
+        "sha256": "08c135755dd589039470f1fdbb400daaabaaa50d0b366d19cebff4d22986baa1",
+        "bytes": 6743,
+        "retrieval": "downloaded",
+        "text_is_html": false
+      },
+      "package_metadata": {
+        "pkgname": [
+          "mingw-w64-x86_64-freetype"
+        ],
+        "pkgbase": [
+          "mingw-w64-freetype"
+        ],
+        "pkgver": [
+          "2.13.3-1"
+        ],
+        "url": [
+          "https://www.freetype.org/"
+        ],
+        "builddate": [
+          "1723527594"
+        ],
+        "license": [
+          "spdx:GPL-2.0-or-later OR FTL"
+        ],
+        "depend": [
+          "mingw-w64-x86_64-gcc-libs",
+          "mingw-w64-x86_64-brotli",
+          "mingw-w64-x86_64-bzip2",
+          "mingw-w64-x86_64-libpng",
+          "mingw-w64-x86_64-zlib",
+          "mingw-w64-x86_64-harfbuzz"
+        ],
+        "makedepend": [
+          "mingw-w64-x86_64-meson",
+          "mingw-w64-x86_64-ninja",
+          "mingw-w64-x86_64-pkgconf",
+          "mingw-w64-x86_64-cc"
+        ]
+      },
+      "build_metadata": {
+        "pkgname": [
+          "mingw-w64-x86_64-freetype"
+        ],
+        "pkgbase": [
+          "mingw-w64-freetype"
+        ],
+        "pkgver": [
+          "2.13.3-1"
+        ],
+        "pkgbuild_sha256sum": [
+          "a7a0921ee30327860fdae106c6f1c8e07ca15c60531e326059437cae7356cf9e"
+        ],
+        "builddate": [
+          "1723527594"
+        ]
+      }
+    },
+    {
+      "component": "fribidi",
+      "recipe": {
+        "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/d69cf6a6c704ce9863d193ec45cbf0b73197d5d5/mingw-w64-fribidi/PKGBUILD",
+        "sha256": "8b0dfca7f26b9f1b7f32fef6ab348b7c7d07b2c568c1b9d75820346f026316b6"
+      },
+      "candidate_package": {
+        "url": "https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-fribidi-1.0.16-1-any.pkg.tar.zst",
+        "version": "1.0.16-1",
+        "retrieval": "downloaded",
+        "sha256": "82d4f9e431082d2ac2fa7b9eddd73aa0c073bf8ae66b7d137195797ec543dffa",
+        "bytes": 84338,
+        "signature_verified": false
+      },
+      "matching_files": [
+        {
+          "file": "libfribidi-0.dll",
+          "sha256": "84930fd86a3b46b62794a3bbaff21fbbaeaade5ff7cdc70be7f717ad29af87ed",
+          "expected_sha256": "84930fd86a3b46b62794a3bbaff21fbbaeaade5ff7cdc70be7f717ad29af87ed"
+        }
+      ],
+      "nonmatching_files": [],
+      "notices": [
+        {
+          "package_path": "mingw64/share/licenses/fribidi/COPYING",
+          "sha256": "32434afcc8666ba060e111d715bfdb6c2d5dd8a35fa4d3ab8ad67d8f850d2f2b",
+          "bytes": 26440
+        }
+      ],
+      "source_obligations_fulfilled": false,
+      "redistribution_cleared": false,
+      "upstream_reference": {
+        "url": "https://raw.githubusercontent.com/fribidi/fribidi/v1.0.16/COPYING",
+        "sha256": "32434afcc8666ba060e111d715bfdb6c2d5dd8a35fa4d3ab8ad67d8f850d2f2b",
+        "bytes": 26440,
+        "retrieval": "downloaded",
+        "text_is_html": false
+      },
+      "package_metadata": {
+        "pkgname": [
+          "mingw-w64-x86_64-fribidi"
+        ],
+        "pkgbase": [
+          "mingw-w64-fribidi"
+        ],
+        "pkgver": [
+          "1.0.16-1"
+        ],
+        "url": [
+          "https://github.com/fribidi/fribidi/"
+        ],
+        "builddate": [
+          "1727425293"
+        ],
+        "license": [
+          "spdx:LGPL-2.1-or-later"
+        ],
+        "makedepend": [
+          "mingw-w64-x86_64-meson",
+          "mingw-w64-x86_64-ninja",
+          "mingw-w64-x86_64-pkgconf",
+          "mingw-w64-x86_64-cc"
+        ]
+      },
+      "build_metadata": {
+        "pkgname": [
+          "mingw-w64-x86_64-fribidi"
+        ],
+        "pkgbase": [
+          "mingw-w64-fribidi"
+        ],
+        "pkgver": [
+          "1.0.16-1"
+        ],
+        "pkgbuild_sha256sum": [
+          "8b0dfca7f26b9f1b7f32fef6ab348b7c7d07b2c568c1b9d75820346f026316b6"
+        ],
+        "builddate": [
+          "1727425293"
+        ]
+      }
+    },
+    {
+      "component": "gcc",
+      "recipe": {
+        "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/d69cf6a6c704ce9863d193ec45cbf0b73197d5d5/mingw-w64-gcc/PKGBUILD",
+        "sha256": "7e77831f9b6e087eee195d3c2637c58923ab5da11b5e681d5292c6bfdc4cc37f"
+      },
+      "candidate_package": {
+        "url": "https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-gcc-libs-14.2.0-2-any.pkg.tar.zst",
+        "version": "14.2.0-2",
+        "retrieval": "downloaded",
+        "sha256": "7369ee1dc8bbb71ce8031e82396c46249bf81407a7868e5c7bde56f9f0cb0d58",
+        "bytes": 1048213,
+        "signature_verified": false
+      },
+      "matching_files": [
+        {
+          "file": "libgcc_s_seh-1.dll",
+          "sha256": "00194fb242d0d7a731343c29accdc5f6b60cc42771224312134a9d4aa8a8c00a",
+          "expected_sha256": "00194fb242d0d7a731343c29accdc5f6b60cc42771224312134a9d4aa8a8c00a"
+        },
+        {
+          "file": "libstdc++-6.dll",
+          "sha256": "a5f344549ca5dd7cb00f1237deab0ce85366e32bb0b85466fecb26743a14f0cc",
+          "expected_sha256": "a5f344549ca5dd7cb00f1237deab0ce85366e32bb0b85466fecb26743a14f0cc"
+        }
+      ],
+      "nonmatching_files": [],
+      "notices": [
+        {
+          "package_path": "mingw64/share/licenses/gcc-libs/COPYING.LIB",
+          "sha256": "a9bdde5616ecdd1e980b44f360600ee8783b1f99b8cc83a2beb163a0a390e861",
+          "bytes": 26527
+        },
+        {
+          "package_path": "mingw64/share/licenses/gcc-libs/COPYING.RUNTIME",
+          "sha256": "9d6b43ce4d8de0c878bf16b54d8e7a10d9bd42b75178153e3af6a815bdc90f74",
+          "bytes": 3324
+        },
+        {
+          "package_path": "mingw64/share/licenses/gcc-libs/COPYING3",
+          "sha256": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903",
+          "bytes": 35147
+        },
+        {
+          "package_path": "mingw64/share/licenses/gcc-libs/README",
+          "sha256": "33400d067fa3e2bd670a0868dcdb60c9486e8f559b675cf9ff1ff55d4e0d06ab",
+          "bytes": 236
+        }
+      ],
+      "source_obligations_fulfilled": false,
+      "redistribution_cleared": false,
+      "upstream_reference": {
+        "url": "https://raw.githubusercontent.com/gcc-mirror/gcc/releases/gcc-14.2.0/COPYING.RUNTIME",
+        "sha256": "9d6b43ce4d8de0c878bf16b54d8e7a10d9bd42b75178153e3af6a815bdc90f74",
+        "bytes": 3324,
+        "retrieval": "downloaded",
+        "text_is_html": false
+      },
+      "package_metadata": {
+        "pkgname": [
+          "mingw-w64-x86_64-gcc-libs"
+        ],
+        "pkgbase": [
+          "mingw-w64-gcc"
+        ],
+        "pkgver": [
+          "14.2.0-2"
+        ],
+        "url": [
+          "https://gcc.gnu.org"
+        ],
+        "builddate": [
+          "1730668682"
+        ],
+        "license": [
+          "spdx:GPL-3.0-or-later WITH GCC-exception-3.1 AND LGPL-2.1-or-later"
+        ],
+        "depend": [
+          "mingw-w64-x86_64-libwinpthread"
+        ],
+        "makedepend": [
+          "mingw-w64-x86_64-gcc",
+          "mingw-w64-x86_64-gcc-ada",
+          "mingw-w64-x86_64-rust",
+          "mingw-w64-x86_64-autotools",
+          "mingw-w64-x86_64-binutils",
+          "mingw-w64-x86_64-crt",
+          "mingw-w64-x86_64-headers",
+          "mingw-w64-x86_64-gmp",
+          "mingw-w64-x86_64-gperf",
+          "mingw-w64-x86_64-isl",
+          "mingw-w64-x86_64-libiconv",
+          "mingw-w64-x86_64-mpc",
+          "mingw-w64-x86_64-mpfr",
+          "mingw-w64-x86_64-python",
+          "mingw-w64-x86_64-windows-default-manifest",
+          "mingw-w64-x86_64-winpthreads",
+          "mingw-w64-x86_64-zlib",
+          "mingw-w64-x86_64-zstd"
+        ]
+      },
+      "build_metadata": {
+        "pkgname": [
+          "mingw-w64-x86_64-gcc-libs"
+        ],
+        "pkgbase": [
+          "mingw-w64-gcc"
+        ],
+        "pkgver": [
+          "14.2.0-2"
+        ],
+        "pkgbuild_sha256sum": [
+          "7e77831f9b6e087eee195d3c2637c58923ab5da11b5e681d5292c6bfdc4cc37f"
+        ],
+        "builddate": [
+          "1730668682"
+        ]
+      }
+    },
+    {
+      "component": "giflib",
+      "recipe": {
+        "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/d69cf6a6c704ce9863d193ec45cbf0b73197d5d5/mingw-w64-giflib/PKGBUILD",
+        "sha256": "23602d6ea7fe9d0a1e1ebab89c70d08a27511f95e4e6ba731f7946090f4f5586"
+      },
+      "candidate_package": {
+        "url": "https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-giflib-5.2.2-1-any.pkg.tar.zst",
+        "version": "5.2.2-1",
+        "retrieval": "downloaded",
+        "sha256": "41364563c9220aa04fb8433256d20a11b579d2385909dc4673b919667e8696f7",
+        "bytes": 121738,
+        "signature_verified": false
+      },
+      "matching_files": [
+        {
+          "file": "libgif-7.dll",
+          "sha256": "a1a179853ae6fad8eb045b8e9f12c55e6fc99929446b02fa345512354cf5e582",
+          "expected_sha256": "a1a179853ae6fad8eb045b8e9f12c55e6fc99929446b02fa345512354cf5e582"
+        }
+      ],
+      "nonmatching_files": [],
+      "notices": [],
+      "source_obligations_fulfilled": false,
+      "redistribution_cleared": false,
+      "upstream_reference": {
+        "url": "https://sourceforge.net/p/giflib/code/ci/5.2.2/tree/COPYING",
+        "retrieval": "HTTPError"
+      },
+      "package_metadata": {
+        "pkgname": [
+          "mingw-w64-x86_64-giflib"
+        ],
+        "pkgbase": [
+          "mingw-w64-giflib"
+        ],
+        "pkgver": [
+          "5.2.2-1"
+        ],
+        "url": [
+          "https://sourceforge.net/projects/giflib"
+        ],
+        "builddate": [
+          "1708506257"
+        ],
+        "license": [
+          "MIT"
+        ],
+        "depend": [
+          "mingw-w64-x86_64-gcc-libs"
+        ],
+        "makedepend": [
+          "mingw-w64-x86_64-cc",
+          "xmlto"
+        ]
+      },
+      "build_metadata": {
+        "pkgname": [
+          "mingw-w64-x86_64-giflib"
+        ],
+        "pkgbase": [
+          "mingw-w64-giflib"
+        ],
+        "pkgver": [
+          "5.2.2-1"
+        ],
+        "pkgbuild_sha256sum": [
+          "d8859601293f13677bf01c7be34b2ee760e7240bb5220603a80ae0580a0cc9c4"
+        ],
+        "builddate": [
+          "1708506257"
+        ]
+      }
+    },
+    {
+      "component": "glib2",
+      "recipe": {
+        "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/d69cf6a6c704ce9863d193ec45cbf0b73197d5d5/mingw-w64-glib2/PKGBUILD",
+        "sha256": "74065a6487b469c2b7896bfe8e97bd12f136dc8274747a3ebf80549b43480776"
+      },
+      "candidate_package": {
+        "url": "https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-glib2-2.82.2-1-any.pkg.tar.zst",
+        "version": "2.82.2-1",
+        "retrieval": "http_404"
+      },
+      "matching_files": [],
+      "nonmatching_files": [],
+      "notices": [],
+      "source_obligations_fulfilled": false,
+      "redistribution_cleared": false,
+      "upstream_reference": {
+        "url": "https://gitlab.gnome.org/GNOME/glib/-/raw/2.82.2/LICENSES/LGPL-2.1-or-later.txt",
+        "sha256": "fa6f36630bb1e0c571d34b2bbdf188d08495c9dbf58f28cac112f303fc1f58fb",
+        "bytes": 25967,
+        "retrieval": "downloaded",
+        "text_is_html": false
+      }
+    },
+    {
+      "component": "graphite2",
+      "recipe": {
+        "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/d69cf6a6c704ce9863d193ec45cbf0b73197d5d5/mingw-w64-graphite2/PKGBUILD",
+        "sha256": "c386c52e65456047d901a08830b5661a0c1bd4419d6313e36ea096b9a749e008"
+      },
+      "candidate_package": {
+        "url": "https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-graphite2-1.3.14-3-any.pkg.tar.zst",
+        "version": "1.3.14-3",
+        "retrieval": "downloaded",
+        "sha256": "7a34b730ebdb7b4be8df91c2ddc9ff4965bd3f8359bb248cb774b5d099fdf5b1",
+        "bytes": 144574,
+        "signature_verified": false
+      },
+      "matching_files": [
+        {
+          "file": "libgraphite2.dll",
+          "sha256": "f927efecd958f0e54a24ae297f86cd6aed05e7fc20e5da0882050ab9ec464395",
+          "expected_sha256": "f927efecd958f0e54a24ae297f86cd6aed05e7fc20e5da0882050ab9ec464395"
+        }
+      ],
+      "nonmatching_files": [],
+      "notices": [
+        {
+          "package_path": "mingw64/share/licenses/graphite2/COPYING",
+          "sha256": "2c272829ff23f182c8bf7ea12fedea69b0ae148663123ed5240c117cb129c9c1",
+          "bytes": 1235
+        },
+        {
+          "package_path": "mingw64/share/licenses/graphite2/LICENSE",
+          "sha256": "a9bdde5616ecdd1e980b44f360600ee8783b1f99b8cc83a2beb163a0a390e861",
+          "bytes": 26527
+        }
+      ],
+      "source_obligations_fulfilled": false,
+      "redistribution_cleared": false,
+      "upstream_reference": {
+        "url": "https://raw.githubusercontent.com/silnrsi/graphite/1.3.14/COPYING",
+        "sha256": "2c272829ff23f182c8bf7ea12fedea69b0ae148663123ed5240c117cb129c9c1",
+        "bytes": 1235,
+        "retrieval": "downloaded",
+        "text_is_html": false
+      },
+      "package_metadata": {
+        "pkgname": [
+          "mingw-w64-x86_64-graphite2"
+        ],
+        "pkgbase": [
+          "mingw-w64-graphite2"
+        ],
+        "pkgver": [
+          "1.3.14-3"
+        ],
+        "url": [
+          "https://github.com/silnrsi/graphite"
+        ],
+        "builddate": [
+          "1695801573"
+        ],
+        "license": [
+          "spdx:LGPL-2.1-or-later"
+        ],
+        "depend": [
+          "mingw-w64-x86_64-gcc-libs"
+        ],
+        "makedepend": [
+          "mingw-w64-x86_64-cmake",
+          "mingw-w64-x86_64-python",
+          "mingw-w64-x86_64-cc"
+        ]
+      },
+      "build_metadata": {
+        "pkgname": [
+          "mingw-w64-x86_64-graphite2"
+        ],
+        "pkgbase": [
+          "mingw-w64-graphite2"
+        ],
+        "pkgver": [
+          "1.3.14-3"
+        ],
+        "pkgbuild_sha256sum": [
+          "da8768256a9003d163a1b543ce1fd4ed40a48ae2a97967554e1d2265a2fea5b1"
+        ],
+        "builddate": [
+          "1695801573"
+        ]
+      }
+    },
+    {
+      "component": "harfbuzz",
+      "recipe": {
+        "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/d69cf6a6c704ce9863d193ec45cbf0b73197d5d5/mingw-w64-harfbuzz/PKGBUILD",
+        "sha256": "9c96718b3d87b565c812389f99f9e42cbdceee15484518c00e37add7f7fa2e62"
+      },
+      "candidate_package": {
+        "url": "https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-harfbuzz-10.1.0-1-any.pkg.tar.zst",
+        "version": "10.1.0-1",
+        "retrieval": "http_404"
+      },
+      "matching_files": [],
+      "nonmatching_files": [],
+      "notices": [],
+      "source_obligations_fulfilled": false,
+      "redistribution_cleared": false,
+      "upstream_reference": {
+        "url": "https://raw.githubusercontent.com/harfbuzz/harfbuzz/10.1.0/COPYING",
+        "sha256": "ba8f810f2455c2f08e2d56bb49b72f37fcf68f1f4fade38977cfd7372050ad64",
+        "bytes": 1971,
+        "retrieval": "downloaded",
+        "text_is_html": false
+      }
+    },
+    {
+      "component": "libiconv",
+      "recipe": {
+        "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/d69cf6a6c704ce9863d193ec45cbf0b73197d5d5/mingw-w64-libiconv/PKGBUILD",
+        "sha256": "5a6abee1e5a1fbf1f80bca19625bac990c94e0aee92cf03a856e86e1b486facf"
+      },
+      "candidate_package": {
+        "url": "https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-libiconv-1.17-4-any.pkg.tar.zst",
+        "version": "1.17-4",
+        "retrieval": "http_404"
+      },
+      "matching_files": [],
+      "nonmatching_files": [],
+      "notices": [],
+      "source_obligations_fulfilled": false,
+      "redistribution_cleared": false,
+      "upstream_reference": {
+        "url": "https://www.gnu.org/software/libiconv/",
+        "sha256": "8713f12384204294c1546dc9c3bb2345428e34af857e26a3682a8020bc9e216f",
+        "bytes": 11430,
+        "retrieval": "downloaded",
+        "text_is_html": true
+      }
+    },
+    {
+      "component": "icu",
+      "recipe": {
+        "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/d69cf6a6c704ce9863d193ec45cbf0b73197d5d5/mingw-w64-icu/PKGBUILD",
+        "sha256": "544fc4e0b1f5b792ee8d02d2e89c370f5bbe690a0a15c01885e15a5f7c60db57"
+      },
+      "candidate_package": {
+        "url": "https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-icu-75.1-2-any.pkg.tar.zst",
+        "version": "75.1-2",
+        "retrieval": "http_404"
+      },
+      "matching_files": [],
+      "nonmatching_files": [],
+      "notices": [],
+      "source_obligations_fulfilled": false,
+      "redistribution_cleared": false,
+      "upstream_reference": {
+        "url": "https://raw.githubusercontent.com/unicode-org/icu/release-75-1/LICENSE",
+        "sha256": "3ae033da0bfd60f4609c5c99fe50c0c840685889d3b705d3f527fd7b52032f5c",
+        "bytes": 25223,
+        "retrieval": "downloaded",
+        "text_is_html": false
+      }
+    },
+    {
+      "component": "libidn2",
+      "recipe": {
+        "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/d69cf6a6c704ce9863d193ec45cbf0b73197d5d5/mingw-w64-libidn2/PKGBUILD",
+        "sha256": "137bf9152b6a1fa6c75677b3835c8d8e7d515bdf4d9727f88a1f47ada11188b4"
+      },
+      "candidate_package": {
+        "url": "https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-libidn2-2.3.7-2-any.pkg.tar.zst",
+        "version": "2.3.7-2",
+        "retrieval": "downloaded",
+        "sha256": "09a23f0a2f9c7bc1b2e9cadf853f136728ae8f9354632186c6189816a5a5264e",
+        "bytes": 173019,
+        "signature_verified": false
+      },
+      "matching_files": [
+        {
+          "file": "libidn2-0.dll",
+          "sha256": "621f5bfc24cdae8479a69b56de530ab6cee633352ae0bce01885cc6b1eca0371",
+          "expected_sha256": "621f5bfc24cdae8479a69b56de530ab6cee633352ae0bce01885cc6b1eca0371"
+        }
+      ],
+      "nonmatching_files": [],
+      "notices": [],
+      "source_obligations_fulfilled": false,
+      "redistribution_cleared": false,
+      "upstream_reference": {
+        "url": "https://raw.githubusercontent.com/libidn/libidn2/v2.3.7/COPYING",
+        "sha256": "73483f797a83373fca1b968c11785b98c4fc4803cdc7d3210811ca8b075d6d76",
+        "bytes": 1555,
+        "retrieval": "downloaded",
+        "text_is_html": false
+      },
+      "package_metadata": {
+        "pkgname": [
+          "mingw-w64-x86_64-libidn2"
+        ],
+        "pkgbase": [
+          "mingw-w64-libidn2"
+        ],
+        "pkgver": [
+          "2.3.7-2"
+        ],
+        "url": [
+          "https://www.gnu.org/software/libidn/#libidn2"
+        ],
+        "builddate": [
+          "1706863693"
+        ],
+        "license": [
+          "spdx:GPL-2.0-or-later",
+          "spdx:LGPL-3.0-or-later"
+        ],
+        "depend": [
+          "mingw-w64-x86_64-gettext-runtime",
+          "mingw-w64-x86_64-libunistring"
+        ],
+        "makedepend": [
+          "mingw-w64-x86_64-cc",
+          "mingw-w64-x86_64-autotools",
+          "mingw-w64-x86_64-gtk-doc",
+          "mingw-w64-x86_64-gettext-tools"
+        ]
+      },
+      "build_metadata": {
+        "pkgname": [
+          "mingw-w64-x86_64-libidn2"
+        ],
+        "pkgbase": [
+          "mingw-w64-libidn2"
+        ],
+        "pkgver": [
+          "2.3.7-2"
+        ],
+        "pkgbuild_sha256sum": [
+          "8c14a76c75ba39a04aacd6fe7fdf923d7a4b26ff355ff27591f619369ea6e218"
+        ],
+        "builddate": [
+          "1706863693"
+        ]
+      }
+    },
+    {
+      "component": "gettext",
+      "recipe": {
+        "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/d69cf6a6c704ce9863d193ec45cbf0b73197d5d5/mingw-w64-gettext/PKGBUILD",
+        "sha256": "a2dd98c2ef3bd5eb728562c64577fbfdbcc6f6d647ec23e2c432f67da16e7af3"
+      },
+      "candidate_package": {
+        "url": "https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-gettext-runtime-0.22.5-2-any.pkg.tar.zst",
+        "version": "0.22.5-2",
+        "retrieval": "http_404"
+      },
+      "matching_files": [],
+      "nonmatching_files": [],
+      "notices": [],
+      "source_obligations_fulfilled": false,
+      "redistribution_cleared": false,
+      "upstream_reference": {
+        "url": "https://www.gnu.org/software/gettext/manual/html_node/Licenses.html",
+        "sha256": "fd33ed76db20fe53674e05800f59d83c9a532d3113197514b0ddca62d8d5751d",
+        "bytes": 4426,
+        "retrieval": "downloaded",
+        "text_is_html": true
+      }
+    },
+    {
+      "component": "jbigkit",
+      "recipe": {
+        "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/d69cf6a6c704ce9863d193ec45cbf0b73197d5d5/mingw-w64-jbigkit/PKGBUILD",
+        "sha256": "95e0df2be8fb755c7e9a0ccbba56412fed191d34e13c6a9d55c3469c029425a8"
+      },
+      "candidate_package": {
+        "url": "https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-jbigkit-2.1-5-any.pkg.tar.zst",
+        "version": "2.1-5",
+        "retrieval": "downloaded",
+        "sha256": "3343b02d3b5e5e44304d68f0122f2de1faba2df6c180b8ddc8ef01f9ad5fe75a",
+        "bytes": 106206,
+        "signature_verified": false
+      },
+      "matching_files": [
+        {
+          "file": "libjbig-0.dll",
+          "sha256": "275a827ba6839d47cfdbe059db1b1b403a92ff26e2b76a29362915487868bef2",
+          "expected_sha256": "275a827ba6839d47cfdbe059db1b1b403a92ff26e2b76a29362915487868bef2"
+        }
+      ],
+      "nonmatching_files": [],
+      "notices": [
+        {
+          "package_path": "mingw64/share/licenses/jbigkit/COPYING",
+          "sha256": "91df39d1816bfb17a4dda2d3d2c83b1f6f2d38d53e53e41e8f97ad5ac46a0cad",
+          "bytes": 17982
+        }
+      ],
+      "source_obligations_fulfilled": false,
+      "redistribution_cleared": false,
+      "upstream_reference": {
+        "url": "https://www.cl.cam.ac.uk/~mgk25/jbigkit/",
+        "sha256": "648a1da014ec8c33c1567501116e4b1a11e8d2f7241f3baff4478efd66ccf48c",
+        "bytes": 13109,
+        "retrieval": "downloaded",
+        "text_is_html": true
+      },
+      "package_metadata": {
+        "pkgname": [
+          "mingw-w64-x86_64-jbigkit"
+        ],
+        "pkgbase": [
+          "mingw-w64-jbigkit"
+        ],
+        "pkgver": [
+          "2.1-5"
+        ],
+        "url": [
+          "https://www.cl.cam.ac.uk/~mgk25/jbigkit/"
+        ],
+        "builddate": [
+          "1692352061"
+        ],
+        "license": [
+          "spdx:GPL-2.0"
+        ],
+        "depend": [
+          "mingw-w64-x86_64-gcc-libs"
+        ],
+        "makedepend": [
+          "mingw-w64-x86_64-cc",
+          "mingw-w64-x86_64-libtool"
+        ]
+      },
+      "build_metadata": {
+        "pkgname": [
+          "mingw-w64-x86_64-jbigkit"
+        ],
+        "pkgbase": [
+          "mingw-w64-jbigkit"
+        ],
+        "pkgver": [
+          "2.1-5"
+        ],
+        "pkgbuild_sha256sum": [
+          "95e0df2be8fb755c7e9a0ccbba56412fed191d34e13c6a9d55c3469c029425a8"
+        ],
+        "builddate": [
+          "1692352061"
+        ]
+      }
+    },
+    {
+      "component": "libjpeg-turbo",
+      "recipe": {
+        "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/d69cf6a6c704ce9863d193ec45cbf0b73197d5d5/mingw-w64-libjpeg-turbo/PKGBUILD",
+        "sha256": "4b656bbf2cd779002f04e7f1d7de989438ac6faa23016ae17ad2cb9a1fe8b070"
+      },
+      "candidate_package": {
+        "url": "https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-libjpeg-turbo-3.0.4-2-any.pkg.tar.zst",
+        "version": "3.0.4-2",
+        "retrieval": "http_404"
+      },
+      "matching_files": [],
+      "nonmatching_files": [],
+      "notices": [],
+      "source_obligations_fulfilled": false,
+      "redistribution_cleared": false,
+      "upstream_reference": {
+        "url": "https://raw.githubusercontent.com/libjpeg-turbo/libjpeg-turbo/3.0.4/LICENSE.md",
+        "sha256": "e548c96c0c09397c94b5c5531836c02ff2c403f1f2b130cad8e3ec9439b5a7cc",
+        "bytes": 5620,
+        "retrieval": "downloaded",
+        "text_is_html": false
+      }
+    },
+    {
+      "component": "leptonica",
+      "recipe": {
+        "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/d69cf6a6c704ce9863d193ec45cbf0b73197d5d5/mingw-w64-leptonica/PKGBUILD",
+        "sha256": "bb32a6523193204d74ce758ed7bf5e3c08d00f32ecaec817bb36fb227270d965"
+      },
+      "candidate_package": {
+        "url": "https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-leptonica-1.85.0-1-any.pkg.tar.zst",
+        "version": "1.85.0-1",
+        "retrieval": "downloaded",
+        "sha256": "3c9471ecc9c29969ab0d455874fda375692deff02849f79c7e02fffed72ecfc5",
+        "bytes": 1777120,
+        "signature_verified": false
+      },
+      "matching_files": [
+        {
+          "file": "libleptonica-6.dll",
+          "sha256": "fdc77910d2f907d6129d929a5d98118a3dd1842198a2de879590dfd5e6413a8c",
+          "expected_sha256": "fdc77910d2f907d6129d929a5d98118a3dd1842198a2de879590dfd5e6413a8c"
+        }
+      ],
+      "nonmatching_files": [],
+      "notices": [
+        {
+          "package_path": "mingw64/share/licenses/leptonica/LICENSE",
+          "sha256": "87829abb5bbb00b55a107365da89e9a33f86c4250169e5a1e5588505be7d5806",
+          "bytes": 1521
+        }
+      ],
+      "source_obligations_fulfilled": false,
+      "redistribution_cleared": false,
+      "upstream_reference": {
+        "url": "https://raw.githubusercontent.com/DanBloomberg/leptonica/1.85.0/leptonica-license.txt",
+        "sha256": "87829abb5bbb00b55a107365da89e9a33f86c4250169e5a1e5588505be7d5806",
+        "bytes": 1521,
+        "retrieval": "downloaded",
+        "text_is_html": false
+      },
+      "package_metadata": {
+        "pkgname": [
+          "mingw-w64-x86_64-leptonica"
+        ],
+        "pkgbase": [
+          "mingw-w64-leptonica"
+        ],
+        "pkgver": [
+          "1.85.0-1"
+        ],
+        "url": [
+          "http://www.leptonica.org"
+        ],
+        "builddate": [
+          "1729339445"
+        ],
+        "license": [
+          "spdx:BSD-2-Clause"
+        ],
+        "depend": [
+          "mingw-w64-x86_64-giflib",
+          "mingw-w64-x86_64-libtiff",
+          "mingw-w64-x86_64-libpng",
+          "mingw-w64-x86_64-libwebp",
+          "mingw-w64-x86_64-openjpeg2",
+          "mingw-w64-x86_64-zlib"
+        ],
+        "makedepend": [
+          "mingw-w64-x86_64-cc",
+          "mingw-w64-x86_64-autotools"
+        ]
+      },
+      "build_metadata": {
+        "pkgname": [
+          "mingw-w64-x86_64-leptonica"
+        ],
+        "pkgbase": [
+          "mingw-w64-leptonica"
+        ],
+        "pkgver": [
+          "1.85.0-1"
+        ],
+        "pkgbuild_sha256sum": [
+          "bb32a6523193204d74ce758ed7bf5e3c08d00f32ecaec817bb36fb227270d965"
+        ],
+        "builddate": [
+          "1729339445"
+        ]
+      }
+    },
+    {
+      "component": "lerc",
+      "recipe": {
+        "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/d69cf6a6c704ce9863d193ec45cbf0b73197d5d5/mingw-w64-lerc/PKGBUILD",
+        "sha256": "bacc823d6a4fb7d22f60c4da38f465be630b2d6cdc7e780477d45bb42e8efd6a"
+      },
+      "candidate_package": {
+        "url": "https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-lerc-4.0.0-1-any.pkg.tar.zst",
+        "version": "4.0.0-1",
+        "retrieval": "downloaded",
+        "sha256": "e73d57113679fac87194a2c2b7a5762697256990babc850551e3b1cef93fc9d4",
+        "bytes": 291095,
+        "signature_verified": false
+      },
+      "matching_files": [
+        {
+          "file": "libLerc.dll",
+          "sha256": "4ab688c7c5c4afdfee0f519f942759137067a7876a1c1bb825ee575b0a5760b1",
+          "expected_sha256": "4ab688c7c5c4afdfee0f519f942759137067a7876a1c1bb825ee575b0a5760b1"
+        }
+      ],
+      "nonmatching_files": [],
+      "notices": [
+        {
+          "package_path": "mingw64/share/licenses/lerc/LICENSE",
+          "sha256": "77a8b761727c75e2167b15bfdf61b2c0bcf8792271228bebe80779106ad00671",
+          "bytes": 9198
+        }
+      ],
+      "source_obligations_fulfilled": false,
+      "redistribution_cleared": false,
+      "upstream_reference": {
+        "url": "https://raw.githubusercontent.com/Esri/lerc/v4.0.0/LICENSE",
+        "sha256": "77a8b761727c75e2167b15bfdf61b2c0bcf8792271228bebe80779106ad00671",
+        "bytes": 9198,
+        "retrieval": "downloaded",
+        "text_is_html": false
+      },
+      "package_metadata": {
+        "pkgname": [
+          "mingw-w64-x86_64-lerc"
+        ],
+        "pkgbase": [
+          "mingw-w64-lerc"
+        ],
+        "pkgver": [
+          "4.0.0-1"
+        ],
+        "url": [
+          "https://github.com/Esri/lerc"
+        ],
+        "builddate": [
+          "1659083641"
+        ],
+        "license": [
+          "spdx:Apache-2.0"
+        ],
+        "depend": [
+          "mingw-w64-x86_64-gcc-libs"
+        ],
+        "makedepend": [
+          "mingw-w64-x86_64-cc",
+          "mingw-w64-x86_64-cmake",
+          "mingw-w64-x86_64-ninja"
+        ]
+      },
+      "build_metadata": {
+        "pkgname": [
+          "mingw-w64-x86_64-lerc"
+        ],
+        "pkgbase": [
+          "mingw-w64-lerc"
+        ],
+        "pkgver": [
+          "4.0.0-1"
+        ],
+        "pkgbuild_sha256sum": [
+          "bacc823d6a4fb7d22f60c4da38f465be630b2d6cdc7e780477d45bb42e8efd6a"
+        ],
+        "builddate": [
+          "1659083641"
+        ]
+      }
+    },
+    {
+      "component": "lz4",
+      "recipe": {
+        "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/d69cf6a6c704ce9863d193ec45cbf0b73197d5d5/mingw-w64-lz4/PKGBUILD",
+        "sha256": "e8780f865620673525e38b992561193c841a9927ac4f81d8b3f5f6ce0534f0a4"
+      },
+      "candidate_package": {
+        "url": "https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-lz4-1.10.0-1-any.pkg.tar.zst",
+        "version": "1.10.0-1",
+        "retrieval": "downloaded",
+        "sha256": "a4c5a3bcd26111554c87591275b8a681bfa4473d1607647e24c22ef6213c055c",
+        "bytes": 170938,
+        "signature_verified": false
+      },
+      "matching_files": [
+        {
+          "file": "liblz4.dll",
+          "sha256": "35f917274bca8f19677ba66f1b3cc3c83568c3249fc43215fc16e76439c8e856",
+          "expected_sha256": "35f917274bca8f19677ba66f1b3cc3c83568c3249fc43215fc16e76439c8e856"
+        }
+      ],
+      "nonmatching_files": [],
+      "notices": [],
+      "source_obligations_fulfilled": false,
+      "redistribution_cleared": false,
+      "upstream_reference": {
+        "url": "https://raw.githubusercontent.com/lz4/lz4/v1.10.0/lib/LICENSE",
+        "sha256": "8b58c446121a109ccf32edc094bba3010a3d85e4ee3702950db55e4d3e87736c",
+        "bytes": 1311,
+        "retrieval": "downloaded",
+        "text_is_html": false
+      },
+      "package_metadata": {
+        "pkgname": [
+          "mingw-w64-x86_64-lz4"
+        ],
+        "pkgbase": [
+          "mingw-w64-lz4"
+        ],
+        "pkgver": [
+          "1.10.0-1"
+        ],
+        "url": [
+          "https://lz4.github.io/lz4/"
+        ],
+        "builddate": [
+          "1721693305"
+        ],
+        "license": [
+          "BSD",
+          "GPL2"
+        ],
+        "makedepend": [
+          "mingw-w64-x86_64-cc"
+        ]
+      },
+      "build_metadata": {
+        "pkgname": [
+          "mingw-w64-x86_64-lz4"
+        ],
+        "pkgbase": [
+          "mingw-w64-lz4"
+        ],
+        "pkgver": [
+          "1.10.0-1"
+        ],
+        "pkgbuild_sha256sum": [
+          "e8780f865620673525e38b992561193c841a9927ac4f81d8b3f5f6ce0534f0a4"
+        ],
+        "builddate": [
+          "1721693305"
+        ]
+      }
+    },
+    {
+      "component": "xz",
+      "recipe": {
+        "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/d69cf6a6c704ce9863d193ec45cbf0b73197d5d5/mingw-w64-xz/PKGBUILD",
+        "sha256": "66eeb72945caf0b2cd636a42a4e0373218d84558d35bfe0a15f8d967ad11dfb9"
+      },
+      "candidate_package": {
+        "url": "https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-xz-5.6.3-2-any.pkg.tar.zst",
+        "version": "5.6.3-2",
+        "retrieval": "http_404"
+      },
+      "matching_files": [],
+      "nonmatching_files": [],
+      "notices": [],
+      "source_obligations_fulfilled": false,
+      "redistribution_cleared": false,
+      "upstream_reference": {
+        "url": "https://raw.githubusercontent.com/tukaani-project/xz/v5.6.3/COPYING",
+        "sha256": "ee3b35b82f7bb0ba5fd9f13ca34ebbe757a59c05bfde5ab9d50ff4188ed33396",
+        "bytes": 3885,
+        "retrieval": "downloaded",
+        "text_is_html": false
+      }
+    },
+    {
+      "component": "openjpeg2",
+      "recipe": {
+        "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/d69cf6a6c704ce9863d193ec45cbf0b73197d5d5/mingw-w64-openjpeg2/PKGBUILD",
+        "sha256": "faaaaf0a4b64261ba02c6f0d3a38c4b54d60adf53c24ab587eed430ed14c3cd4"
+      },
+      "candidate_package": {
+        "url": "https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-openjpeg2-2.5.2-1-any.pkg.tar.zst",
+        "version": "2.5.2-1",
+        "retrieval": "http_404"
+      },
+      "matching_files": [],
+      "nonmatching_files": [],
+      "notices": [],
+      "source_obligations_fulfilled": false,
+      "redistribution_cleared": false,
+      "upstream_reference": {
+        "url": "https://raw.githubusercontent.com/uclouvain/openjpeg/v2.5.2/LICENSE",
+        "sha256": "a6af136f3e15038a666b61f376612a07d9a4e48cb7c01adbf3e33b3f14ab49b6",
+        "bytes": 2112,
+        "retrieval": "downloaded",
+        "text_is_html": false
+      }
+    },
+    {
+      "component": "pango",
+      "recipe": {
+        "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/d69cf6a6c704ce9863d193ec45cbf0b73197d5d5/mingw-w64-pango/PKGBUILD",
+        "sha256": "7522e3025b426f33c2cab8b8344cf7c4e1083036879d389bc5c00cb91b933123"
+      },
+      "candidate_package": {
+        "url": "https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-pango-1.54.0-1-any.pkg.tar.zst",
+        "version": "1.54.0-1",
+        "retrieval": "http_404"
+      },
+      "matching_files": [],
+      "nonmatching_files": [],
+      "notices": [],
+      "source_obligations_fulfilled": false,
+      "redistribution_cleared": false,
+      "upstream_reference": {
+        "url": "https://gitlab.gnome.org/GNOME/pango/-/raw/1.54.0/COPYING",
+        "sha256": "d245807f90032872d1438d741ed21e2490e1175dc8aa3afa5ddb6c8e529b58e5",
+        "bytes": 25292,
+        "retrieval": "downloaded",
+        "text_is_html": false
+      }
+    },
+    {
+      "component": "pcre2",
+      "recipe": {
+        "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/d69cf6a6c704ce9863d193ec45cbf0b73197d5d5/mingw-w64-pcre2/PKGBUILD",
+        "sha256": "23f92a9dc3689cad5925fedbeaf210fe1b5af8418d0645a2b4a197659dbdc4a3"
+      },
+      "candidate_package": {
+        "url": "https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-pcre2-10.44-1-any.pkg.tar.zst",
+        "version": "10.44-1",
+        "retrieval": "http_404"
+      },
+      "matching_files": [],
+      "nonmatching_files": [],
+      "notices": [],
+      "source_obligations_fulfilled": false,
+      "redistribution_cleared": false,
+      "upstream_reference": {
+        "url": "https://raw.githubusercontent.com/PCRE2Project/pcre2/pcre2-10.44/LICENCE",
+        "sha256": "030087e2e8dd7c1bdd26057d25d4ded8f45bbf01ad458d68665ad04b8b0fbedf",
+        "bytes": 3477,
+        "retrieval": "downloaded",
+        "text_is_html": false
+      }
+    },
+    {
+      "component": "pixman",
+      "recipe": {
+        "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/d69cf6a6c704ce9863d193ec45cbf0b73197d5d5/mingw-w64-pixman/PKGBUILD",
+        "sha256": "8862a28fae4caf2bfc1dc56e0f941359f9efa5385fe7774cc0205531dbca5547"
+      },
+      "candidate_package": {
+        "url": "https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-pixman-0.44.0-1-any.pkg.tar.zst",
+        "version": "0.44.0-1",
+        "retrieval": "http_404"
+      },
+      "matching_files": [],
+      "nonmatching_files": [],
+      "notices": [],
+      "source_obligations_fulfilled": false,
+      "redistribution_cleared": false,
+      "upstream_reference": {
+        "url": "https://gitlab.freedesktop.org/pixman/pixman/-/raw/pixman-0.44.0/COPYING",
+        "sha256": "fac9270f0987b96ff4533fca3548c633e02083cbba4a0172a3b149b2e4019793",
+        "bytes": 2087,
+        "retrieval": "downloaded",
+        "text_is_html": false
+      }
+    },
+    {
+      "component": "libpng",
+      "recipe": {
+        "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/d69cf6a6c704ce9863d193ec45cbf0b73197d5d5/mingw-w64-libpng/PKGBUILD",
+        "sha256": "581eadc97bcd4c81fc4ca9ace4d7e2958048e947742de14779a681942ea9eb94"
+      },
+      "candidate_package": {
+        "url": "https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-libpng-1.6.44-1-any.pkg.tar.zst",
+        "version": "1.6.44-1",
+        "retrieval": "http_404"
+      },
+      "matching_files": [],
+      "nonmatching_files": [],
+      "notices": [],
+      "source_obligations_fulfilled": false,
+      "redistribution_cleared": false,
+      "upstream_reference": {
+        "url": "https://raw.githubusercontent.com/pnggroup/libpng/v1.6.44/LICENSE",
+        "sha256": "7317e078e2d3b5d7ba5a6159e650945153262b44b76f6700f8e9edb261c5143e",
+        "bytes": 5345,
+        "retrieval": "downloaded",
+        "text_is_html": false
+      }
+    },
+    {
+      "component": "libpsl",
+      "recipe": {
+        "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/d69cf6a6c704ce9863d193ec45cbf0b73197d5d5/mingw-w64-libpsl/PKGBUILD",
+        "sha256": "16981a7a01371696edf6da7e3dbe0952e60d259c95a7e8d98aec59eead282a4c"
+      },
+      "candidate_package": {
+        "url": "https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-libpsl-0.21.5-2-any.pkg.tar.zst",
+        "version": "0.21.5-2",
+        "retrieval": "http_404"
+      },
+      "matching_files": [],
+      "nonmatching_files": [],
+      "notices": [],
+      "source_obligations_fulfilled": false,
+      "redistribution_cleared": false,
+      "upstream_reference": {
+        "url": "https://raw.githubusercontent.com/rockdaboot/libpsl/0.21.5/COPYING",
+        "sha256": "322392e6001b2b3b0fca705dc9f11f26e12441188ecde50eb1d22909980b2925",
+        "bytes": 1060,
+        "retrieval": "downloaded",
+        "text_is_html": false
+      }
+    },
+    {
+      "component": "libwebp",
+      "recipe": {
+        "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/d69cf6a6c704ce9863d193ec45cbf0b73197d5d5/mingw-w64-libwebp/PKGBUILD",
+        "sha256": "4e2626db6ac745b3ab5b50ba0c2c7e8fd5f2d357d6a1b49aeca979400509b810"
+      },
+      "candidate_package": {
+        "url": "https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-libwebp-1.4.0-1-any.pkg.tar.zst",
+        "version": "1.4.0-1",
+        "retrieval": "http_404"
+      },
+      "matching_files": [],
+      "nonmatching_files": [],
+      "notices": [],
+      "source_obligations_fulfilled": false,
+      "redistribution_cleared": false,
+      "upstream_reference": {
+        "url": "https://raw.githubusercontent.com/webmproject/libwebp/v1.4.0/COPYING",
+        "sha256": "5aec868f669e384a22372a4e8a1a6cd7d44c64cd451f960ca69cc170d1e13acf",
+        "bytes": 1496,
+        "retrieval": "downloaded",
+        "text_is_html": false
+      }
+    },
+    {
+      "component": "libssh2",
+      "recipe": {
+        "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/d69cf6a6c704ce9863d193ec45cbf0b73197d5d5/mingw-w64-libssh2/PKGBUILD",
+        "sha256": "e9d555f8626f27af0921df58d1e7c0afb0149c72d1752d55567f23a62e1ece98"
+      },
+      "candidate_package": {
+        "url": "https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-libssh2-1.11.0-2-any.pkg.tar.zst",
+        "version": "1.11.0-2",
+        "retrieval": "http_404"
+      },
+      "matching_files": [],
+      "nonmatching_files": [],
+      "notices": [],
+      "source_obligations_fulfilled": false,
+      "redistribution_cleared": false,
+      "upstream_reference": {
+        "url": "https://raw.githubusercontent.com/libssh2/libssh2/libssh2-1.11.0/COPYING",
+        "sha256": "fda5e2522c58ba1f31c9f2044747616457466f4aebec16ade4af86e3a16a8e02",
+        "bytes": 1959,
+        "retrieval": "downloaded",
+        "text_is_html": false
+      }
+    },
+    {
+      "component": "tesseract-ocr",
+      "recipe": {
+        "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/d69cf6a6c704ce9863d193ec45cbf0b73197d5d5/mingw-w64-tesseract-ocr/PKGBUILD",
+        "sha256": "c0998a068a807b3f7cb947502579fa70fe8ea7aec190783b76edeab69a82d68e"
+      },
+      "candidate_package": {
+        "url": "https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-tesseract-ocr-5.5.0-1-any.pkg.tar.zst",
+        "version": "5.5.0-1",
+        "retrieval": "http_404"
+      },
+      "matching_files": [],
+      "nonmatching_files": [],
+      "notices": [],
+      "source_obligations_fulfilled": false,
+      "redistribution_cleared": false,
+      "upstream_reference": {
+        "url": "https://raw.githubusercontent.com/tesseract-ocr/tesseract/5.5.0/LICENSE",
+        "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+        "bytes": 11358,
+        "retrieval": "downloaded",
+        "text_is_html": false
+      }
+    },
+    {
+      "component": "libthai",
+      "recipe": {
+        "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/d69cf6a6c704ce9863d193ec45cbf0b73197d5d5/mingw-w64-libthai/PKGBUILD",
+        "sha256": "fb73499a3f2e88b53d2ed6f4130560a0b9b42e613284e4e4e30a85bfa46ab246"
+      },
+      "candidate_package": {
+        "url": "https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-libthai-0.1.29-3-any.pkg.tar.zst",
+        "version": "0.1.29-3",
+        "retrieval": "downloaded",
+        "sha256": "17d40b586a2dc8358e85548f261945245ad353e257a076ef0fb14722a947db03",
+        "bytes": 215864,
+        "signature_verified": false
+      },
+      "matching_files": [
+        {
+          "file": "libthai-0.dll",
+          "sha256": "420e08cedaf9daaabcf8f6c92349d9dadb7b5ad9e4e79d1126bb2a55a7cdbe09",
+          "expected_sha256": "420e08cedaf9daaabcf8f6c92349d9dadb7b5ad9e4e79d1126bb2a55a7cdbe09"
+        }
+      ],
+      "nonmatching_files": [],
+      "notices": [
+        {
+          "package_path": "mingw64/share/licenses/libthai/COPYING",
+          "sha256": "a9bdde5616ecdd1e980b44f360600ee8783b1f99b8cc83a2beb163a0a390e861",
+          "bytes": 26527
+        }
+      ],
+      "source_obligations_fulfilled": false,
+      "redistribution_cleared": false,
+      "upstream_reference": {
+        "url": "https://raw.githubusercontent.com/tlwg/libthai/v0.1.29/COPYING",
+        "sha256": "a9bdde5616ecdd1e980b44f360600ee8783b1f99b8cc83a2beb163a0a390e861",
+        "bytes": 26527,
+        "retrieval": "downloaded",
+        "text_is_html": false
+      },
+      "package_metadata": {
+        "pkgname": [
+          "mingw-w64-x86_64-libthai"
+        ],
+        "pkgbase": [
+          "mingw-w64-libthai"
+        ],
+        "pkgver": [
+          "0.1.29-3"
+        ],
+        "url": [
+          "https://linux.thai.net/projects/libthai"
+        ],
+        "builddate": [
+          "1685993830"
+        ],
+        "license": [
+          "LGPL"
+        ],
+        "depend": [
+          "mingw-w64-x86_64-libdatrie"
+        ],
+        "makedepend": [
+          "autoconf-archive",
+          "mingw-w64-x86_64-autotools",
+          "mingw-w64-x86_64-cc",
+          "mingw-w64-x86_64-doxygen"
+        ]
+      },
+      "build_metadata": {
+        "pkgname": [
+          "mingw-w64-x86_64-libthai"
+        ],
+        "pkgbase": [
+          "mingw-w64-libthai"
+        ],
+        "pkgver": [
+          "0.1.29-3"
+        ],
+        "pkgbuild_sha256sum": [
+          "6ac8ed87c4daee7e188866081fe04490625af4a5cc1f08c8d5ef01bf570971ff"
+        ],
+        "builddate": [
+          "1685993830"
+        ]
+      }
+    },
+    {
+      "component": "libtiff",
+      "recipe": {
+        "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/d69cf6a6c704ce9863d193ec45cbf0b73197d5d5/mingw-w64-libtiff/PKGBUILD",
+        "sha256": "426a25910e7f7778455da0194f59abbf96c571c219bee1c73e43d4b2b3fc4534"
+      },
+      "candidate_package": {
+        "url": "https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-libtiff-4.7.0-1-any.pkg.tar.zst",
+        "version": "4.7.0-1",
+        "retrieval": "downloaded",
+        "sha256": "5470372309432ae33083ce69d861e48622a053fefdb384793731c2fe9f16f4cd",
+        "bytes": 685017,
+        "signature_verified": false
+      },
+      "matching_files": [
+        {
+          "file": "libtiff-6.dll",
+          "sha256": "33b46b399327b3bcd7cefb63ca4eff7c0696cdf30de37a7ad20d946261e7cdac",
+          "expected_sha256": "33b46b399327b3bcd7cefb63ca4eff7c0696cdf30de37a7ad20d946261e7cdac"
+        }
+      ],
+      "nonmatching_files": [],
+      "notices": [
+        {
+          "package_path": "mingw64/share/licenses/libtiff/LICENSE.md",
+          "sha256": "0780558a8bfba0af1160ec1ff11ade4f41c0d7deafd6ecfc796b492a788e380d",
+          "bytes": 1164
+        }
+      ],
+      "source_obligations_fulfilled": false,
+      "redistribution_cleared": false,
+      "upstream_reference": {
+        "url": "https://gitlab.com/libtiff/libtiff/-/raw/v4.7.0/LICENSE.md",
+        "sha256": "0780558a8bfba0af1160ec1ff11ade4f41c0d7deafd6ecfc796b492a788e380d",
+        "bytes": 1164,
+        "retrieval": "downloaded",
+        "text_is_html": false
+      },
+      "package_metadata": {
+        "pkgname": [
+          "mingw-w64-x86_64-libtiff"
+        ],
+        "pkgbase": [
+          "mingw-w64-libtiff"
+        ],
+        "pkgver": [
+          "4.7.0-1"
+        ],
+        "url": [
+          "https://libtiff.gitlab.io/libtiff/"
+        ],
+        "builddate": [
+          "1726747509"
+        ],
+        "license": [
+          "spdx:MIT"
+        ],
+        "depend": [
+          "mingw-w64-x86_64-gcc-libs",
+          "mingw-w64-x86_64-jbigkit",
+          "mingw-w64-x86_64-lerc",
+          "mingw-w64-x86_64-libjpeg-turbo",
+          "mingw-w64-x86_64-libdeflate",
+          "mingw-w64-x86_64-libwebp",
+          "mingw-w64-x86_64-xz",
+          "mingw-w64-x86_64-zlib",
+          "mingw-w64-x86_64-zstd"
+        ],
+        "makedepend": [
+          "mingw-w64-x86_64-cc",
+          "mingw-w64-x86_64-autotools",
+          "mingw-w64-x86_64-python-sphinx"
+        ]
+      },
+      "build_metadata": {
+        "pkgname": [
+          "mingw-w64-x86_64-libtiff"
+        ],
+        "pkgbase": [
+          "mingw-w64-libtiff"
+        ],
+        "pkgver": [
+          "4.7.0-1"
+        ],
+        "pkgbuild_sha256sum": [
+          "426a25910e7f7778455da0194f59abbf96c571c219bee1c73e43d4b2b3fc4534"
+        ],
+        "builddate": [
+          "1726747509"
+        ]
+      }
+    },
+    {
+      "component": "libunistring",
+      "recipe": {
+        "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/d69cf6a6c704ce9863d193ec45cbf0b73197d5d5/mingw-w64-libunistring/PKGBUILD",
+        "sha256": "b231307d342e59122de2c8c331c6564b544a52ae39738d4d292ceabf0b3ff401"
+      },
+      "candidate_package": {
+        "url": "https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-libunistring-1.2-1-any.pkg.tar.zst",
+        "version": "1.2-1",
+        "retrieval": "http_404"
+      },
+      "matching_files": [],
+      "nonmatching_files": [],
+      "notices": [],
+      "source_obligations_fulfilled": false,
+      "redistribution_cleared": false,
+      "upstream_reference": {
+        "url": "https://www.gnu.org/software/libunistring/",
+        "sha256": "3f83119485bed42178cbd25ab424bd95326fdfc4d31bd2399f2fe831feb7a4cd",
+        "bytes": 5606,
+        "retrieval": "downloaded",
+        "text_is_html": true
+      }
+    },
+    {
+      "component": "winpthreads-git",
+      "recipe": {
+        "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/d69cf6a6c704ce9863d193ec45cbf0b73197d5d5/mingw-w64-winpthreads-git/PKGBUILD",
+        "sha256": "0541052b3f3212d0c0fb7c693de35ebc7be32dd21a8657d6cad86700377669ab"
+      },
+      "candidate_package": {
+        "url": "https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-libwinpthread-git-12.0.0.r369.g0d4221712-1-any.pkg.tar.zst",
+        "version": "12.0.0.r369.g0d4221712-1",
+        "retrieval": "http_404"
+      },
+      "matching_files": [],
+      "nonmatching_files": [],
+      "notices": [],
+      "source_obligations_fulfilled": false,
+      "redistribution_cleared": false,
+      "upstream_reference": {
+        "url": "https://raw.githubusercontent.com/mingw-w64/mingw-w64/0d42217123d3aec0341b79f6d959c76e09648a1e/mingw-w64-libraries/winpthreads/COPYING",
+        "sha256": "63263614cdd29f2f93cba85e992f041b31f9fc7b4033692f31269489a8a1b177",
+        "bytes": 2883,
+        "retrieval": "downloaded",
+        "text_is_html": false
+      }
+    },
+    {
+      "component": "zstd",
+      "recipe": {
+        "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/d69cf6a6c704ce9863d193ec45cbf0b73197d5d5/mingw-w64-zstd/PKGBUILD",
+        "sha256": "7670b7adc88057d72a34760d550503a4c0ed4dd394d45a131fba69c618d73403"
+      },
+      "candidate_package": {
+        "url": "https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-zstd-1.5.6-2-any.pkg.tar.zst",
+        "version": "1.5.6-2",
+        "retrieval": "downloaded",
+        "sha256": "1475d6d9129aad9773b92deab2033f245d4dbeb55363bad18fd49f76e631e125",
+        "bytes": 651190,
+        "signature_verified": false
+      },
+      "matching_files": [
+        {
+          "file": "libzstd.dll",
+          "sha256": "f216ea8efb5b3bb9ad3d938fb9ac07e3b8f78c2c92faab03d2c468d0b6798a5a",
+          "expected_sha256": "f216ea8efb5b3bb9ad3d938fb9ac07e3b8f78c2c92faab03d2c468d0b6798a5a"
+        }
+      ],
+      "nonmatching_files": [],
+      "notices": [
+        {
+          "package_path": "mingw64/share/licenses/zstd/LICENSE",
+          "sha256": "7055266497633c9025b777c78eb7235af13922117480ed5c674677adc381c9d8",
+          "bytes": 1549
+        }
+      ],
+      "source_obligations_fulfilled": false,
+      "redistribution_cleared": false,
+      "upstream_reference": {
+        "url": "https://raw.githubusercontent.com/facebook/zstd/v1.5.6/LICENSE",
+        "sha256": "7055266497633c9025b777c78eb7235af13922117480ed5c674677adc381c9d8",
+        "bytes": 1549,
+        "retrieval": "downloaded",
+        "text_is_html": false
+      },
+      "package_metadata": {
+        "pkgname": [
+          "mingw-w64-x86_64-zstd"
+        ],
+        "pkgbase": [
+          "mingw-w64-zstd"
+        ],
+        "pkgver": [
+          "1.5.6-2"
+        ],
+        "url": [
+          "https://facebook.github.io/zstd/"
+        ],
+        "builddate": [
+          "1712087989"
+        ],
+        "license": [
+          "spdx:BSD-3-Clause OR GPL-2.0-or-later"
+        ],
+        "depend": [
+          "mingw-w64-x86_64-gcc-libs"
+        ],
+        "makedepend": [
+          "mingw-w64-x86_64-cc",
+          "mingw-w64-x86_64-cmake",
+          "mingw-w64-x86_64-ninja"
+        ]
+      },
+      "build_metadata": {
+        "pkgname": [
+          "mingw-w64-x86_64-zstd"
+        ],
+        "pkgbase": [
+          "mingw-w64-zstd"
+        ],
+        "pkgver": [
+          "1.5.6-2"
+        ],
+        "pkgbuild_sha256sum": [
+          "7670b7adc88057d72a34760d550503a4c0ed4dd394d45a131fba69c618d73403"
+        ],
+        "builddate": [
+          "1712087989"
+        ]
+      }
+    },
+    {
+      "component": "zlib",
+      "recipe": {
+        "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/d69cf6a6c704ce9863d193ec45cbf0b73197d5d5/mingw-w64-zlib/PKGBUILD",
+        "sha256": "dada944be7fdbc675a02f7b8ede171e310221489288345257050c3e2091429d1"
+      },
+      "candidate_package": {
+        "url": "https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-zlib-1.3.1-1-any.pkg.tar.zst",
+        "version": "1.3.1-1",
+        "retrieval": "downloaded",
+        "sha256": "ca04caafd73e15de216502d53038406e79d29b20c47d9a409e9b2d12858105f0",
+        "bytes": 106864,
+        "signature_verified": false
+      },
+      "matching_files": [
+        {
+          "file": "zlib1.dll",
+          "sha256": "cb7ab3788d10940df874acd97b1821bbb5ee4a91f3eec11982bb5bf7a3c96443",
+          "expected_sha256": "cb7ab3788d10940df874acd97b1821bbb5ee4a91f3eec11982bb5bf7a3c96443"
+        }
+      ],
+      "nonmatching_files": [],
+      "notices": [
+        {
+          "package_path": "mingw64/share/licenses/zlib/LICENSE",
+          "sha256": "845efc77857d485d91fb3e0b884aaa929368c717ae8186b66fe1ed2495753243",
+          "bytes": 1002
+        }
+      ],
+      "source_obligations_fulfilled": false,
+      "redistribution_cleared": false,
+      "upstream_reference": {
+        "url": "https://raw.githubusercontent.com/madler/zlib/v1.3.1/LICENSE",
+        "sha256": "845efc77857d485d91fb3e0b884aaa929368c717ae8186b66fe1ed2495753243",
+        "bytes": 1002,
+        "retrieval": "downloaded",
+        "text_is_html": false
+      },
+      "package_metadata": {
+        "pkgname": [
+          "mingw-w64-x86_64-zlib"
+        ],
+        "pkgbase": [
+          "mingw-w64-zlib"
+        ],
+        "pkgver": [
+          "1.3.1-1"
+        ],
+        "url": [
+          "https://www.zlib.net/"
+        ],
+        "builddate": [
+          "1705996161"
+        ],
+        "license": [
+          "spdx:Zlib"
+        ],
+        "makedepend": [
+          "mingw-w64-x86_64-cc",
+          "mingw-w64-x86_64-autotools",
+          "mingw-w64-x86_64-bzip2"
+        ]
+      },
+      "build_metadata": {
+        "pkgname": [
+          "mingw-w64-x86_64-zlib"
+        ],
+        "pkgbase": [
+          "mingw-w64-zlib"
+        ],
+        "pkgver": [
+          "1.3.1-1"
+        ],
+        "pkgbuild_sha256sum": [
+          "c9ae8e5e9d10e20c7782dd3476f020f62dbdfb23d8aa24d144a9425ffe08635e"
+        ],
+        "builddate": [
+          "1705996161"
+        ]
+      }
+    }
+  ],
+  "verbatim_notice_files": [
+    {
+      "path": "libb2/libb2/LICENSE",
+      "package_path": "mingw64/share/licenses/libb2/LICENSE",
+      "sha256": "6a1ee543e5282cd9061881edf462e6fdab181f328da71fc2c9a6950a80e94d01",
+      "bytes": 6556
+    },
+    {
+      "path": "bzip2/bzip2/LICENSE",
+      "package_path": "mingw64/share/licenses/bzip2/LICENSE",
+      "sha256": "c6dbbf828498be844a89eaa3b84adbab3199e342eb5cb2ed2f0d4ba7ec0f38a3",
+      "bytes": 1896
+    },
+    {
+      "path": "libdatrie/libdatrie/COPYING",
+      "package_path": "mingw64/share/licenses/libdatrie/COPYING",
+      "sha256": "a9bdde5616ecdd1e980b44f360600ee8783b1f99b8cc83a2beb163a0a390e861",
+      "bytes": 26527
+    },
+    {
+      "path": "expat/expat/COPYING",
+      "package_path": "mingw64/share/licenses/expat/COPYING",
+      "sha256": "122f2c27000472a201d337b9b31f7eb2b52d091b02857061a8880371612d9534",
+      "bytes": 1144
+    },
+    {
+      "path": "libffi/libffi/LICENSE",
+      "package_path": "mingw64/share/licenses/libffi/LICENSE",
+      "sha256": "67894089811f93fca47a76f85e017da6f8582d4ba0905963c6e0f1ad6df7a195",
+      "bytes": 1132
+    },
+    {
+      "path": "freetype/freetype/FTL.TXT",
+      "package_path": "mingw64/share/licenses/freetype/FTL.TXT",
+      "sha256": "08c135755dd589039470f1fdbb400daaabaaa50d0b366d19cebff4d22986baa1",
+      "bytes": 6743
+    },
+    {
+      "path": "freetype/freetype/GPLv2.TXT",
+      "package_path": "mingw64/share/licenses/freetype/GPLv2.TXT",
+      "sha256": "c4120c6752c910c299e3bd9cb3a46ff262c268303ca2069b61f92f10a5656c18",
+      "bytes": 17994
+    },
+    {
+      "path": "fribidi/fribidi/COPYING",
+      "package_path": "mingw64/share/licenses/fribidi/COPYING",
+      "sha256": "32434afcc8666ba060e111d715bfdb6c2d5dd8a35fa4d3ab8ad67d8f850d2f2b",
+      "bytes": 26440
+    },
+    {
+      "path": "gcc/gcc-libs/COPYING.LIB",
+      "package_path": "mingw64/share/licenses/gcc-libs/COPYING.LIB",
+      "sha256": "a9bdde5616ecdd1e980b44f360600ee8783b1f99b8cc83a2beb163a0a390e861",
+      "bytes": 26527
+    },
+    {
+      "path": "gcc/gcc-libs/COPYING.RUNTIME",
+      "package_path": "mingw64/share/licenses/gcc-libs/COPYING.RUNTIME",
+      "sha256": "9d6b43ce4d8de0c878bf16b54d8e7a10d9bd42b75178153e3af6a815bdc90f74",
+      "bytes": 3324
+    },
+    {
+      "path": "gcc/gcc-libs/COPYING3",
+      "package_path": "mingw64/share/licenses/gcc-libs/COPYING3",
+      "sha256": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903",
+      "bytes": 35147
+    },
+    {
+      "path": "gcc/gcc-libs/README",
+      "package_path": "mingw64/share/licenses/gcc-libs/README",
+      "sha256": "33400d067fa3e2bd670a0868dcdb60c9486e8f559b675cf9ff1ff55d4e0d06ab",
+      "bytes": 236
+    },
+    {
+      "path": "graphite2/graphite2/COPYING",
+      "package_path": "mingw64/share/licenses/graphite2/COPYING",
+      "sha256": "2c272829ff23f182c8bf7ea12fedea69b0ae148663123ed5240c117cb129c9c1",
+      "bytes": 1235
+    },
+    {
+      "path": "graphite2/graphite2/LICENSE",
+      "package_path": "mingw64/share/licenses/graphite2/LICENSE",
+      "sha256": "a9bdde5616ecdd1e980b44f360600ee8783b1f99b8cc83a2beb163a0a390e861",
+      "bytes": 26527
+    },
+    {
+      "path": "jbigkit/jbigkit/COPYING",
+      "package_path": "mingw64/share/licenses/jbigkit/COPYING",
+      "sha256": "91df39d1816bfb17a4dda2d3d2c83b1f6f2d38d53e53e41e8f97ad5ac46a0cad",
+      "bytes": 17982
+    },
+    {
+      "path": "leptonica/leptonica/LICENSE",
+      "package_path": "mingw64/share/licenses/leptonica/LICENSE",
+      "sha256": "87829abb5bbb00b55a107365da89e9a33f86c4250169e5a1e5588505be7d5806",
+      "bytes": 1521
+    },
+    {
+      "path": "lerc/lerc/LICENSE",
+      "package_path": "mingw64/share/licenses/lerc/LICENSE",
+      "sha256": "77a8b761727c75e2167b15bfdf61b2c0bcf8792271228bebe80779106ad00671",
+      "bytes": 9198
+    },
+    {
+      "path": "libthai/libthai/COPYING",
+      "package_path": "mingw64/share/licenses/libthai/COPYING",
+      "sha256": "a9bdde5616ecdd1e980b44f360600ee8783b1f99b8cc83a2beb163a0a390e861",
+      "bytes": 26527
+    },
+    {
+      "path": "libtiff/libtiff/LICENSE.md",
+      "package_path": "mingw64/share/licenses/libtiff/LICENSE.md",
+      "sha256": "0780558a8bfba0af1160ec1ff11ade4f41c0d7deafd6ecfc796b492a788e380d",
+      "bytes": 1164
+    },
+    {
+      "path": "zstd/zstd/LICENSE",
+      "package_path": "mingw64/share/licenses/zstd/LICENSE",
+      "sha256": "7055266497633c9025b777c78eb7235af13922117480ed5c674677adc381c9d8",
+      "bytes": 1549
+    },
+    {
+      "path": "zlib/zlib/LICENSE",
+      "package_path": "mingw64/share/licenses/zlib/LICENSE",
+      "sha256": "845efc77857d485d91fb3e0b884aaa929368c717ae8186b66fe1ed2495753243",
+      "bytes": 1002
+    }
+  ]
+}

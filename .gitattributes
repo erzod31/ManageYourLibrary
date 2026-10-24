@@ -2,3 +2,5 @@
 * text=auto
 *.sh text eol=lf
 *.bat text eol=crlf
+# Preserve exact bytes of third-party legal notices matched to package receipts.
+tesseract/licenses/reviewed-package-notices/** -text

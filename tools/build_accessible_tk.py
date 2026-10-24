@@ -96,15 +96,15 @@ def build(destination, resume=False):
             run(['make', 'install'], cwd=work, env=env)
     from setuptools import Extension, Distribution
     lib = prefix / 'lib'
+    # Tk 9.1 installs script archives on Unix as well as Windows. Explicit
+    # directories also let PyInstaller collect the complete script library.
+    for archive in lib.glob('libt*9*.zip'):
+        with zipfile.ZipFile(archive) as stream:
+            for name in stream.namelist():
+                if not (lib / name).resolve().is_relative_to(lib.resolve()):
+                    raise RuntimeError('Unsafe runtime ZIP member')
+            stream.extractall(lib)
     if os.name == 'nt':
-        # Tk 9.1's Windows install embeds scripts in DLL/ZIP files. Explicit
-        # script directories work with CPython 3.12's existing initialization.
-        for archive in lib.glob('libt*9*.zip'):
-            with zipfile.ZipFile(archive) as stream:
-                for name in stream.namelist():
-                    if not (lib / name).resolve().is_relative_to(lib.resolve()):
-                        raise RuntimeError('Unsafe runtime ZIP member')
-                stream.extractall(lib)
         libraries = [next(p for p in lib.glob(pattern) if 'stub' not in p.name).stem
                      for pattern in ('tcl91.lib', 'tcl9tk91.lib')]
         libraries += ['tommath']
@@ -112,7 +112,7 @@ def build(destination, resume=False):
         # Keep the version's decimal point: libtcl9.1.so -> tcl9.1.
         libraries = [p.name.removeprefix('lib').removesuffix('.dylib').removesuffix('.so')
                      for pattern in ('libtcl9*.dylib' if sys.platform == 'darwin' else 'libtcl9*.so',
-                                     'libtk9*.dylib' if sys.platform == 'darwin' else 'libtk9*.so')
+                                     'libtcl9tk9*.dylib' if sys.platform == 'darwin' else 'libtcl9tk9*.so')
                      for p in [next(lib.glob(pattern))]]
     extension = Extension('_tkinter', [str(modules / n) for n in ('_tkinter.c', 'tkappinit.c')],
         include_dirs=[str(prefix / 'include'), str(Path(sysconfig.get_path('include')) / 'internal')],
@@ -150,8 +150,8 @@ def build(destination, resume=False):
     bootstrap = bridge / 'myl_tk_runtime_bootstrap.py'
     bootstrap.write_text('import os, sys\n'
         f'sys.path.insert(0, {str(bridge)!r})\n'
-        f'os.environ["TCL_LIBRARY"] = {str(prefix / ("lib/tcl_library" if os.name == "nt" else "lib/tcl9.1"))!r}\n'
-        f'os.environ["TK_LIBRARY"] = {str(prefix / ("lib/tk_library" if os.name == "nt" else "lib/tk9.1"))!r}\n'
+        f'os.environ["TCL_LIBRARY"] = {str(lib / ("tcl_library" if (lib / "tcl_library").is_dir() else "tcl9.1"))!r}\n'
+        f'os.environ["TK_LIBRARY"] = {str(lib / ("tk_library" if (lib / "tk_library").is_dir() else "tk9.1"))!r}\n'
         + (f'_dll = os.add_dll_directory({str(prefix / "bin")!r})\n' if os.name == 'nt' else ''), encoding='utf-8')
     site = Path(sysconfig.get_path('purelib'))
     activation = site / 'myl_accessible_tk.pth'

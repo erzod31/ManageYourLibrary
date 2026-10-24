@@ -43,7 +43,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y xvfb libtk8.6 patchelf libx11-dev libxft-dev libxext-dev libxss-dev libatk-bridge2.0-dev dbus-x11 tesseract-ocr tesseract-ocr-eng tesseract-ocr-spa tesseract-ocr-fra tesseract-ocr-nld tesseract-ocr-chi-sim
+          sudo apt-get install -y xvfb libtk8.6 patchelf libx11-dev libxft-dev libxext-dev libxss-dev libharfbuzz-dev libatk-bridge2.0-dev dbus-x11 tesseract-ocr tesseract-ocr-eng tesseract-ocr-spa tesseract-ocr-fra tesseract-ocr-nld tesseract-ocr-chi-sim
       - name: Install macOS OCR prerequisites
         if: runner.os == 'macOS'
         run: brew install tesseract tesseract-lang
@@ -96,6 +96,7 @@ jobs:
             dist/**/runtime-self-test.json
             dist/**/first-use-self-test.json
             dist/**/extracted-*-self-test.json
+            dist/accessibility-self-test.json
           if-no-files-found: ignore
 
   publish:

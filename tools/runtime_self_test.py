@@ -37,6 +37,16 @@ def run_checks(version: str) -> dict:
         try:
             root.withdraw()
             root.update_idletasks()
+            from ui.accessibility import available, expose
+            native = available(root)
+            report['gui'] = {'tk': root.tk.call('package', 'present', 'Tk'),
+                             'native_accessibility': native}
+            if native:
+                fixture = tk.Button(root, text='Accessibility fixture')
+                expose(fixture, role='Button', name='Accessibility fixture')
+                if root.tk.call('::tk::accessible::get_acc_name', str(fixture)) != 'Accessibility fixture':
+                    raise RuntimeError('Native accessibility name was not retained')
+                fixture.destroy()
         finally:
             root.destroy()
 

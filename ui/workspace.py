@@ -28,6 +28,7 @@ from core.library_view_model import (
 )
 from rounded_widgets import RoundedButton, RoundedCard
 from ui.icon_palette import create_icon
+from ui.accessibility import name_control, annotate
 
 TEXT = {
     "es": {
@@ -505,6 +506,29 @@ class Workspace:
         self.root.bind("<Configure>", self._schedule_responsive_layout, add="+")
         self.root.after_idle(lambda: self.shell.sash_place(0, 240, 0))
         self.root.after_idle(self._restore_details_width)
+        self._name_accessible_controls()
+        self.root.bind('<F6>', self._cycle_pane_focus, add='+')
+
+    def _name_accessible_controls(self):
+        fields = {'search_entry': 'search', 'format_combo': 'format', 'sort_combo': 'sort_by',
+                  'tree': 'books', 'entity_tree': self.library_scope if self.library_scope in {'authors', 'series', 'tags'} else 'authors',
+                  'detail_path_entry': 'path', 'read_status_combo': 'reading_status'}
+        for attribute, key in fields.items():
+            control = getattr(self, attribute, None)
+            if isinstance(control, tk.Misc):
+                name_control(control, _text(key) if key != 'reading_status' else _text('unread') + ' / ' + _text('reading') + ' / ' + _text('read'))
+
+    def _cycle_pane_focus(self, _event=None):
+        center = self.entity_tree if self.entity_view.winfo_ismapped() else self.tree if self.view_mode == 'table' else self.search_entry
+        controls = [self.nav_buttons['library'], center, self.details_heading]
+        current = self.root.focus_get()
+        index = controls.index(current) if current in controls else -1
+        for offset in range(1, len(controls) + 1):
+            candidate = controls[(index + offset) % len(controls)]
+            if candidate.winfo_ismapped():
+                candidate.focus_set()
+                break
+        return 'break'
 
     def _icon_photo(self, name, color=None, size=24):
         colors = getattr(self.app, "tema_actual", {})
@@ -1665,12 +1689,14 @@ class Workspace:
             if button is None:
                 continue
             button.configure(text="" if self._sidebar_compact else _text(key))
+            button.configure(accessible_name=_text(key))
         theme_icon = "sun" if self.app.modo_oscuro else "moon"
         self.app.btn_tema.configure(
             text=("" if self._sidebar_compact else (core.tr("light_mode") if self.app.modo_oscuro else core.tr("dark_mode"))),
             image=self._icon_photo(theme_icon),
         )
         self._update_review_count(refresh=False)
+        self._name_accessible_controls()
 
     def _set_details_visible(self, visible):
         panes = {str(value) for value in self.library_panes.panes()}
@@ -2197,7 +2223,9 @@ class Workspace:
                 cover._item_path = item["ruta"]
                 cover._item_format = item["formato"]
                 cover.configure(command=lambda selected=item: self.select_item(selected))
+                name_control(cover, item['titulo'] + ' — ' + item['autor_mostrar'])
                 title.configure(text=item["titulo"], command=lambda selected=item: self.select_item(selected))
+                name_control(title, item['titulo'])
                 author.configure(text=item["autor_mostrar"])
                 if not getattr(cover, "_cover_loaded", False):
                     self._request_cover(cover, *cover_key)
@@ -2580,6 +2608,8 @@ class Workspace:
             self.show_folder_button.configure(state="normal")
         self.detail_title.configure(text=item["titulo"])
         self.detail_path_var.set(full_display_path(item['ruta']))
+        name_control(self.detail_title, item['titulo'])
+        annotate(self.detail_path_entry)
         self._refresh_detail_metadata_controls()
         edition = []
         for label, key in [
@@ -2749,6 +2779,9 @@ class Workspace:
                 insertbackground=colors.get("text", "#2d2a27"),
             )
             entry.grid(row=row, column=1, sticky="ew", pady=6, ipady=6)
+            name_control(entry, _text(label_key))
+            if row == 0:
+                window.after_idle(entry.focus_set)
             variables[field] = variable
         form.grid_columnconfigure(1, weight=1)
 
@@ -2770,6 +2803,7 @@ class Workspace:
         )
         save_button.pack(side="right")
         window.grab_set()
+        window.bind('<Escape>', lambda _event: window.destroy())
 
     def review_selected_metadata(self):
         if not self.selected_item or self.app.trabajando:

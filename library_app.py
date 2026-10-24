@@ -77,6 +77,8 @@ class App:
         self.theme_preference = operation_config.get("theme", "system")
         self.modo_oscuro = self._tema_sistema_oscuro() if self.theme_preference == "system" else self.theme_preference in {"dark", "contrast"}
         self.theme_widgets = []
+        from ui.accessibility import install
+        install(root)
         self.crear_interfaz()
         self.actualizar_label_indice()
         self.actualizar_estado_botones()

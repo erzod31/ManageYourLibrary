@@ -43,14 +43,32 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y xvfb libtk8.6 patchelf tesseract-ocr tesseract-ocr-eng tesseract-ocr-spa tesseract-ocr-fra tesseract-ocr-nld tesseract-ocr-chi-sim
+          sudo apt-get install -y xvfb libtk8.6 patchelf libx11-dev libxft-dev libxext-dev libxss-dev libatk-bridge2.0-dev dbus-x11 tesseract-ocr tesseract-ocr-eng tesseract-ocr-spa tesseract-ocr-fra tesseract-ocr-nld tesseract-ocr-chi-sim
       - name: Install macOS OCR prerequisites
         if: runner.os == 'macOS'
         run: brew install tesseract tesseract-lang
       - name: Resolve and hash-lock native Python wheels
-        run: python3 tools/lock_native_wheels.py
+        run: |
+          python3 -m venv .venv
+          .venv/bin/python -m pip install -r requirements-build.txt
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+          .venv/bin/python tools/lock_native_wheels.py
+      - name: Build pinned accessible Tcl and Tk runtime
+        run: |
+          if [ "$RUNNER_OS" = Linux ]; then
+            xvfb-run -a python3 tools/build_accessible_tk.py --output dist/native-gui
+          else
+            python3 tools/build_accessible_tk.py --output dist/native-gui
+          fi
       - name: Bundle native OCR and dependency licenses
         run: python3 tools/bundle_native_ocr.py
+      - name: Verify native accessibility properties and actions
+        run: |
+          if [ "$RUNNER_OS" = Linux ]; then
+            xvfb-run -a python3 tools/verify_accessibility.py --output dist/accessibility-self-test.json
+          else
+            python3 tools/verify_accessibility.py --output dist/accessibility-self-test.json
+          fi
       - name: Build and test Linux frozen application and archive
         if: runner.os == 'Linux'
         run: |
@@ -77,6 +95,7 @@ jobs:
           path: |
             dist/**/runtime-self-test.json
             dist/**/first-use-self-test.json
+            dist/**/extracted-*-self-test.json
           if-no-files-found: ignore
 
   publish:

@@ -338,6 +338,16 @@ class RoundedButton(tk.Canvas):
         self.bind('<Map>', lambda _event: schedule_paint(self, self._draw), add='+')
         self._draw()
 
+    def _sync_accessibility(self):
+        from ui.accessibility import available, expose
+        if not available(self):
+            return
+        if not hasattr(self, '_myl_a11y_action'):
+            self._myl_a11y_action = self.register(self.invoke)
+        expose(self, role='Button', name=self.accessible_name or self.text,
+               description=getattr(self, '_myl_a11y_description', ''),
+               state=self.state, action=self._myl_a11y_action)
+
     def _on_resize(self, _event=None):
         self._draw(fast=True)
         if self._draw_after is not None:
@@ -437,6 +447,7 @@ class RoundedButton(tk.Canvas):
         c.create_line(x2, y1 + r, x2, y2 - r, fill=outline)
 
     def _draw(self, fast=False):
+        self._sync_accessibility()
         measured_width = self.winfo_width()
         measured_height = self.winfo_height()
         w = max(2, measured_width if measured_width > 1 else int(self.cget("width")))

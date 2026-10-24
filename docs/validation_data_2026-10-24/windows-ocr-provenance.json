@@ -1,0 +1,1267 @@
+{
+  "scope": "Exact binary/model provenance; no inference that the installer clears every DLL license",
+  "upstream_installer": {
+    "url": "https://github.com/tesseract-ocr/tesseract/releases/download/5.5.0/tesseract-ocr-w64-setup-5.5.0.20241111.exe",
+    "sha256": "f3fc4236425b690c8be756f35793f77394ee004be0a6460a440c754d892f68bc",
+    "bytes": 21381872
+  },
+  "binary_count": 57,
+  "exact_upstream_matches": 57,
+  "files": [
+    {
+      "file": "libarchive-13.dll",
+      "sha256": "5f25546a72ea6a78f172d285fff03e11d163383ad2997977c9144201982e1f0c",
+      "bytes": 790117,
+      "upstream_installer_matches": [
+        "libarchive-13.dll"
+      ],
+      "metadata": {},
+      "bundled_imports": [
+        "libb2-1.dll",
+        "libbz2-1.dll",
+        "libcrypto-3-x64.dll",
+        "libexpat-1.dll",
+        "libiconv-2.dll",
+        "liblz4.dll",
+        "liblzma-5.dll",
+        "libzstd.dll",
+        "zlib1.dll"
+      ],
+      "other_imports": [
+        "advapi32.dll",
+        "kernel32.dll",
+        "msvcrt.dll"
+      ],
+      "individual_redistribution_review": "not_complete"
+    },
+    {
+      "file": "libb2-1.dll",
+      "sha256": "7fb8418a1172042dab5227fcd466b1bf293737f5b5cf35359e851516227f109c",
+      "bytes": 34372,
+      "upstream_installer_matches": [
+        "libb2-1.dll"
+      ],
+      "metadata": {},
+      "bundled_imports": [],
+      "other_imports": [
+        "kernel32.dll",
+        "msvcrt.dll"
+      ],
+      "individual_redistribution_review": "not_complete"
+    },
+    {
+      "file": "libbrotlicommon.dll",
+      "sha256": "dd6984f7c9d6ac1995aa40862e48b4165b1acf5adeecd95ffdf35e479c73f633",
+      "bytes": 143397,
+      "upstream_installer_matches": [
+        "libbrotlicommon.dll"
+      ],
+      "metadata": {},
+      "bundled_imports": [],
+      "other_imports": [
+        "kernel32.dll",
+        "msvcrt.dll"
+      ],
+      "individual_redistribution_review": "not_complete"
+    },
+    {
+      "file": "libbrotlidec.dll",
+      "sha256": "3005ec619e34e436e31d41c2a329f272d8f97422e2304563771bdf75cf411b23",
+      "bytes": 61436,
+      "upstream_installer_matches": [
+        "libbrotlidec.dll"
+      ],
+      "metadata": {},
+      "bundled_imports": [
+        "libbrotlicommon.dll"
+      ],
+      "other_imports": [
+        "kernel32.dll",
+        "msvcrt.dll"
+      ],
+      "individual_redistribution_review": "not_complete"
+    },
+    {
+      "file": "libbz2-1.dll",
+      "sha256": "b79cd3a7102e359ef6324e98966a67939e58ec2b651ae2847cae84a4dfa453f7",
+      "bytes": 100964,
+      "upstream_installer_matches": [
+        "libbz2-1.dll"
+      ],
+      "metadata": {},
+      "bundled_imports": [],
+      "other_imports": [
+        "kernel32.dll",
+        "msvcrt.dll"
+      ],
+      "individual_redistribution_review": "not_complete"
+    },
+    {
+      "file": "libcairo-2.dll",
+      "sha256": "987dbebbfb2de844ab0e7bdd95e4c5ec913adc62f8f0fe8332c0cbe06c967ed9",
+      "bytes": 1224975,
+      "upstream_installer_matches": [
+        "libcairo-2.dll"
+      ],
+      "metadata": {},
+      "bundled_imports": [
+        "libfontconfig-1.dll",
+        "libfreetype-6.dll",
+        "libgcc_s_seh-1.dll",
+        "libpixman-1-0.dll",
+        "libpng16-16.dll",
+        "libstdc++-6.dll",
+        "zlib1.dll"
+      ],
+      "other_imports": [
+        "gdi32.dll",
+        "kernel32.dll",
+        "msimg32.dll",
+        "msvcrt.dll",
+        "ole32.dll",
+        "user32.dll"
+      ],
+      "individual_redistribution_review": "not_complete"
+    },
+    {
+      "file": "libcrypto-3-x64.dll",
+      "sha256": "9e94b4f9b03099b29f2ab33ff01b107ecd62625bd60a3b752c32cd7aa1e351b1",
+      "bytes": 5298204,
+      "upstream_installer_matches": [
+        "libcrypto-3-x64.dll"
+      ],
+      "metadata": {
+        "FileVersion": "3.4.0",
+        "ProductName": "The OpenSSL Toolkit",
+        "ProductVersion": "3.4.0",
+        "LegalCopyright": "Copyright 1998-2024 The OpenSSL Authors. All rights reserved."
+      },
+      "bundled_imports": [],
+      "other_imports": [
+        "advapi32.dll",
+        "crypt32.dll",
+        "kernel32.dll",
+        "msvcrt.dll",
+        "user32.dll",
+        "ws2_32.dll"
+      ],
+      "individual_redistribution_review": "not_complete"
+    },
+    {
+      "file": "libcurl-4.dll",
+      "sha256": "5bb95c8c98c69ab14be7e30a6287e5f86a9af3e97ab1c8ea70842f63967b396d",
+      "bytes": 1006162,
+      "upstream_installer_matches": [
+        "libcurl-4.dll"
+      ],
+      "metadata": {
+        "FileVersion": "8.11.0",
+        "ProductName": "The curl library",
+        "ProductVersion": "8.11.0",
+        "LegalCopyright": "Copyright (C) Daniel Stenberg, <daniel@haxx.se>."
+      },
+      "bundled_imports": [
+        "libbrotlidec.dll",
+        "libidn2-0.dll",
+        "libpsl-5.dll",
+        "libssh2-1.dll",
+        "libzstd.dll",
+        "zlib1.dll"
+      ],
+      "other_imports": [
+        "advapi32.dll",
+        "bcrypt.dll",
+        "crypt32.dll",
+        "kernel32.dll",
+        "msvcrt.dll",
+        "wldap32.dll",
+        "ws2_32.dll"
+      ],
+      "individual_redistribution_review": "not_complete"
+    },
+    {
+      "file": "libdatrie-1.dll",
+      "sha256": "f760aef8a31b7c3670484ca4eabab1ab8e95c14052167e191463f6371c3f0850",
+      "bytes": 34386,
+      "upstream_installer_matches": [
+        "libdatrie-1.dll"
+      ],
+      "metadata": {},
+      "bundled_imports": [],
+      "other_imports": [
+        "kernel32.dll",
+        "msvcrt.dll"
+      ],
+      "individual_redistribution_review": "not_complete"
+    },
+    {
+      "file": "libdeflate.dll",
+      "sha256": "f40014fed434c4d35f118d934aee9e5c8d6cf55879747ca35755a0d241a56669",
+      "bytes": 94619,
+      "upstream_installer_matches": [
+        "libdeflate.dll"
+      ],
+      "metadata": {},
+      "bundled_imports": [],
+      "other_imports": [
+        "kernel32.dll",
+        "msvcrt.dll"
+      ],
+      "individual_redistribution_review": "not_complete"
+    },
+    {
+      "file": "libexpat-1.dll",
+      "sha256": "38cf1ace5a8f227675f589c81300d48d575270291b6012da51a30bee87bc5a8e",
+      "bytes": 192011,
+      "upstream_installer_matches": [
+        "libexpat-1.dll"
+      ],
+      "metadata": {},
+      "bundled_imports": [],
+      "other_imports": [
+        "kernel32.dll",
+        "msvcrt.dll"
+      ],
+      "individual_redistribution_review": "not_complete"
+    },
+    {
+      "file": "libffi-8.dll",
+      "sha256": "f1ed51652b3746c1b4bce497b7041e677e5d80c5ab8198efebb8fc6f75329ae8",
+      "bytes": 33708,
+      "upstream_installer_matches": [
+        "libffi-8.dll"
+      ],
+      "metadata": {},
+      "bundled_imports": [],
+      "other_imports": [
+        "kernel32.dll",
+        "msvcrt.dll"
+      ],
+      "individual_redistribution_review": "not_complete"
+    },
+    {
+      "file": "libfontconfig-1.dll",
+      "sha256": "d6c70b7e205f24ff96b29a80849b59c84f8701b311434f64f2bf93bd36bdb163",
+      "bytes": 350185,
+      "upstream_installer_matches": [
+        "libfontconfig-1.dll"
+      ],
+      "metadata": {},
+      "bundled_imports": [
+        "libexpat-1.dll",
+        "libfreetype-6.dll",
+        "libgcc_s_seh-1.dll"
+      ],
+      "other_imports": [
+        "kernel32.dll",
+        "msvcrt.dll"
+      ],
+      "individual_redistribution_review": "not_complete"
+    },
+    {
+      "file": "libfreetype-6.dll",
+      "sha256": "67434ed595661d1029850d52578c3068d8d23bfdb4c73c300a446dbac7b1e151",
+      "bytes": 787954,
+      "upstream_installer_matches": [
+        "libfreetype-6.dll"
+      ],
+      "metadata": {
+        "FileVersion": "2.13.3",
+        "ProductName": "FreeType",
+        "ProductVersion": "2.13.3",
+        "LegalCopyright": "\u00a9 2000-2024 The FreeType Project www.freetype.org. All rights reserved."
+      },
+      "bundled_imports": [
+        "libbrotlidec.dll",
+        "libbz2-1.dll",
+        "libharfbuzz-0.dll",
+        "libpng16-16.dll",
+        "zlib1.dll"
+      ],
+      "other_imports": [
+        "kernel32.dll",
+        "msvcrt.dll"
+      ],
+      "individual_redistribution_review": "not_complete"
+    },
+    {
+      "file": "libfribidi-0.dll",
+      "sha256": "84930fd86a3b46b62794a3bbaff21fbbaeaade5ff7cdc70be7f717ad29af87ed",
+      "bytes": 156403,
+      "upstream_installer_matches": [
+        "libfribidi-0.dll"
+      ],
+      "metadata": {},
+      "bundled_imports": [],
+      "other_imports": [
+        "kernel32.dll",
+        "msvcrt.dll"
+      ],
+      "individual_redistribution_review": "not_complete"
+    },
+    {
+      "file": "libgcc_s_seh-1.dll",
+      "sha256": "00194fb242d0d7a731343c29accdc5f6b60cc42771224312134a9d4aa8a8c00a",
+      "bytes": 151731,
+      "upstream_installer_matches": [
+        "libgcc_s_seh-1.dll"
+      ],
+      "metadata": {},
+      "bundled_imports": [
+        "libwinpthread-1.dll"
+      ],
+      "other_imports": [
+        "kernel32.dll",
+        "msvcrt.dll"
+      ],
+      "individual_redistribution_review": "not_complete"
+    },
+    {
+      "file": "libgif-7.dll",
+      "sha256": "a1a179853ae6fad8eb045b8e9f12c55e6fc99929446b02fa345512354cf5e582",
+      "bytes": 41367,
+      "upstream_installer_matches": [
+        "libgif-7.dll"
+      ],
+      "metadata": {},
+      "bundled_imports": [],
+      "other_imports": [
+        "kernel32.dll",
+        "msvcrt.dll"
+      ],
+      "individual_redistribution_review": "not_complete"
+    },
+    {
+      "file": "libgio-2.0-0.dll",
+      "sha256": "e4203279ad017c6290c8225c4aacaa8150f95426e3a4f902134cea9c836a134e",
+      "bytes": 1830118,
+      "upstream_installer_matches": [
+        "libgio-2.0-0.dll"
+      ],
+      "metadata": {
+        "FileVersion": "2.82.2.0",
+        "LegalCopyright": "Copyright 2006-2011 Red Hat, Inc. and others.",
+        "ProductName": "GLib",
+        "ProductVersion": "2.82.2"
+      },
+      "bundled_imports": [
+        "libglib-2.0-0.dll",
+        "libgmodule-2.0-0.dll",
+        "libgobject-2.0-0.dll",
+        "libintl-8.dll",
+        "zlib1.dll"
+      ],
+      "other_imports": [
+        "advapi32.dll",
+        "dnsapi.dll",
+        "iphlpapi.dll",
+        "kernel32.dll",
+        "msvcrt.dll",
+        "ole32.dll",
+        "shell32.dll",
+        "shlwapi.dll",
+        "user32.dll",
+        "ws2_32.dll"
+      ],
+      "individual_redistribution_review": "not_complete"
+    },
+    {
+      "file": "libglib-2.0-0.dll",
+      "sha256": "e8c0bcf60f6176acf107cce2969a49843a4665d5916d91e08988375ed12c22d5",
+      "bytes": 1481203,
+      "upstream_installer_matches": [
+        "libglib-2.0-0.dll"
+      ],
+      "metadata": {
+        "FileVersion": "2.82.2.0",
+        "LegalCopyright": "Copyright 1995-2011 Peter Mattis, Spencer Kimball, Josh MacDonald and others.",
+        "ProductName": "GLib",
+        "ProductVersion": "2.82.2"
+      },
+      "bundled_imports": [
+        "libintl-8.dll",
+        "libpcre2-8-0.dll"
+      ],
+      "other_imports": [
+        "advapi32.dll",
+        "kernel32.dll",
+        "msvcrt.dll",
+        "ole32.dll",
+        "shell32.dll",
+        "user32.dll",
+        "ws2_32.dll"
+      ],
+      "individual_redistribution_review": "not_complete"
+    },
+    {
+      "file": "libgmodule-2.0-0.dll",
+      "sha256": "d6d82704153aeafc777a2b81896b70e66516cbbe4a2a9985d8599c36824358d9",
+      "bytes": 26783,
+      "upstream_installer_matches": [
+        "libgmodule-2.0-0.dll"
+      ],
+      "metadata": {
+        "FileVersion": "2.82.2.0",
+        "LegalCopyright": "Copyright 1998-2011 Tim Janik and others.",
+        "ProductName": "GLib",
+        "ProductVersion": "2.82.2"
+      },
+      "bundled_imports": [
+        "libglib-2.0-0.dll",
+        "libintl-8.dll"
+      ],
+      "other_imports": [
+        "kernel32.dll",
+        "msvcrt.dll"
+      ],
+      "individual_redistribution_review": "not_complete"
+    },
+    {
+      "file": "libgobject-2.0-0.dll",
+      "sha256": "7e04e11eebf13f03e76afbae7a61fbd6cb6fd1cf12a15c52de5540c41ad3acbd",
+      "bytes": 356817,
+      "upstream_installer_matches": [
+        "libgobject-2.0-0.dll"
+      ],
+      "metadata": {
+        "FileVersion": "2.82.2.0",
+        "LegalCopyright": "Copyright 1998-2011 Tim Janik, Red Hat, Inc. and others",
+        "ProductName": "GLib",
+        "ProductVersion": "2.82.2"
+      },
+      "bundled_imports": [
+        "libffi-8.dll",
+        "libglib-2.0-0.dll"
+      ],
+      "other_imports": [
+        "kernel32.dll",
+        "msvcrt.dll"
+      ],
+      "individual_redistribution_review": "not_complete"
+    },
+    {
+      "file": "libgraphite2.dll",
+      "sha256": "f927efecd958f0e54a24ae297f86cd6aed05e7fc20e5da0882050ab9ec464395",
+      "bytes": 152538,
+      "upstream_installer_matches": [
+        "libgraphite2.dll"
+      ],
+      "metadata": {},
+      "bundled_imports": [
+        "libgcc_s_seh-1.dll",
+        "libstdc++-6.dll"
+      ],
+      "other_imports": [
+        "kernel32.dll",
+        "msvcrt.dll"
+      ],
+      "individual_redistribution_review": "not_complete"
+    },
+    {
+      "file": "libharfbuzz-0.dll",
+      "sha256": "a60c5d19f816c2a9720c94c38c2e1673fa0133da0100811fc2008d5a5edffb68",
+      "bytes": 1357741,
+      "upstream_installer_matches": [
+        "libharfbuzz-0.dll"
+      ],
+      "metadata": {},
+      "bundled_imports": [
+        "libfreetype-6.dll",
+        "libgcc_s_seh-1.dll",
+        "libglib-2.0-0.dll",
+        "libgraphite2.dll",
+        "libintl-8.dll",
+        "libstdc++-6.dll"
+      ],
+      "other_imports": [
+        "gdi32.dll",
+        "kernel32.dll",
+        "msvcrt.dll",
+        "rpcrt4.dll",
+        "user32.dll",
+        "usp10.dll"
+      ],
+      "individual_redistribution_review": "not_complete"
+    },
+    {
+      "file": "libiconv-2.dll",
+      "sha256": "967189adfbc889fde89aafc867f7a1f02731f8592cf6fd5a4ace1929213e2e13",
+      "bytes": 1118202,
+      "upstream_installer_matches": [
+        "libiconv-2.dll"
+      ],
+      "metadata": {
+        "FileVersion": "1.17",
+        "LegalCopyright": "Copyright (C) 1999-2022",
+        "ProductName": "libiconv: character set conversion library",
+        "ProductVersion": "1.17"
+      },
+      "bundled_imports": [],
+      "other_imports": [
+        "kernel32.dll",
+        "msvcrt.dll"
+      ],
+      "individual_redistribution_review": "not_complete"
+    },
+    {
+      "file": "libicudt75.dll",
+      "sha256": "836bd5cac053329121ba95f8242887633d2f57acc0da61e48dd2c524caa55a0e",
+      "bytes": 30743046,
+      "upstream_installer_matches": [
+        "libicudt75.dll"
+      ],
+      "metadata": {},
+      "bundled_imports": [],
+      "other_imports": [
+        "kernel32.dll",
+        "msvcrt.dll"
+      ],
+      "individual_redistribution_review": "not_complete"
+    },
+    {
+      "file": "libicuin75.dll",
+      "sha256": "225d01fa26c500261a054d931b8a4473ce2197ec7c47867dde808041c4935cba",
+      "bytes": 3381215,
+      "upstream_installer_matches": [
+        "libicuin75.dll"
+      ],
+      "metadata": {},
+      "bundled_imports": [
+        "libgcc_s_seh-1.dll",
+        "libicuuc75.dll",
+        "libstdc++-6.dll"
+      ],
+      "other_imports": [
+        "kernel32.dll",
+        "msvcrt.dll"
+      ],
+      "individual_redistribution_review": "not_complete"
+    },
+    {
+      "file": "libicuuc75.dll",
+      "sha256": "ddc63202f2d2f257a5adef3fba2c98e428309373068274050683a8e46aa77070",
+      "bytes": 1932464,
+      "upstream_installer_matches": [
+        "libicuuc75.dll"
+      ],
+      "metadata": {},
+      "bundled_imports": [
+        "libgcc_s_seh-1.dll",
+        "libicudt75.dll",
+        "libstdc++-6.dll",
+        "libwinpthread-1.dll"
+      ],
+      "other_imports": [
+        "advapi32.dll",
+        "kernel32.dll",
+        "msvcrt.dll"
+      ],
+      "individual_redistribution_review": "not_complete"
+    },
+    {
+      "file": "libidn2-0.dll",
+      "sha256": "621f5bfc24cdae8479a69b56de530ab6cee633352ae0bce01885cc6b1eca0371",
+      "bytes": 242965,
+      "upstream_installer_matches": [
+        "libidn2-0.dll"
+      ],
+      "metadata": {},
+      "bundled_imports": [
+        "libiconv-2.dll",
+        "libintl-8.dll",
+        "libunistring-5.dll"
+      ],
+      "other_imports": [
+        "kernel32.dll",
+        "msvcrt.dll"
+      ],
+      "individual_redistribution_review": "not_complete"
+    },
+    {
+      "file": "libintl-8.dll",
+      "sha256": "42a63cb4c3c28a683d9f6c3510de5ec17849eb18c097fa02cd78aeb800bff202",
+      "bytes": 188681,
+      "upstream_installer_matches": [
+        "libintl-8.dll"
+      ],
+      "metadata": {
+        "FileVersion": "0.22.5",
+        "LegalCopyright": "Copyright (C) 1995-2019",
+        "ProductName": "GNU libintl: accessing NLS message catalogs",
+        "ProductVersion": "0.22.5"
+      },
+      "bundled_imports": [
+        "libiconv-2.dll"
+      ],
+      "other_imports": [
+        "advapi32.dll",
+        "kernel32.dll",
+        "msvcrt.dll"
+      ],
+      "individual_redistribution_review": "not_complete"
+    },
+    {
+      "file": "libjbig-0.dll",
+      "sha256": "275a827ba6839d47cfdbe059db1b1b403a92ff26e2b76a29362915487868bef2",
+      "bytes": 62083,
+      "upstream_installer_matches": [
+        "libjbig-0.dll"
+      ],
+      "metadata": {},
+      "bundled_imports": [],
+      "other_imports": [
+        "kernel32.dll",
+        "msvcrt.dll"
+      ],
+      "individual_redistribution_review": "not_complete"
+    },
+    {
+      "file": "libjpeg-8.dll",
+      "sha256": "8b39c028e751cc0efb1b08695a9d272967e6e8d33b7ce6720d3a9a9438ec3cb0",
+      "bytes": 924010,
+      "upstream_installer_matches": [
+        "libjpeg-8.dll"
+      ],
+      "metadata": {},
+      "bundled_imports": [
+        "libgcc_s_seh-1.dll"
+      ],
+      "other_imports": [
+        "kernel32.dll",
+        "msvcrt.dll"
+      ],
+      "individual_redistribution_review": "not_complete"
+    },
+    {
+      "file": "libleptonica-6.dll",
+      "sha256": "fdc77910d2f907d6129d929a5d98118a3dd1842198a2de879590dfd5e6413a8c",
+      "bytes": 2774254,
+      "upstream_installer_matches": [
+        "libleptonica-6.dll"
+      ],
+      "metadata": {},
+      "bundled_imports": [
+        "libgif-7.dll",
+        "libjpeg-8.dll",
+        "libopenjp2-7.dll",
+        "libpng16-16.dll",
+        "libtiff-6.dll",
+        "libwebp-7.dll",
+        "libwebpmux-3.dll",
+        "zlib1.dll"
+      ],
+      "other_imports": [
+        "gdi32.dll",
+        "kernel32.dll",
+        "msvcrt.dll",
+        "user32.dll"
+      ],
+      "individual_redistribution_review": "not_complete"
+    },
+    {
+      "file": "libLerc.dll",
+      "sha256": "4ab688c7c5c4afdfee0f519f942759137067a7876a1c1bb825ee575b0a5760b1",
+      "bytes": 761261,
+      "upstream_installer_matches": [
+        "libLerc.dll"
+      ],
+      "metadata": {},
+      "bundled_imports": [
+        "libgcc_s_seh-1.dll",
+        "libstdc++-6.dll"
+      ],
+      "other_imports": [
+        "kernel32.dll",
+        "msvcrt.dll"
+      ],
+      "individual_redistribution_review": "not_complete"
+    },
+    {
+      "file": "liblz4.dll",
+      "sha256": "35f917274bca8f19677ba66f1b3cc3c83568c3249fc43215fc16e76439c8e856",
+      "bytes": 158649,
+      "upstream_installer_matches": [
+        "liblz4.dll"
+      ],
+      "metadata": {
+        "FileVersion": "1.10.0.0",
+        "LegalCopyright": "Copyright (C) 2013-2020, Yann Collet",
+        "ProductName": "LZ4",
+        "ProductVersion": "1.10.0.0"
+      },
+      "bundled_imports": [],
+      "other_imports": [
+        "kernel32.dll",
+        "msvcrt.dll"
+      ],
+      "individual_redistribution_review": "not_complete"
+    },
+    {
+      "file": "liblzma-5.dll",
+      "sha256": "49cc69c10ad1f079fc0a86bfd46be62ba6402266995c77e261fff29bbafdd946",
+      "bytes": 187227,
+      "upstream_installer_matches": [
+        "liblzma-5.dll"
+      ],
+      "metadata": {
+        "FileVersion": "5.6.3",
+        "ProductName": "XZ Utils <https://tukaani.org/xz/>",
+        "ProductVersion": "5.6.3"
+      },
+      "bundled_imports": [],
+      "other_imports": [
+        "kernel32.dll",
+        "msvcrt.dll"
+      ],
+      "individual_redistribution_review": "not_complete"
+    },
+    {
+      "file": "libopenjp2-7.dll",
+      "sha256": "5ff762ff6d672a06ee502819daf1494aa3aa3acf408805f0429303e026705011",
+      "bytes": 462194,
+      "upstream_installer_matches": [
+        "libopenjp2-7.dll"
+      ],
+      "metadata": {},
+      "bundled_imports": [
+        "libgcc_s_seh-1.dll"
+      ],
+      "other_imports": [
+        "kernel32.dll",
+        "msvcrt.dll"
+      ],
+      "individual_redistribution_review": "not_complete"
+    },
+    {
+      "file": "libpango-1.0-0.dll",
+      "sha256": "3ff3c1105cf4922d18530f3094ddf12996a69e290bd230e7d8ae133b9ae7d217",
+      "bytes": 411128,
+      "upstream_installer_matches": [
+        "libpango-1.0-0.dll"
+      ],
+      "metadata": {
+        "FileVersion": "1.54.0.0",
+        "LegalCopyright": "Copyright 1999 Red Hat Software.",
+        "ProductName": "Pango",
+        "ProductVersion": "1.54.0"
+      },
+      "bundled_imports": [
+        "libfribidi-0.dll",
+        "libgio-2.0-0.dll",
+        "libglib-2.0-0.dll",
+        "libgobject-2.0-0.dll",
+        "libharfbuzz-0.dll",
+        "libintl-8.dll",
+        "libthai-0.dll"
+      ],
+      "other_imports": [
+        "kernel32.dll",
+        "msvcrt.dll"
+      ],
+      "individual_redistribution_review": "not_complete"
+    },
+    {
+      "file": "libpangocairo-1.0-0.dll",
+      "sha256": "8e96bf3954740622e2ee28a6cc725fddf4cfce866405d00475e6a5a1216d023e",
+      "bytes": 74028,
+      "upstream_installer_matches": [
+        "libpangocairo-1.0-0.dll"
+      ],
+      "metadata": {
+        "FileVersion": "1.54.0.0",
+        "LegalCopyright": "Copyright 2010 Red Hat Software.",
+        "ProductName": "PangoCairo",
+        "ProductVersion": "1.54.0"
+      },
+      "bundled_imports": [
+        "libcairo-2.dll",
+        "libfontconfig-1.dll",
+        "libglib-2.0-0.dll",
+        "libgobject-2.0-0.dll",
+        "libharfbuzz-0.dll",
+        "libintl-8.dll",
+        "libpango-1.0-0.dll",
+        "libpangoft2-1.0-0.dll",
+        "libpangowin32-1.0-0.dll"
+      ],
+      "other_imports": [
+        "gdi32.dll",
+        "kernel32.dll",
+        "msvcrt.dll"
+      ],
+      "individual_redistribution_review": "not_complete"
+    },
+    {
+      "file": "libpangoft2-1.0-0.dll",
+      "sha256": "9caf81ecd48a4e896b353c0241e83d5787dcc149b38c2dc7e3935c3e9190b9b8",
+      "bytes": 102773,
+      "upstream_installer_matches": [
+        "libpangoft2-1.0-0.dll"
+      ],
+      "metadata": {
+        "FileVersion": "1.54.0.0",
+        "LegalCopyright": "Copyright 1999 Red Hat Software. Copyright 2000 Tor Lillqvist",
+        "ProductName": "PangoFT2",
+        "ProductVersion": "1.54.0"
+      },
+      "bundled_imports": [
+        "libfontconfig-1.dll",
+        "libfreetype-6.dll",
+        "libgio-2.0-0.dll",
+        "libglib-2.0-0.dll",
+        "libgobject-2.0-0.dll",
+        "libharfbuzz-0.dll",
+        "libintl-8.dll",
+        "libpango-1.0-0.dll"
+      ],
+      "other_imports": [
+        "kernel32.dll",
+        "msvcrt.dll"
+      ],
+      "individual_redistribution_review": "not_complete"
+    },
+    {
+      "file": "libpangowin32-1.0-0.dll",
+      "sha256": "40bbb94aee52e886fea46e07d31a326f4941acfedd0306ed7dafd2dbfac2df80",
+      "bytes": 115107,
+      "upstream_installer_matches": [
+        "libpangowin32-1.0-0.dll"
+      ],
+      "metadata": {
+        "FileVersion": "1.54.0.0",
+        "LegalCopyright": "Copyright 1999 Red Hat Software. Copyright 2000 Tor Lillqvist",
+        "ProductName": "PangoWin32",
+        "ProductVersion": "1.54.0"
+      },
+      "bundled_imports": [
+        "libgcc_s_seh-1.dll",
+        "libgio-2.0-0.dll",
+        "libglib-2.0-0.dll",
+        "libgobject-2.0-0.dll",
+        "libharfbuzz-0.dll",
+        "libintl-8.dll",
+        "libpango-1.0-0.dll",
+        "libstdc++-6.dll"
+      ],
+      "other_imports": [
+        "advapi32.dll",
+        "dwrite.dll",
+        "gdi32.dll",
+        "kernel32.dll",
+        "msvcrt.dll",
+        "user32.dll"
+      ],
+      "individual_redistribution_review": "not_complete"
+    },
+    {
+      "file": "libpcre2-8-0.dll",
+      "sha256": "fbc71bd904a7500a65786f07b17d6ddbee71ad4916be28a46ecf1ade48ef7f27",
+      "bytes": 405881,
+      "upstream_installer_matches": [
+        "libpcre2-8-0.dll"
+      ],
+      "metadata": {},
+      "bundled_imports": [],
+      "other_imports": [
+        "kernel32.dll",
+        "msvcrt.dll"
+      ],
+      "individual_redistribution_review": "not_complete"
+    },
+    {
+      "file": "libpixman-1-0.dll",
+      "sha256": "24ac9493db8fc50b75f9f48631c73971245ca9de002f549c3b3c18584eb64d6c",
+      "bytes": 709180,
+      "upstream_installer_matches": [
+        "libpixman-1-0.dll"
+      ],
+      "metadata": {},
+      "bundled_imports": [
+        "libgcc_s_seh-1.dll"
+      ],
+      "other_imports": [
+        "kernel32.dll",
+        "msvcrt.dll"
+      ],
+      "individual_redistribution_review": "not_complete"
+    },
+    {
+      "file": "libpng16-16.dll",
+      "sha256": "da78a17bd5228fb957b97d77595cd8d5d75daf86b900cb0742f36a638ac3d31f",
+      "bytes": 255572,
+      "upstream_installer_matches": [
+        "libpng16-16.dll"
+      ],
+      "metadata": {},
+      "bundled_imports": [
+        "zlib1.dll"
+      ],
+      "other_imports": [
+        "kernel32.dll",
+        "msvcrt.dll"
+      ],
+      "individual_redistribution_review": "not_complete"
+    },
+    {
+      "file": "libpsl-5.dll",
+      "sha256": "d516bbc47418475bbbddfdba4da9d38abf6201329f5f7037750c31d5b4bcdc73",
+      "bytes": 103768,
+      "upstream_installer_matches": [
+        "libpsl-5.dll"
+      ],
+      "metadata": {},
+      "bundled_imports": [
+        "libiconv-2.dll",
+        "libidn2-0.dll",
+        "libunistring-5.dll"
+      ],
+      "other_imports": [
+        "kernel32.dll",
+        "msvcrt.dll",
+        "ws2_32.dll"
+      ],
+      "individual_redistribution_review": "not_complete"
+    },
+    {
+      "file": "libsharpyuv-0.dll",
+      "sha256": "60bcc87ac64a834e967e9ec9461be37395dbc090c579f3e23497ef69a5d8323e",
+      "bytes": 57852,
+      "upstream_installer_matches": [
+        "libsharpyuv-0.dll"
+      ],
+      "metadata": {},
+      "bundled_imports": [],
+      "other_imports": [
+        "kernel32.dll",
+        "msvcrt.dll"
+      ],
+      "individual_redistribution_review": "not_complete"
+    },
+    {
+      "file": "libssh2-1.dll",
+      "sha256": "fe29b88792005f3ab3e86a6c9a514a6c04737fbee77b56be9c4fc0acca74b6ab",
+      "bytes": 255839,
+      "upstream_installer_matches": [
+        "libssh2-1.dll"
+      ],
+      "metadata": {
+        "FileVersion": "1.11.0",
+        "ProductName": "The libssh2 library",
+        "ProductVersion": "1.11.0",
+        "LegalCopyright": "Copyright (C) 2004-2023 The libssh2 project and its contributors."
+      },
+      "bundled_imports": [
+        "zlib1.dll"
+      ],
+      "other_imports": [
+        "bcrypt.dll",
+        "crypt32.dll",
+        "kernel32.dll",
+        "msvcrt.dll",
+        "user32.dll",
+        "ws2_32.dll"
+      ],
+      "individual_redistribution_review": "not_complete"
+    },
+    {
+      "file": "libstdc++-6.dll",
+      "sha256": "a5f344549ca5dd7cb00f1237deab0ce85366e32bb0b85466fecb26743a14f0cc",
+      "bytes": 2400680,
+      "upstream_installer_matches": [
+        "libstdc++-6.dll"
+      ],
+      "metadata": {},
+      "bundled_imports": [
+        "libgcc_s_seh-1.dll",
+        "libwinpthread-1.dll"
+      ],
+      "other_imports": [
+        "kernel32.dll",
+        "msvcrt.dll"
+      ],
+      "individual_redistribution_review": "not_complete"
+    },
+    {
+      "file": "libtesseract-5.dll",
+      "sha256": "7b291a1570cda3f4a218a844bb08ac6eaa94392a459d857da9c685e01e0211ab",
+      "bytes": 3336896,
+      "upstream_installer_matches": [
+        "libtesseract-5.dll"
+      ],
+      "metadata": {},
+      "bundled_imports": [
+        "libarchive-13.dll",
+        "libcurl-4.dll",
+        "libgcc_s_seh-1.dll",
+        "libleptonica-6.dll",
+        "libstdc++-6.dll",
+        "libwinpthread-1.dll"
+      ],
+      "other_imports": [
+        "kernel32.dll",
+        "msvcrt.dll",
+        "ws2_32.dll"
+      ],
+      "individual_redistribution_review": "not_complete"
+    },
+    {
+      "file": "libthai-0.dll",
+      "sha256": "420e08cedaf9daaabcf8f6c92349d9dadb7b5ad9e4e79d1126bb2a55a7cdbe09",
+      "bytes": 69739,
+      "upstream_installer_matches": [
+        "libthai-0.dll"
+      ],
+      "metadata": {},
+      "bundled_imports": [
+        "libdatrie-1.dll"
+      ],
+      "other_imports": [
+        "kernel32.dll",
+        "msvcrt.dll",
+        "shlwapi.dll"
+      ],
+      "individual_redistribution_review": "not_complete"
+    },
+    {
+      "file": "libtiff-6.dll",
+      "sha256": "33b46b399327b3bcd7cefb63ca4eff7c0696cdf30de37a7ad20d946261e7cdac",
+      "bytes": 600981,
+      "upstream_installer_matches": [
+        "libtiff-6.dll"
+      ],
+      "metadata": {},
+      "bundled_imports": [
+        "libdeflate.dll",
+        "libjbig-0.dll",
+        "libjpeg-8.dll",
+        "liblerc.dll",
+        "liblzma-5.dll",
+        "libwebp-7.dll",
+        "libzstd.dll",
+        "zlib1.dll"
+      ],
+      "other_imports": [
+        "kernel32.dll",
+        "msvcrt.dll"
+      ],
+      "individual_redistribution_review": "not_complete"
+    },
+    {
+      "file": "libunistring-5.dll",
+      "sha256": "9267f38109fb1a290c5c0fe28fcf0531909b3135407b57fe398cb6cfa2aa8767",
+      "bytes": 1999287,
+      "upstream_installer_matches": [
+        "libunistring-5.dll"
+      ],
+      "metadata": {
+        "FileVersion": "1.2",
+        "LegalCopyright": "Copyright (C) 2001-2019",
+        "ProductName": "GNU libunistring: Unicode string library",
+        "ProductVersion": "1.2"
+      },
+      "bundled_imports": [
+        "libiconv-2.dll"
+      ],
+      "other_imports": [
+        "kernel32.dll",
+        "msvcrt.dll"
+      ],
+      "individual_redistribution_review": "not_complete"
+    },
+    {
+      "file": "libwebp-7.dll",
+      "sha256": "687b8859e1f739dad5800fdc293a6ee1fd0dd4b33380ab283681a5a12eb3d4fa",
+      "bytes": 743580,
+      "upstream_installer_matches": [
+        "libwebp-7.dll"
+      ],
+      "metadata": {},
+      "bundled_imports": [
+        "libsharpyuv-0.dll"
+      ],
+      "other_imports": [
+        "kernel32.dll",
+        "msvcrt.dll"
+      ],
+      "individual_redistribution_review": "not_complete"
+    },
+    {
+      "file": "libwebpmux-3.dll",
+      "sha256": "ad10bacecd37b44c7c2c813da098a8bf6a42a3bf0152f7f33726d216815558f9",
+      "bytes": 78730,
+      "upstream_installer_matches": [
+        "libwebpmux-3.dll"
+      ],
+      "metadata": {},
+      "bundled_imports": [
+        "libwebp-7.dll"
+      ],
+      "other_imports": [
+        "kernel32.dll",
+        "msvcrt.dll"
+      ],
+      "individual_redistribution_review": "not_complete"
+    },
+    {
+      "file": "libwinpthread-1.dll",
+      "sha256": "7ea1053b03879d1cf1decfd284627c4b897f9d4198727182113a8ed005968b51",
+      "bytes": 61343,
+      "upstream_installer_matches": [
+        "libwinpthread-1.dll"
+      ],
+      "metadata": {
+        "ProductVersion": "1, 0, 0, 0",
+        "FileVersion": "1, 0, 0, 0",
+        "LegalCopyright": "Copyright (C) MinGW-W64 Project Members 2010-2023"
+      },
+      "bundled_imports": [],
+      "other_imports": [
+        "kernel32.dll",
+        "msvcrt.dll"
+      ],
+      "individual_redistribution_review": "not_complete"
+    },
+    {
+      "file": "libzstd.dll",
+      "sha256": "f216ea8efb5b3bb9ad3d938fb9ac07e3b8f78c2c92faab03d2c468d0b6798a5a",
+      "bytes": 1179848,
+      "upstream_installer_matches": [
+        "libzstd.dll"
+      ],
+      "metadata": {},
+      "bundled_imports": [],
+      "other_imports": [
+        "kernel32.dll",
+        "msvcrt.dll"
+      ],
+      "individual_redistribution_review": "not_complete"
+    },
+    {
+      "file": "tesseract.exe",
+      "sha256": "ccd044d6cf16eaaad151260e1fcc5e3e1504cd1b8644e940b4f7ae3e315dd0d3",
+      "bytes": 86152,
+      "upstream_installer_matches": [
+        "tesseract.exe"
+      ],
+      "metadata": {},
+      "bundled_imports": [
+        "libarchive-13.dll",
+        "libcurl-4.dll",
+        "libgcc_s_seh-1.dll",
+        "libleptonica-6.dll",
+        "libstdc++-6.dll",
+        "libtesseract-5.dll",
+        "libtiff-6.dll"
+      ],
+      "other_imports": [
+        "kernel32.dll",
+        "msvcrt.dll"
+      ],
+      "individual_redistribution_review": "not_complete"
+    },
+    {
+      "file": "zlib1.dll",
+      "sha256": "cb7ab3788d10940df874acd97b1821bbb5ee4a91f3eec11982bb5bf7a3c96443",
+      "bytes": 120814,
+      "upstream_installer_matches": [
+        "zlib1.dll"
+      ],
+      "metadata": {},
+      "bundled_imports": [],
+      "other_imports": [
+        "kernel32.dll",
+        "msvcrt.dll"
+      ],
+      "individual_redistribution_review": "not_complete"
+    }
+  ],
+  "models": {
+    "chi_sim.traineddata": {
+      "sha256": "a5fcb6f0db1e1d6d8522f39db4e848f05984669172e584e8d76b6b3141e1f730",
+      "bytes": 2469156,
+      "git_blob_sha1": "388bac276d033d06e5ed5ba7a7ad14ae58f97dab",
+      "matches": [
+        {
+          "repository": "tesseract-ocr/tessdata_fast",
+          "commit": "87416418657359cb625c412a48b6e1d6d41c29bd",
+          "url": "https://raw.githubusercontent.com/tesseract-ocr/tessdata_fast/87416418657359cb625c412a48b6e1d6d41c29bd/chi_sim.traineddata",
+          "license_url": "https://github.com/tesseract-ocr/tessdata_fast/blob/87416418657359cb625c412a48b6e1d6d41c29bd/LICENSE"
+        }
+      ]
+    },
+    "eng.traineddata": {
+      "sha256": "7d4322bd2a7749724879683fc3912cb542f19906c83bcc1a52132556427170b2",
+      "bytes": 4113088,
+      "git_blob_sha1": "bbef4675053b5b468cdb477053e28b1c698ba08e",
+      "matches": [
+        {
+          "repository": "tesseract-ocr/tessdata_fast",
+          "commit": "87416418657359cb625c412a48b6e1d6d41c29bd",
+          "url": "https://raw.githubusercontent.com/tesseract-ocr/tessdata_fast/87416418657359cb625c412a48b6e1d6d41c29bd/eng.traineddata",
+          "license_url": "https://github.com/tesseract-ocr/tessdata_fast/blob/87416418657359cb625c412a48b6e1d6d41c29bd/LICENSE"
+        }
+      ]
+    },
+    "fra.traineddata": {
+      "sha256": "ced037562e8c80c13122dece28dd477d399af80911a28791a66a63ac1e3445ca",
+      "bytes": 1130365,
+      "git_blob_sha1": "d9e2b2160be0d1ca3b8f1bf2730fae476ef3b4a6",
+      "matches": [
+        {
+          "repository": "tesseract-ocr/tessdata_fast",
+          "commit": "87416418657359cb625c412a48b6e1d6d41c29bd",
+          "url": "https://raw.githubusercontent.com/tesseract-ocr/tessdata_fast/87416418657359cb625c412a48b6e1d6d41c29bd/fra.traineddata",
+          "license_url": "https://github.com/tesseract-ocr/tessdata_fast/blob/87416418657359cb625c412a48b6e1d6d41c29bd/LICENSE"
+        }
+      ]
+    },
+    "nld.traineddata": {
+      "sha256": "ced0e5e046a84c908a6aa7accbef9a232c4a5d9a8276691b81c6ee64d02963f6",
+      "bytes": 6050296,
+      "git_blob_sha1": "53ce95a9c2488a9a0228939944a184157373d0ae",
+      "matches": [
+        {
+          "repository": "tesseract-ocr/tessdata_fast",
+          "commit": "87416418657359cb625c412a48b6e1d6d41c29bd",
+          "url": "https://raw.githubusercontent.com/tesseract-ocr/tessdata_fast/87416418657359cb625c412a48b6e1d6d41c29bd/nld.traineddata",
+          "license_url": "https://github.com/tesseract-ocr/tessdata_fast/blob/87416418657359cb625c412a48b6e1d6d41c29bd/LICENSE"
+        }
+      ]
+    },
+    "osd.traineddata": {
+      "sha256": "9cf5d576fcc47564f11265841e5ca839001e7e6f38ff7f7aacf46d15a96b00ff",
+      "bytes": 10562727,
+      "git_blob_sha1": "527457ca8f8fe1fda7c2f88bce3c0e4be12be9d0",
+      "matches": [
+        {
+          "repository": "tesseract-ocr/tessdata_fast",
+          "commit": "87416418657359cb625c412a48b6e1d6d41c29bd",
+          "url": "https://raw.githubusercontent.com/tesseract-ocr/tessdata_fast/87416418657359cb625c412a48b6e1d6d41c29bd/osd.traineddata",
+          "license_url": "https://github.com/tesseract-ocr/tessdata_fast/blob/87416418657359cb625c412a48b6e1d6d41c29bd/LICENSE"
+        },
+        {
+          "repository": "tesseract-ocr/tessdata_best",
+          "commit": "e12c65a915945e4c28e237a9b52bc4a8f39a0cec",
+          "url": "https://raw.githubusercontent.com/tesseract-ocr/tessdata_best/e12c65a915945e4c28e237a9b52bc4a8f39a0cec/osd.traineddata",
+          "license_url": "https://github.com/tesseract-ocr/tessdata_best/blob/e12c65a915945e4c28e237a9b52bc4a8f39a0cec/LICENSE"
+        }
+      ]
+    },
+    "spa.traineddata": {
+      "sha256": "6f2e04d02774a18f01bed44b1111f2cd7f3ba7ac9dc4373cd3f898a40ea6b464",
+      "bytes": 2294433,
+      "git_blob_sha1": "72e901f13ca52cfe34cf239a368b9ed3c0ddaf26",
+      "matches": [
+        {
+          "repository": "tesseract-ocr/tessdata_fast",
+          "commit": "87416418657359cb625c412a48b6e1d6d41c29bd",
+          "url": "https://raw.githubusercontent.com/tesseract-ocr/tessdata_fast/87416418657359cb625c412a48b6e1d6d41c29bd/spa.traineddata",
+          "license_url": "https://github.com/tesseract-ocr/tessdata_fast/blob/87416418657359cb625c412a48b6e1d6d41c29bd/LICENSE"
+        }
+      ]
+    }
+  },
+  "redistribution_review": "not_complete",
+  "installer_executed": false,
+  "native_security_audit": "not_complete"
+}

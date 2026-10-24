@@ -1,0 +1,12 @@
+{
+  "version": "9.1.0",
+  "python": "3.12.10",
+  "sources": [
+    {"name":"tcl","git_commit":"0c6bad08d91fa2ad51f05a50a41f8c1ea82ce985","url":"https://codeload.github.com/tcltk/tcl/tar.gz/refs/tags/core-9-1-0","sha256":"4b6efbe457aa10515674b2570e5c2150998104c02a200020393094dc289de935"},
+    {"name":"tk","git_commit":"3f45110c0a568b70f2ebd5412f215e87d199bc7d","url":"https://codeload.github.com/tcltk/tk/tar.gz/refs/tags/core-9-1-0","sha256":"23a5509d15f24adc901e10f24e0291108735eba156560812067346f13ebf4a85"},
+    {"name":"_tkinter.c","url":"https://raw.githubusercontent.com/python/cpython/v3.12.10/Modules/_tkinter.c","sha256":"c484afe880de65c628f5376adf0be413eae2f0d339d5ef5f33365c14ba59eca3"},
+    {"name":"tkappinit.c","url":"https://raw.githubusercontent.com/python/cpython/v3.12.10/Modules/tkappinit.c","sha256":"312be438c11b08dd334c9a64149e94aef9ac31d24b7ae9b428c37f93f67821d6"},
+    {"name":"tkinter.h","url":"https://raw.githubusercontent.com/python/cpython/v3.12.10/Modules/tkinter.h","sha256":"229776646f467c4ed9ec1460a14b756bc2de5e5bd70ead431a495d21305f7675"},
+    {"name":"clinic/_tkinter.c.h","url":"https://raw.githubusercontent.com/python/cpython/v3.12.10/Modules/clinic/_tkinter.c.h","sha256":"2a6f1f61b004e88fbb8769650699747119004076c45eb7d430beb0be93325658"}
+  ]
+}

@@ -1,5 +1,6 @@
 from pathlib import Path
 import sys
+import os
 
 from PyInstaller.utils.hooks import collect_all, copy_metadata
 
@@ -15,6 +16,13 @@ datas = [
     (str(ROOT / "tesseract"), "tesseract"),
 ]
 binaries = []
+if os.environ.get('TK_LIBRARY'):
+    # Tk 9.1's Windows library is extracted from its embedded ZIP by the
+    # reproducible GUI builder; collect that exact directory, not an old guess.
+    datas += [(os.environ['TK_LIBRARY'], '_tk_data')]
+    gui_licenses = Path(os.environ['TK_LIBRARY']).parent.parent / 'licenses'
+    if gui_licenses.is_dir():
+        datas += [(str(gui_licenses), 'licenses/tcltk')]
 hiddenimports = ["pypdf", "pypdfium2", "PIL", "ftfy"]
 for package in ("Pillow", "pypdf", "wcwidth", "pyinstaller"):
     datas += copy_metadata(package)

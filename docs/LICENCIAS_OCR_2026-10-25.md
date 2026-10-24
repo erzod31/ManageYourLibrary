@@ -174,4 +174,3 @@ usan bytes exactos. Las pruebas comprueban cobertura única de los 57 binarios,
 coherencia de hashes, avisos verbatim y que obligaciones pendientes no aparezcan
 como aprobadas. Los avisos legales conservan las atribuciones requeridas a sus
 autores; no son datos privados del propietario de esta aplicación.
-

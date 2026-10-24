@@ -22,6 +22,12 @@ def expose(widget, *, role, name, description='', value=None, action=None, state
         return True
     try:
         values = {'role': role, 'name': name, 'description': description, 'state': state}
+        if widget.tk.call('tk', 'windowingsystem') == 'win32':
+            # Tk 9.1's MSAA get_accName returns the description slot (its own
+            # Button bindings also use that slot for visible labels). Keep the
+            # actual label there and put optional explanatory text in help.
+            values['description'] = name
+            values['help'] = description
         if value is not None:
             values['value'] = value
         if action:

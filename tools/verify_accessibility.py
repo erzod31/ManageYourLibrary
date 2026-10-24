@@ -45,6 +45,8 @@ def run():
             for key, button in workspace.nav_buttons.items():
                 checks['navigation_' + key] = prop(button, 'role') == 'Button' and bool(prop(button, 'name'))
             checks['search_name'] = prop(workspace.search_entry, 'name') == _text('search')
+            if root.tk.call('tk', 'windowingsystem') == 'win32':
+                checks['windows_provider_label_slot'] = prop(workspace.search_entry, 'description') == _text('search')
             checks['icon_button_names'] = all(bool(prop(button, 'name')) for button in (
                 workspace.table_button, workspace.cover_button, workspace.details_button))
             root.tk.eval(prop(workspace.nav_buttons['authors'], 'action'))
@@ -96,7 +98,10 @@ def run():
                 app.workspace.shutdown()
                 app.catalog_gc.close()
             for identifier in root.tk.call('after', 'info'):
-                root.after_cancel(identifier)
+                # Callbacks can belong to child widgets. Misc.after_cancel on
+                # root would delete their commands but leave child ownership
+                # records behind, causing a second delete during destruction.
+                root.tk.call('after', 'cancel', identifier)
             root.destroy()
 
 

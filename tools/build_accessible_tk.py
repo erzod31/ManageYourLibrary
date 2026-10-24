@@ -84,7 +84,9 @@ def build(destination, resume=False):
         for name in ('tcl', 'tk'):
             work = destination / ('build-' + name)
             work.mkdir(exist_ok=resume)
-            args = [roots[name] / 'unix/configure', '--prefix=' + str(prefix), '--enable-shared']
+            # Appended script ZIPs make Mach-O install_name_tool/codesign reject
+            # the dylib. Ordinary installed scripts also simplify frozen builds.
+            args = [roots[name] / 'unix/configure', '--prefix=' + str(prefix), '--enable-shared', '--disable-zipfs']
             if name == 'tcl':
                 args += ['--without-system-libtommath']
             if name == 'tk':
@@ -114,10 +116,13 @@ def build(destination, resume=False):
         libraries += ['tommath']
     else:
         # Keep the version's decimal point: libtcl9.1.so -> tcl9.1.
-        libraries = [p.name.removeprefix('lib').removesuffix('.dylib').removesuffix('.so')
-                     for pattern in ('libtcl9*.dylib' if sys.platform == 'darwin' else 'libtcl9*.so',
-                                     'libtcl9tk9*.dylib' if sys.platform == 'darwin' else 'libtcl9tk9*.so')
-                     for p in [next(lib.glob(pattern))]]
+        # libtcl9*.so ALSO matches libtcl9tk9.1.so. Never let directory order
+        # choose Tk twice and omit Tcl from the ELF/Mach-O link dependencies.
+        libraries = ['tcl9.1', 'tcl9tk9.1']
+        suffix = '.dylib' if sys.platform == 'darwin' else '.so'
+        for name in libraries:
+            if not (lib / ('lib' + name + suffix)).is_file():
+                raise FileNotFoundError('Missing exact GUI link library: ' + name)
     extension = Extension('_tkinter', [str(modules / n) for n in ('_tkinter.c', 'tkappinit.c')],
         include_dirs=[str(prefix / 'include'), str(Path(sysconfig.get_path('include')) / 'internal')],
         library_dirs=[str(lib)], libraries=libraries,
@@ -167,9 +172,6 @@ def build(destination, resume=False):
     (destination / 'build-provenance.json').write_text(json.dumps(lock, indent=2))
     if sys.platform.startswith('linux'):
         run(['ldd', next(bridge.glob('_tkinter*.so'))], cwd=ROOT, env=env)
-        # Setup-python can export a library search path. Keep the source probe
-        # on the exact runtime just built; frozen packages use their own loader.
-        env['LD_LIBRARY_PATH'] = str(lib) + os.pathsep + env.get('LD_LIBRARY_PATH', '')
     run([sys.executable, '-B', '-c',
          ('import tkinter as t; r=t.Tk(); print(r.tk.call("package", "present", "Tk")); '
           'assert r.tk.call("info", "commands", "::tk::accessible::set_acc_role"); r.destroy()')], cwd=ROOT, env=env)

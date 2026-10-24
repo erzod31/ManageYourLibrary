@@ -98,8 +98,14 @@ def _mac_memory_reader(process):
     def resident_bytes():
         count = lib.proc_pidinfo(process.pid, 4, 0, buffer, len(buffer))
         if count < 16:
-            if process.poll() is not None:
+            # A process can become a zombie between poll and proc_pidinfo.
+            # Darwin may report EPERM in that window; reap it before deciding
+            # that a live process cannot be monitored.
+            try:
+                process.wait(timeout=.05)
                 return 0
+            except subprocess.TimeoutExpired:
+                pass
             raise ReaderFailure('Cannot monitor Darwin reader memory')
         return ctypes.c_uint64.from_buffer(buffer, 8).value
     return resident_bytes
@@ -173,8 +179,9 @@ def _run_reader(kind, payload, *, timeout=45, memory_mb=1024, cancellation=None)
             elif os.name != 'nt':
                 try:
                     os.killpg(process.pid, signal.SIGKILL)
-                except ProcessLookupError:
-                    pass
+                except (ProcessLookupError, PermissionError):
+                    if process.poll() is None:
+                        process.kill()
             if process.poll() is None:
                 process.kill()
             process.wait(timeout=5)

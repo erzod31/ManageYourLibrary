@@ -111,7 +111,13 @@ def main():
         subprocess.run([str(launcher), '--smoke-test'], check=True, timeout=90)
         for flag, check_set in (('runtime', RUNTIME_CHECKS), ('first-use', FIRST_CHECKS)):
             report = extracted / (flag + '.json')
-            subprocess.run([str(launcher), '--' + flag + '-self-test', str(report)], check=True, timeout=90)
+            result = subprocess.run([str(launcher), '--' + flag + '-self-test', str(report)], timeout=90)
+            if result.returncode:
+                if report.is_file():
+                    diagnostic = evidence / ('extracted-' + flag + '-self-test.json')
+                    shutil.copy2(report, diagnostic)
+                    print(report.read_text(encoding='utf-8'), flush=True)
+                raise RuntimeError('Extracted application failed ' + flag + ' diagnostics')
             validate_report(report, check_set, version)
     manifest.update({
         'architecture': architecture, 'build_os': platform.platform(),

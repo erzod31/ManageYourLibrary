@@ -86,8 +86,8 @@ def _mac_memory_reader(process):
     """Darwin does not implement Linux's address-space limit semantics.
 
     Read the native task RSS while the child executes, including native hangs.
-    RLIMIT_DATA in the child separately constrains its data allocations. This
-    watchdog is sampled, rather than a Windows Job's atomic allocation cap.
+    Darwin's data/address-space rlimits reject otherwise valid limits on supported
+    hosts. This watchdog is sampled, unlike a Windows Job's allocation cap.
     """
     import ctypes
     lib = ctypes.CDLL('/usr/lib/libproc.dylib', use_errno=True)
@@ -265,9 +265,10 @@ def _set_posix_limits(memory_mb):
         return
     import resource
     budget = int(memory_mb) * 1024 * 1024
-    memory_limit = resource.RLIMIT_DATA if sys.platform == 'darwin' else resource.RLIMIT_AS
-    for category, requested in ((memory_limit, budget), (resource.RLIMIT_CORE, 0),
-                                (resource.RLIMIT_FSIZE, 64 * 1024 * 1024)):
+    limits = [(resource.RLIMIT_CORE, 0), (resource.RLIMIT_FSIZE, 64 * 1024 * 1024)]
+    if sys.platform != 'darwin':
+        limits.insert(0, (resource.RLIMIT_AS, budget))
+    for category, requested in limits:
         _, inherited_hard = resource.getrlimit(category)
         effective = requested if inherited_hard == resource.RLIM_INFINITY else min(requested, inherited_hard)
         resource.setrlimit(category, (effective, effective))

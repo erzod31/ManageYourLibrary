@@ -28,7 +28,7 @@ class AuditWorkflowTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
-        self.root = Path(self.temp.name)
+        self.root = Path(self.temp.name).resolve()
         self.profile = self.root / 'profile'
         self.profile.mkdir()
         self.book = self.root / 'book.txt'

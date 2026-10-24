@@ -82,6 +82,29 @@ def run_reader(kind, payload, *, timeout=45, memory_mb=1024, cancellation=None):
         slots.release()
 
 
+def _mac_memory_reader(process):
+    """Darwin does not implement Linux's address-space limit semantics.
+
+    Read the native task RSS while the child executes, including native hangs.
+    RLIMIT_DATA in the child separately constrains its data allocations. This
+    watchdog is sampled, rather than a Windows Job's atomic allocation cap.
+    """
+    import ctypes
+    lib = ctypes.CDLL('/usr/lib/libproc.dylib', use_errno=True)
+    lib.proc_pidinfo.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_uint64,
+                                ctypes.c_void_p, ctypes.c_int]
+    lib.proc_pidinfo.restype = ctypes.c_int
+    buffer = ctypes.create_string_buffer(96)  # struct proc_taskinfo, PROC_PIDTASKINFO=4
+    def resident_bytes():
+        count = lib.proc_pidinfo(process.pid, 4, 0, buffer, len(buffer))
+        if count < 16:
+            if process.poll() is not None:
+                return 0
+            raise ReaderFailure('Cannot monitor Darwin reader memory')
+        return ctypes.c_uint64.from_buffer(buffer, 8).value
+    return resident_bytes
+
+
 def _run_reader(kind, payload, *, timeout=45, memory_mb=1024, cancellation=None):
     """Run a single allowlisted operation; time includes interpreter startup.
 
@@ -118,6 +141,7 @@ def _run_reader(kind, payload, *, timeout=45, memory_mb=1024, cancellation=None)
         )
         close_job = None
         try:
+            rss = _mac_memory_reader(process) if sys.platform == 'darwin' else None
             if os.name == 'nt':
                 close_job = _windows_job(process, int(memory_mb * 1024 * 1024))
             ready_path.touch(exist_ok=False)
@@ -126,6 +150,8 @@ def _run_reader(kind, payload, *, timeout=45, memory_mb=1024, cancellation=None)
                     cancellation.raise_if_cancelled()
                 if time.monotonic() - started >= timeout:
                     raise ReaderFailure(f'Reader {kind} exceeded {timeout:g}s; manual review required')
+                if rss and rss() > memory_mb * 1024 * 1024:
+                    raise ReaderFailure(f'Reader {kind} exceeded its resident-memory budget')
                 time.sleep(.025)
             if cancellation:
                 cancellation.raise_if_cancelled()
@@ -239,9 +265,12 @@ def _set_posix_limits(memory_mb):
         return
     import resource
     budget = int(memory_mb) * 1024 * 1024
-    resource.setrlimit(resource.RLIMIT_AS, (budget, budget))
-    resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
-    resource.setrlimit(resource.RLIMIT_FSIZE, (64 * 1024 * 1024, 64 * 1024 * 1024))
+    memory_limit = resource.RLIMIT_DATA if sys.platform == 'darwin' else resource.RLIMIT_AS
+    for category, requested in ((memory_limit, budget), (resource.RLIMIT_CORE, 0),
+                                (resource.RLIMIT_FSIZE, 64 * 1024 * 1024)):
+        _, inherited_hard = resource.getrlimit(category)
+        effective = requested if inherited_hard == resource.RLIM_INFINITY else min(requested, inherited_hard)
+        resource.setrlimit(category, (effective, effective))
 
 
 def worker_main(request_path):

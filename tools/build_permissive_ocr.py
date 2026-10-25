@@ -151,6 +151,21 @@ def collect_source_notices(source, target):
     target.write_text('\n\n'.join(notices) + '\n', encoding='utf-8')
 
 
+def normalize_build_paths(text, output, *, project=ROOT, home=None):
+    """Normalize receipt paths, including CMake's case/separator variations.
+
+    Only generated build metadata is transformed. Upstream source/notice
+    archives and linked executable bytes must remain untouched.
+    """
+    for path, label in ((output, '${BUILD_ROOT}'), (project, '${PROJECT_ROOT}'),
+                        (Path.home() if home is None else home, '${USER_PROFILE}')):
+        value = str(path).replace('\\', '/')
+        pattern = re.escape(value).replace('/', r'[\\/]')
+        flags = re.I if re.match(r'^[A-Za-z]:/', value) else 0
+        text = re.sub(pattern, lambda match: label, text, flags=flags)
+    return text
+
+
 def build(output, resume=False, jobs=4):
     output = output.resolve()
     output.mkdir(parents=True, exist_ok=resume)
@@ -201,7 +216,7 @@ def build(output, resume=False, jobs=4):
         configure = [cmake, '-S', source, '-B', build_dir, '-G', generator, *base, *options]
         if name == 'tesseract':
             configure += ['-DLeptonica_DIR=' + (prefix / 'lib/cmake/leptonica').as_posix()]
-        commands.append([str(arg).replace(str(output), '${BUILD_ROOT}') for arg in configure])
+        commands.append([normalize_build_paths(str(arg), output) for arg in configure])
         log = output / (name + '-build.log')
         run(configure, env=env, log=log)
         run([cmake, '--build', build_dir, '--parallel', jobs], env=env, log=log)
@@ -233,8 +248,7 @@ def build(output, resume=False, jobs=4):
     for component in lock['components']:
         shutil.copy2(downloads / (component['id'] + '.tar.gz'), source_dest)
         cache = (output / ('build-' + component['id']) / 'CMakeCache.txt').read_text(encoding='utf-8')
-        for path, label in ((output, '${BUILD_ROOT}'), (ROOT, '${PROJECT_ROOT}'), (Path.home(), '${USER_PROFILE}')):
-            cache = cache.replace(str(path), label).replace(path.as_posix(), label)
+        cache = normalize_build_paths(cache, output)
         (source_dest / (component['id'] + '-CMakeCache.txt')).write_text(cache, encoding='utf-8')
     shutil.copy2(LOCK, source_dest / LOCK.name)
     shutil.copy2(Path(__file__), source_dest / Path(__file__).name)

@@ -32,6 +32,7 @@ class WindowsBuildConfigTests(unittest.TestCase):
         self.assertIn('"pypdfium2"', spec)
         self.assertIn('ROOT / "app_icon.ico"', spec)
         self.assertIn("--require-hashes", script)
+        self.assertIn('tools\\verify_binary_privacy.py', script)
         self.assertNotIn("rapidfuzz", (script + spec).lower())
         self.assertNotIn(r"c:\users", script.lower())
         for language in ("eng", "spa", "fra", "nld", "chi_sim"):

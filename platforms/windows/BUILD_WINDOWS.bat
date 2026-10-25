@@ -88,6 +88,10 @@ if errorlevel 1 exit /b 1
 "%MANAGE_YOUR_LIBRARY_DIST_DIR%\ManageYourLibrary\ManageYourLibrary.exe" --local-voice-self-test "%MANAGE_YOUR_LIBRARY_DIST_DIR%\ManageYourLibrary\local-voice-self-test.json"
 if errorlevel 1 exit /b 1
 
+echo Checking the entire frozen payload for embedded Windows profile paths...
+"%PYTHON_EXE%" -B tools\verify_binary_privacy.py "%MANAGE_YOUR_LIBRARY_DIST_DIR%\ManageYourLibrary"
+if errorlevel 1 exit /b 1
+
 "%PYTHON_EXE%" tools\write_build_manifest.py "%MANAGE_YOUR_LIBRARY_DIST_DIR%\ManageYourLibrary\ManageYourLibrary.exe" --platform windows-x64 --validated-release-gates --validated-runtime --validated-first-use --validated-windows-accessibility
 if errorlevel 1 exit /b 1
 

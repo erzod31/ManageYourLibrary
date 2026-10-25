@@ -81,6 +81,15 @@ La duración del audio renderizado no es tiempo de bloqueo de la interfaz.
 
 ## Estado de construcción
 
+Primera construcción sobre `aa04989`: EXE y los cinco diagnósticos congelados
+correctos (runtime 5, primer uso 5, API 22, COM 16, SAPI 14). La comprobación
+completa posterior rechazó cinco archivos generados de procedencia OCR por
+rutas locales; **ese paquete no se entrega**. La normalización anterior no
+cubría todas las combinaciones de barras y mayúsculas de CMake. Se añadió la
+regresión correspondiente y una puerta de privacidad al propio build antes de
+generar el manifiesto. No se modificaron archivos originales ni avisos de
+licencia: solo la generación de metadatos de construcción.
+
 La reconstrucción final del EXE, el instalador y la validación de los paquetes
 se registrarán aquí únicamente después de ejecutarse. No se sustituye esa
 evidencia por los nombres de artefactos simulados que imprimen las pruebas unitarias.

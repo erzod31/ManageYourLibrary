@@ -12,12 +12,36 @@ from unittest.mock import patch
 
 import ocr_engine
 from tools import verify_ocr_payload as verifier
-from tools.build_permissive_ocr import extract, verify_extracted_source
+from tools.build_permissive_ocr import extract, normalize_build_paths, verify_extracted_source
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 class PermissiveOcrTests(unittest.TestCase):
+    def test_build_receipts_normalize_mixed_windows_separators_and_case(self):
+        options = dict(output=Path('C:/Users/SyntheticUser/build'),
+                       project=Path('C:/Users/SyntheticUser/project'),
+                       home=Path('C:/Users/SyntheticUser'))
+        for text in ('-DCMAKE_INSTALL_PREFIX=C:/Users/SyntheticUser/build/prefix',
+                     r'-DCMAKE_INSTALL_PREFIX=c:\users\syntheticuser\build\prefix',
+                     r'-DCMAKE_INSTALL_PREFIX=C:/USERS\SyntheticUser/build\prefix'):
+            normalized = normalize_build_paths(text, **options)
+            self.assertTrue(normalized.startswith('-DCMAKE_INSTALL_PREFIX=${BUILD_ROOT}'))
+            self.assertNotIn('syntheticuser', normalized.lower())
+        self.assertEqual(normalize_build_paths('C:/USERS/SyntheticUser/project/recipe.py', **options),
+                         '${PROJECT_ROOT}/recipe.py')
+        self.assertEqual(normalize_build_paths('c:/users/syntheticuser/cache', **options),
+                         '${USER_PROFILE}/cache')
+
+    def test_posix_receipts_keep_case_and_use_specific_root_before_home(self):
+        options = dict(output=Path('/home/synthetic/build'), project=Path('/home/synthetic/project'),
+                       home=Path('/home/synthetic'))
+        text = '/home/synthetic/build/prefix;/home/synthetic/project/recipe.py;/home/synthetic/cache'
+        self.assertEqual(normalize_build_paths(text, **options),
+                         '${BUILD_ROOT}/prefix;${PROJECT_ROOT}/recipe.py;${USER_PROFILE}/cache')
+        self.assertEqual(normalize_build_paths('/HOME/synthetic/build/prefix', **options),
+                         '/HOME/synthetic/build/prefix')
+
     def test_source_profile_disables_every_legacy_dependency_route(self):
         lock = json.loads((ROOT / 'tools/ocr_source_lock.json').read_text())
         components = {c['id']: c for c in lock['components']}

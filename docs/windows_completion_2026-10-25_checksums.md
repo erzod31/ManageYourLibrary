@@ -90,6 +90,15 @@ regresión correspondiente y una puerta de privacidad al propio build antes de
 generar el manifiesto. No se modificaron archivos originales ni avisos de
 licencia: solo la generación de metadatos de construcción.
 
+La validación remota Windows encontró que el botón de prueba de identidad,
+añadido como hermano mediante `pack`, podía quedar sin espacio en pantallas
+pequeñas. Reproducción local en 760×560: no mapeado, 1×1; con superposición
+controlada dentro del fixture: mapeado, 240×36. Se mantiene la exigencia de dos
+identidades positivas crecientes, sin omitir el caso; el informe registra
+ambos IDs y su visibilidad. La prueba corregida pasó localmente 16/16 (94→95).
+Esto corrige el fixture, no cambia el proveedor nativo. El resultado remoto
+debe repetirse y registrarse en su ejecución propia.
+
 La reconstrucción final del EXE, el instalador y la validación de los paquetes
 se registrarán aquí únicamente después de ejecutarse. No se sustituye esa
 evidencia por los nombres de artefactos simulados que imprimen las pruebas unitarias.

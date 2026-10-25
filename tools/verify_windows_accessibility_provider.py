@@ -23,6 +23,34 @@ REQUIRED_CHECKS = {
 }
 
 
+def recreated_child_identity(root, snapshot, annotate):
+    """Check lifetime identity without depending on spare packer space.
+
+    App(root) fills its root. A second packed sibling may be unmapped on a
+    small CI desktop; an overlay keeps both incarnations inside the fixture.
+    Mapping and discovery are prerequisites, not reasons to skip this check.
+    """
+    import tkinter as tk
+    evidence = {}
+    for phase in ('before', 'after'):
+        label = 'MYL_QA_identity_' + phase
+        button = tk.Button(root, name='myl_identity_test', text=label)
+        try:
+            button.place(x=8, y=8, width=240, height=36)
+            root.update()
+            annotate(button, label)
+            row = next((row for row in snapshot(root)['children'] if row['name'] == label), None)
+            evidence[phase] = {'mapped': bool(button.winfo_ismapped()), 'id': row['id'] if row else None}
+        finally:
+            button.destroy()
+            root.update()
+    before, after = evidence['before'], evidence['after']
+    evidence['passed'] = bool(before['mapped'] and after['mapped']
+                              and before['id'] is not None and after['id'] is not None
+                              and after['id'] > before['id'] > 0)
+    return evidence
+
+
 def run_fixture():
     if sys.platform != 'win32':
         return {'passed': False, 'reason': 'windows_only'}
@@ -83,20 +111,8 @@ def run_fixture():
             repeated = snapshot(root)
             checks['registration_idempotent'] = search is not None and named(repeated, _text('search'))['id'] == search['id']
 
-            button = tk.Button(root, name='myl_identity_test', text='MYL_QA_identity_before')
-            button.pack(side='bottom')
-            root.update()
-            name_control(button, 'MYL_QA_identity_before')
-            before = named(snapshot(root), 'MYL_QA_identity_before')
-            button.destroy()
-            root.update()
-            button = tk.Button(root, name='myl_identity_test', text='MYL_QA_identity_after')
-            button.pack(side='bottom')
-            root.update()
-            name_control(button, 'MYL_QA_identity_after')
-            after = named(snapshot(root), 'MYL_QA_identity_after')
-            checks['destroyed_id_not_reassigned'] = bool(before and after and after['id'] > before['id'])
-            button.destroy()
+            identity = recreated_child_identity(root, snapshot, name_control)
+            checks['destroyed_id_not_reassigned'] = identity['passed']
 
             workspace.select_item(workspace.filtered_items[0])
             workspace.edit_selected_metadata()
@@ -122,6 +138,7 @@ def run_fixture():
             checks['no_callback_errors'] = not errors
             checks['no_native_property_errors'] = not root._myl_a11y_errors
             return {'passed': set(checks) == REQUIRED_CHECKS and all(checks.values()), 'checks': checks, 'errors': errors,
+                    'identity_fixture': identity,
                     'scope': 'in_process_msaa_contract_and_background_threads',
                     'external_assistive_client': 'not_run', 'screen_reader_speech': 'not_run',
                     'profile': 'synthetic_disposable', 'tk': root.tk.call('package', 'present', 'Tk')}

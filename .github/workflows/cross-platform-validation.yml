@@ -3,6 +3,10 @@ name: Cross-platform source validation
 on:
   push:
     branches: [main, codex/audit-optimizations]
+    paths-ignore:
+      - 'docs/**'
+      - 'README.md'
+      - 'THIRD_PARTY_NOTICES.md'
   pull_request:
   workflow_dispatch:
 

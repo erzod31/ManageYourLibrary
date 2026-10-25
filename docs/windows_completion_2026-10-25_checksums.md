@@ -1,5 +1,116 @@
 # Cierre de comprobaciones Windows — 2026-10-25
 
+## Candidato de cierre `e719082`: ATK-6
+
+Esta es la revisión posterior a la investigación de los avisos GLib. Fuente:
+`e7190826639a9705642634bd3ed5f574ad8b5770`, árbol limpio al construir y rama
+de pruebas `codex/audit-optimizations`. La huella local Windows de 282 archivos
+es `324451D7B81FF50F700B7D2BA8A4058FDB52B4679BABD583E7026FEFAB540E1B`.
+Las huellas nativas pertenecen a sus propios hosts; los manifiestos registran
+los bytes realmente construidos, sin presumir igualdad entre finales de línea.
+
+ATK-6 corrige los dos avisos por pathname nulo de los proxies anónimos de
+`PanedWindow`. El helper privado conserva NULL; no inventa nombres ni altera
+la jerarquía, índices o semántica AT-SPI. El ensayo C con GLib real cubre
+NULL, vacío, Unicode y bytes UTF-8 inválidos. Una regresión con Tk 9.1 real
+crea dos PanedWindow, registra el árbol y lo cierra con
+`G_DEBUG=fatal-warnings`. Los tres diagnósticos API Linux, desde fuente,
+congelado y extraído, exigen también avisos fatales.
+
+### Windows del candidato actual
+
+El build canónico pasó **792 pruebas en 14,616 s**, seis omitidas por
+plataforma/permisos. Pasaron smoke, catálogo, OCR, orígenes y avisos. El
+ejecutable original, el ZIP extraído y la copia QA instalada pasaron los
+seis diagnósticos: runtime 5/5, primer uso 5/5, API 22/22, COM/MSAA 16/16,
+SAPI a WAV 14/14 y threading 11/11. `remote_cover` offline también pasó.
+No se ejecutaron NVDA ni audio audible en esta repetición.
+
+Los **1.179 archivos** del ZIP y de la instalación coinciden con el payload.
+La instalación QA se retiró correctamente; nueve archivos de perfil y el
+original sintético conservaron sus hashes, con registro habitual intacto.
+El ciclo usa el AppId QA ya descrito y un setup distinto del distribuible.
+La actualización `b4a80306` → `e3e2eaa` conserva su evidencia separada debajo;
+no se atribuye esa actualización al candidato `e719082`.
+
+La auditoría independiente volvió a comprobar 39 PE AMD64, 534 módulos PYZ,
+155 entradas stdlib, fuentes/recetas/contratos y avisos. Sin rutas de perfil
+en el alcance inspeccionado ni módulos de build excluidos dentro de PYZ.
+Las dos DLL CRT conservaron firmas válidas Microsoft; la elegibilidad legal
+sigue sin determinar. Los diagnósticos no modificaron los bytes extraídos.
+
+Artefactos locales **de desarrollo**, sin firma ni publicación:
+
+| Archivo | Bytes | SHA-256 |
+| --- | ---: | --- |
+| `ManageYourLibrary-0.5.3-development-Windows-x64-portable.zip` | 62.797.539 | `9D516EB19259B77D9BD44554D18437D187C26013B37C0514F860FB659D2534F6` |
+| `ManageYourLibrary-0.5.3-development-Setup-x64.exe` | 52.937.467 | `582DCEB0E5CCA6A980AD0597ADD9281B7279DB26E505324C854E7BFAA60BA2D3` |
+| `build-manifest-0.5.3-development.json` | 9.552 | `A7016B526CA97981D0E452C4454B69533D04274A2AF966E9AF713D9CE24BD09C` |
+
+EXE (5.376.485 bytes):
+`6CB189E47B9F6E6D99DCB5B2566C322AE2F67B123E9CCF66AC8A6069A7E870AD`.
+Setup QA:
+`58EFA9BED4A15397174D4FB5FD34B9A030FFD2B8C78DF89E92FF125238D5822B`.
+Las tres sumas y la copia del instalador coinciden con sus originales.
+Los informes independientes de payload y paquete/ciclo QA tienen SHA-256
+`c57b03846b6d6cc6d1468a3f175740b578d504e9a1e6378e9b4d0246f0e1f1b5`
+y `25bebb1295a0ecbe7df7b7f3a775461503b2edbb88bd847479de8c1ef9438e7b`.
+Se conservaron fuera de Git; no se sobrescribió la evidencia anterior.
+
+### CI de esta revisión
+
+- [Suite fuente Ubuntu/macOS](https://github.com/erzod31/ManageYourLibrary/actions/runs/40220163331): correcta en ambos hosts.
+- [Windows](https://github.com/erzod31/ManageYourLibrary/actions/runs/40220163276): correcto; 792 pruebas y tres omisiones por ejecución, construcción y gates congelados correctos.
+- [Paquetes Linux/macOS](https://github.com/erzod31/ManageYourLibrary/actions/runs/40220163335): Linux x64, macOS ARM64 y macOS Intel correctos, incluidos empaquetado y diagnósticos extraídos. Publicación omitida.
+
+Linux ejecutó las 792 pruebas con una omisión y el ensayo real de dos
+PanedWindow. Las tres etapas API pasaron con avisos fatales. El log completo
+no contiene `g_utf8_make_valid` ni `GLib-CRITICAL`. También pasaron los 18
+contratos notifier bajo ASan/UBSan, fuentes exactas, writer del tar,
+reemplazo/carga GLib y el paquete extraído. La repetición Windows de CI y los
+tres hosts nativos corresponden a `e719082`; no se sustituyen por resultados
+de revisiones anteriores.
+
+La auditoría independiente descargó los tres ZIP de Actions y comprobó sus
+bytes, sumas y recibos. Linux: 13 assets por checksum, 714 entradas del app tar
+y 185 miembros del tar de fuentes; 35 familias, 39 SO de dpkg y 81 orígenes
+no-dpkg explícitos. El recibo de fuentes coincide entre la app y el asset.
+Cada Mac: 12 assets y 658 archivos del `.app`, resolviendo sus symlinks internos
+sin ejecutar contenido localmente. Los contratos de fuente/frozen se ligaron
+al checker, EXE y extensión reales; los logs retienen la repetición extraída.
+Huella nativa de 282 archivos:
+`530B7081AA62DE5E1352C72990AD1C2A82FE8B21001C6829BB783CE91AB66C4D`.
+
+Estos son los ZIP **contenedores de Actions**, no hashes de los archivos app
+internos. Los assets internos conservan sus propios manifiestos y sumas:
+
+| Artefacto QA | SHA-256 del ZIP descargado |
+| --- | --- |
+| [Linux x64](https://github.com/erzod31/ManageYourLibrary/actions/runs/40220163335/artifacts/12608674244) | `b9679d6eb871360b148e2b3d5fee53cfc2dd8c124e72fc2976a13aa86cae858b` |
+| [macOS ARM64](https://github.com/erzod31/ManageYourLibrary/actions/runs/40220163335/artifacts/12608408279) | `59c0f1f88b944063f92c0c5e424f5bcb13a8db966b13e4694614f1f75d44c1be` |
+| [macOS Intel](https://github.com/erzod31/ManageYourLibrary/actions/runs/40220163335/artifacts/12608582978) | `df0f2bfe796aff6b70aaa8894a8a47fa2afc0da5fc0579e086455d78ccdd0e58` |
+
+Tar de fuentes Linux:
+`f3c5b694329fdee849c0904155be553f5d5d643d7f70f963b1249051ab1fa2e4`.
+Informe normalizado independiente de los tres hosts:
+`409744309b15dc07df15230b989b103f14ba4fd216d8cba3c4a806e857ee6529`.
+Los artefactos son evidencia de pruebas con retención de Actions, no una
+release ni sustitutos de la entrega permanente exigible al publicar.
+
+Orca 42 real repitió **14/14 controles y cinco fases**, incluidos los valores
+de Title/Author y el cierre del editor. Se mantuvieron silencio, ausencia de
+red y limpieza de procesos propios. ZIP de evidencia:
+`d4fcff751e801a5068075ee04587d42760b0fef2a36f14cf52071426b6f6dfa0`.
+
+La publicación sigue bloqueada por `redistribution_review: not_complete`.
+La respuesta sobre licencia Visual Studio sigue siendo «No lo sé» y no se
+convirtió en una aprobación. Permanecen los límites de VoiceOver real,
+evaluación humana/DPI, firma macOS ad-hoc y releases históricas descritos
+abajo. Esta comprobación técnica no concede derechos ni certifica accesibilidad
+completa. No se crearon releases/tags ni se fusionó `main`.
+
+---
+
 ## Candidato integrado `e3e2eaa` y revisión ATK-6
 
 Esta sección resume el candidato integrado antes de ATK-6. Las secciones posteriores conservan

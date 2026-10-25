@@ -113,6 +113,23 @@ class NativeReleaseTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     validate_gui_provenance(root / 'build', root / 'lock', **kwargs)
 
+    def test_gui_builder_contract_omits_frozen_metadata_but_cannot_be_a_frozen_report(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            kwargs, record = self.gui_fixture(root, 'macos')
+            contract = record['tkinter_threading_contract']
+            contract.pop('frozen')  # Actual source CLI format, not the frozen CLI.
+            path = kwargs['bridge_directory'] / 'threading-contract.json'
+            path.write_text(json.dumps(contract))
+            (root / 'build').write_text(json.dumps(record))
+            validate_gui_provenance(root / 'build', root / 'lock', **kwargs)
+            for value in (True, 1, 0, None):
+                contract['frozen'] = value
+                path.write_text(json.dumps(contract))
+                (root / 'build').write_text(json.dumps(record))
+                with self.subTest(value=value), self.assertRaises(ValueError):
+                    validate_gui_provenance(root / 'build', root / 'lock', **kwargs)
+
     def test_wheel_lock_records_metadata_and_bytes(self):
         with tempfile.TemporaryDirectory() as temp:
             wheel = Path(temp) / 'example.whl'

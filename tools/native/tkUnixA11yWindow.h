@@ -205,6 +205,40 @@ static gint MylTkAtkTextCaret(AtkText *text)
     return offset;
 }
 
+static AtkAttributeSet *MylTkAtkTextRunAttributes(AtkText *text, gint offset,
+        gint *start, gint *end)
+{
+    TkAtkAccessible *acc = (TkAtkAccessible *)text;
+    AtkRole role;
+    gint length;
+    if (start) *start = -1;
+    if (end) *end = -1;
+    if (!acc || acc->is_defunct || !acc->tkwin
+            || !MylTkAtkValueAllowed(acc->tkwin)) return NULL;
+    role = GetAtkRoleForWidget(acc->tkwin);
+    if (role != ATK_ROLE_ENTRY && role != ATK_ROLE_TEXT) return NULL;
+    length = MylTkAtkTextCount(text);
+    if (offset == -1) offset = MylTkAtkTextCaret(text);
+    if (offset < 0 || offset > length) return NULL;
+    /* This provider exports no explicit character styling. The empty set of
+     * supported attributes is invariant over the actual Unicode text range.
+     * Do not invent language/style, or return an empty range for real text:
+     * readers use these bounds to split the line before presenting it. */
+    if (start) *start = 0;
+    if (end) *end = length;
+    return NULL; /* An empty AtkAttributeSet needs no allocated list. */
+}
+
+static void MylTkAtkNotifyTextSnapshot(AtkObject *obj)
+{
+    TkAtkAccessible *acc = (TkAtkAccessible *)obj;
+    if (!acc || acc->is_defunct || !acc->tkwin) return;
+    /* The Tcl caller supplies a complete value snapshot, including on focus.
+     * No insertion offset/length or selection change is known here. Report
+     * refreshed visible data without fabricating a zero-length insertion. */
+    g_signal_emit_by_name(obj, "visible-data-changed");
+}
+
 static gboolean MylTkAtkWindowActive(Tk_Window window)
 {
     TkWindow *focused;

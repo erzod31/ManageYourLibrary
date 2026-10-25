@@ -145,7 +145,9 @@ def validate_gui_provenance(path, lock_path, *, platform, patch_receipt=None,
     validate_threading(contract, expected_bridge_sha256=sha256(Path(source_bridge)),
                        expected_contract_sha256=sha256(checker),
                        expected_platform='darwin' if platform == 'macos' else 'linux')
-    if record.get('tkinter_threading_contract') != contract or contract.get('frozen') is not False:
+    # The builder's source API omits app-only metadata. An explicit source
+    # marker may be False; never accept a frozen report or truthy substitute.
+    if record.get('tkinter_threading_contract') != contract or contract.get('frozen', False) is not False:
         raise ValueError('GUI bridge source contract differs from its delivered evidence')
     return {'sha256': sha256(path), 'upstream_version': locked['version'],
             'linux_accessibility_patch': record.get('linux_accessibility_patch', {}).get('patch_id'),

@@ -457,3 +457,28 @@ ni ejecutar las fuentes. SHA del tar:
 quedaron separados. El artefacto es QA; no abre la puerta global ni regulariza
 releases históricas. La retirada/reinstalación Windows aislada sigue pendiente
 de cerrar con el último payload.
+
+`643dec4` confirmó los contratos fuente/frozen del bridge en Windows y ambos
+Mac; Windows local también pasó los seis diagnósticos, incluido threading
+11/11 y la acción remote_cover offline. Linux notifier pasó sus 18 contratos
+con ASan/UBSan; IPC sintético p50/p95 10.111/10.158 µs con polling frente a
+58/77 µs con FD. El bridge Linux frozen midió 0,034/0,059 ms en worker-call;
+son scopes distintos. No se activó audio.
+
+Orca ya presentó Search y Authors. El siguiente fallo fue Title: el proveedor
+devolvía atributos de texto con rango `(0,0)` y Orca descartaba su valor.
+La receta ATK-5 devuelve el span Unicode real sin inventar atributos o idioma.
+También sustituye la inserción ficticia `insert(0,0)` por la notificación de
+snapshot visible. Las regresiones cubren contraseña, defunct y rangos inválidos;
+la prueba ATK usa `G_DEBUG=fatal-warnings`. La presentación real sigue pendiente
+de repetir este candidato, sin ampliar los plazos del lector.
+
+El empaquetado Mac detectó un error de validación añadido durante esta revisión:
+el contrato fuente acordado omite `frozen`, pero el gate exigía False explícito.
+Se corrige la compatibilidad del gate (ausente o False exacto) y se rechazan
+True, enteros y None. Los controles frozen siguen exigiendo True exacto y
+hashes del EXE/extensión/checker. La nueva regresión usa la salida fuente real.
+También se corrige el resumen de atribución Python que aún describía el bridge
+como no modificado; las fuentes originales y la copia reparada quedan claramente
+distinguidas. Suite conjunta: **789 pruebas en 15,559 s**, cinco omitidas,
+Ruff y whitespace correctos, antes de este nuevo commit.

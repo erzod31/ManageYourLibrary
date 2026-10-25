@@ -2,13 +2,13 @@
 import hashlib
 import json
 import os
-from pathlib import Path
 import shlex
 import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 from tools import tk_linux_patch as native
@@ -119,7 +119,7 @@ class LinuxNativePatchTests(unittest.TestCase):
             if os.environ.get('GITHUB_ACTIONS') == 'true':
                 self.fail('Linux CI must provide cc and pkg-config for the native provider contract')
             self.skipTest('Native helper requires cc and pkg-config')
-        flags = subprocess.run([pkg_config, '--cflags', '--libs', 'atk'], capture_output=True, text=True)
+        flags = subprocess.run([pkg_config, '--cflags', '--libs', 'atk'], capture_output=True, text=True, check=False)
         if flags.returncode:
             if os.environ.get('GITHUB_ACTIONS') == 'true':
                 self.fail('Linux CI must provide real ATK development headers and library')
@@ -129,9 +129,10 @@ class LinuxNativePatchTests(unittest.TestCase):
             binary = Path(directory) / 'atk-window-contract'
             compilation = subprocess.run([compiler, '-std=c11', '-Wall', '-Wextra', '-Werror', str(source),
                                           '-o', str(binary), *shlex.split(flags.stdout)],
-                                         capture_output=True, text=True, timeout=30)
+                                         capture_output=True, text=True, timeout=30, check=False)
             self.assertEqual(compilation.returncode, 0, compilation.stderr[-8000:])
-            result = subprocess.run([str(binary)], capture_output=True, text=True, timeout=10)
+            result = subprocess.run([str(binary)], capture_output=True, text=True, timeout=10,
+                                    env={**os.environ, 'G_DEBUG': 'fatal-warnings'}, check=False)
             self.assertEqual(result.returncode, 0, result.stderr[-8000:])
             self.assertIn('ATK window contract: passed', result.stdout)
 

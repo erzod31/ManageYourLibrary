@@ -106,9 +106,10 @@ def _summary(*, windows):
         'Initial license comments were copied byte-for-byte from the pinned HACL*, KaRaMeL and BLAKE2 sources.\n'
         'Their raw source hashes and extraction rule are recorded in receipt.json.\n'
         'The Unicode notice is the hash-pinned current V3 text; the UCD 15.0.0 ReadMe is separately retained.\n'
-        'No change is made to Python source code here. The project recompiles the unmodified CPython\n'
-        '_tkinter sources against an isolated Tcl/Tk 9.1 runtime. Its Windows Tk MSAA repair is\n'
-        'project-maintained, not an upstream Python/Tk release; see the separate Tcl/Tk notices and patch receipt.\n'
+        'This collector does not modify CPython sources. The GUI build preserves the original _tkinter.c\n'
+        'download and compiles a separate copy with the pinned Tcl 9 thread-detection backport.\n'
+        'See licenses/tcltk/myl-tkinter-tcl9-repair for sources, license, recipe and contract.\n'
+        'The separate Tk Windows/Linux accessibility repairs are project-maintained, not an upstream release.\n'
         'The original PSF, Microsoft and dependency rights are not replaced by the project MIT license.\n'
         'This evidence does not approve redistribution of the entire application or historical releases.\n'
     )

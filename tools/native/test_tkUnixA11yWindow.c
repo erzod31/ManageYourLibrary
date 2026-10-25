@@ -139,6 +139,7 @@ static void text_iface_init(AtkTextIface *iface)
     iface->get_character_count = MylTkAtkTextCount;
     iface->get_text_at_offset = MylTkAtkTextAtOffset;
     iface->get_caret_offset = MylTkAtkTextCaret;
+    iface->get_run_attributes = MylTkAtkTextRunAttributes;
 }
 
 static TkAtkAccessible *provider(Tk_Window w)
@@ -170,6 +171,13 @@ static void count_visibility(AtkObject *obj, const char *state, gboolean enabled
     (void)obj; (void)enabled;
     if (!strcmp(state, "visible") || !strcmp(state, "showing")) (*(int *)data)++;
 }
+
+static void count_data_changed(AtkObject *obj, void *data)
+{ (void)obj; (*(int *)data)++; }
+static void count_text_insert(AtkText *obj, gint position, gint length, void *data)
+{ (void)obj; (void)position; (void)length; (*(int *)data)++; }
+static void count_text_selection(AtkText *obj, void *data)
+{ (void)obj; (*(int *)data)++; }
 
 int main(void)
 {
@@ -261,6 +269,27 @@ int main(void)
     selected = atk_text_get_text(ATK_TEXT(one), 50, -1);
     assert(selected && !selected[0]); g_free(selected);
     gint start, end;
+    AtkAttributeSet *attributes;
+    for (gint offset = 0; offset <= 5; offset++) {
+        attributes = atk_text_get_run_attributes(ATK_TEXT(one), offset, &start, &end);
+        assert(attributes == NULL && start == 0 && end == 5);
+        atk_attribute_set_free(attributes);
+    }
+    attributes = atk_text_get_run_attributes(ATK_TEXT(one), -1, &start, &end);
+    assert(attributes == NULL && start == 0 && end == 5); /* Actual caret. */
+    for (gint offset = -2; offset <= 6; offset += 8) {
+        attributes = atk_text_get_run_attributes(ATK_TEXT(one), offset, &start, &end);
+        assert(attributes == NULL && start == -1 && end == -1);
+    }
+    assert(MylTkAtkTextRunAttributes(ATK_TEXT(one), 0, NULL, NULL) == NULL);
+    attributes = atk_text_get_run_attributes(ATK_TEXT(two), 3, &start, &end);
+    assert(attributes == NULL && start == 0 && end == 6); /* Unicode, multiple lines. */
+    int data_changed = 0, text_inserted = 0, text_selection = 0;
+    g_signal_connect(one, "visible-data-changed", G_CALLBACK(count_data_changed), &data_changed);
+    g_signal_connect(one, "text-changed::insert", G_CALLBACK(count_text_insert), &text_inserted);
+    g_signal_connect(one, "text-selection-changed", G_CALLBACK(count_text_selection), &text_selection);
+    MylTkAtkNotifyTextSnapshot(ATK_OBJECT(one));
+    assert(data_changed == 1 && text_inserted == 0 && text_selection == 0);
     selected = atk_text_get_text_at_offset(ATK_TEXT(one), 3, ATK_TEXT_BOUNDARY_LINE_START, &start, &end);
     assert(!strcmp(selected, unicode) && start == 0 && end == 5); g_free(selected);
     selected = atk_text_get_text_at_offset(ATK_TEXT(one), 3, ATK_TEXT_BOUNDARY_CHAR, &start, &end);
@@ -279,10 +308,18 @@ int main(void)
     assert(selected && !selected[0]); g_free(selected);
     assert(atk_text_get_character_count(ATK_TEXT(one)) == 0);
     assert(atk_text_get_caret_offset(ATK_TEXT(one)) == -1);
+    attributes = atk_text_get_run_attributes(ATK_TEXT(one), 0, &start, &end);
+    assert(attributes == NULL && start == -1 && end == -1); /* No password range. */
     entry_interp.show = ""; entry_interp.status = 1;
     selected = atk_text_get_text(ATK_TEXT(one), 0, -1);
     assert(selected && !selected[0]); g_free(selected);
+    attributes = atk_text_get_run_attributes(ATK_TEXT(one), 0, &start, &end);
+    assert(attributes == NULL && start == -1 && end == -1); /* Failed privacy query. */
     entry_interp.status = TCL_OK;
+    first.value = "";
+    attributes = atk_text_get_run_attributes(ATK_TEXT(one), 0, &start, &end);
+    assert(attributes == NULL && start == 0 && end == 0); /* Actual empty text. */
+    first.value = unicode;
     assert(!strcmp(entry_interp.result, "unchanged Entry result") && entry_interp.preserved == 0);
     assert(!strcmp(text_interp.result, "unchanged Text result") && text_interp.preserved == 0);
     MylTkAtkSyncActiveWindows();
@@ -311,6 +348,10 @@ int main(void)
     assert(selected && !selected[0]); g_free(selected);
     assert(atk_text_get_character_count(ATK_TEXT(one)) == 0);
     assert(atk_text_get_caret_offset(ATK_TEXT(one)) == -1);
+    attributes = atk_text_get_run_attributes(ATK_TEXT(one), 0, &start, &end);
+    assert(attributes == NULL && start == -1 && end == -1);
+    MylTkAtkNotifyTextSnapshot(ATK_OBJECT(one));
+    assert(data_changed == 1 && text_inserted == 0 && text_selection == 0);
     assert(!one->is_active && !one->is_focused);
     assert(!g_hash_table_contains(widget_map, &first));
     assert(MylTkAtkIndexInParent(ATK_OBJECT(one)) == -1);

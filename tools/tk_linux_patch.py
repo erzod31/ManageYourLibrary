@@ -10,10 +10,10 @@ from __future__ import annotations
 
 import hashlib
 import json
-from pathlib import Path
 import re
+from pathlib import Path
 
-PATCH_ID = 'myl-tk91-linux-atk-4'
+PATCH_ID = 'myl-tk91-linux-atk-5'
 INPUT_HASHES = {'tkUnixAccessibility.c': 'de0a9d9e6b3e9ea1d08dbb97927e49817fa4ef84adb34ee8bea6fb10e49d9f6a'}
 NATIVE = Path(__file__).parent / 'native'
 HELPER = 'tkUnixA11yWindow.h'
@@ -32,7 +32,7 @@ def replace_once(source, before, after):
 
 def replace_function(source, name, body):
     match = re.search(r'^\s*(?:static )?(?:[A-Za-z_][A-Za-z_0-9]*\s*\*?\s+)?' + re.escape(name)
-                      + r'\([^;]*?^\{\n.*?^\}', source, re.M | re.S)
+                      + r'\([^;]*?^\{\n.*?^\}', source, re.MULTILINE | re.DOTALL)
     if not match:
         raise ValueError('Missing pinned Linux Tk function: ' + name)
     signature = match[0].split('{', 1)[0]
@@ -41,7 +41,7 @@ def replace_function(source, name, body):
 
 def remove_function(source, name):
     match = re.search(r'^static (?:void|int) ' + re.escape(name)
-                      + r'\([^;]*?^\{\n.*?^\}', source, re.M | re.S)
+                      + r'\([^;]*?^\{\n.*?^\}', source, re.MULTILINE | re.DOTALL)
     if not match:
         raise ValueError('Missing pinned Linux Tk event function: ' + name)
     return source[:match.start()] + source[match.end():]
@@ -126,6 +126,11 @@ def repair_provider(source):
 }''')
     source = replace_once(source, '    iface->get_text_at_offset = NULL;',
                           '    iface->get_text_at_offset = MylTkAtkTextAtOffset;')
+    source = replace_once(source, '    iface->get_run_attributes = NULL;',
+                          '    iface->get_run_attributes = MylTkAtkTextRunAttributes;')
+    source = replace_once(source, '''	/* Use text-changed for text-based widgets. */
+	g_signal_emit_by_name(obj, "text-changed::insert", 0, 0);''',
+                          '        MylTkAtkNotifyTextSnapshot(obj);')
     source = replace_once(source, '''    TkAtkAccessible *acc = (TkAtkAccessible *)g_object_new(TK_ATK_TYPE_ACCESSIBLE, NULL);
     acc->interp = interp;''', '''    TkAtkAccessible *acc = (TkAtkAccessible *)g_object_new(
             Tk_IsTopLevel(tkwin) ? myl_tk_atk_window_get_type() : TK_ATK_TYPE_ACCESSIBLE, NULL);

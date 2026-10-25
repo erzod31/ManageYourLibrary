@@ -87,9 +87,49 @@ certifica toda dependencia de Python/Tk/PDFium ni sustituye asesoramiento juríd
 
 ## Resultados de esta revisión
 
-La primera compilación Windows controlada reconoció los siete formatos, cargó
-los cinco idiomas juntos, produjo TSV y pasó los cinco checks de runtime con
-Tk 9.1, PDFium y lectura en proceso aislado. La segunda compilación añade cachés
-de configuración al inventario. Las evidencias finales de fuente, congelado y
-CI se completan después de sus respectivas ejecuciones; no se reutilizan cifras
-anteriores como si pertenecieran a esta revisión.
+Windows final, fuente limpia `52c986b3904eaf4d11767483cc31388e97f59d54`:
+
+- 503 pruebas, correctas, dos omitidas por permisos de symlinks en Windows.
+- Siete formatos y originales intactos; cinco idiomas cargados juntos y TSV.
+- Runtime congelado: 5/5, con Tk 9.1, PDFium y OCR en el lector aislado.
+- Primer uso congelado: 5/5, sin biblioteca ni peticiones automáticas.
+- Puerta de rendimiento: catálogos sintéticos de 1.000, 10.000 y 50.000 registros.
+- OCR de 3.315.712 bytes; únicamente importa `KERNEL32.dll`. Cero DLL en su
+  payload y cero prefijos de rutas de perfil Windows en el CLI. Se comprobó
+  realmente `/pathmap` con `/experimental:deterministic`, no solo su configuración.
+- Aviso MIT de pefile conservado, además de las licencias de las bibliotecas OCR.
+- Validador del paquete Windows ejecutado contra los bytes congelados: correcto.
+
+SHA-256 del CLI OCR:
+`65d98b046e5e8be1a5d73d07305277ad89f1d59edcf19959d69951c2cafc8be7`.
+SHA-256 de la app congelada:
+`f4fd156d10e555f8f978e2237f7305fc0f5a650397196f2d800c69904c70bf3a`.
+Inventario OCR: 32 ficheros, incluidas fuentes, avisos y cachés de configuración.
+[Evidencia estructurada Windows](validation_data_2026-10-25/ocr-replacement-windows.json).
+
+Validación nativa completa de la misma receta OCR y código común, fuente
+`d10f7d689227397894eb05ec010458eb5ddc1940`:
+[run 40170858790](https://github.com/erzod31/ManageYourLibrary/actions/runs/40170858790).
+
+| Destino | Job | Resultado |
+| --- | --- | --- |
+| Ubuntu 22.04 x64 | 121101454985 | Correcto: 503 pruebas, una omitida |
+| macOS 15 ARM64 | 121101454986 | Correcto: 503 pruebas, una omitida |
+| macOS 15 Intel x64 | 121101454878 | Correcto: 503 pruebas, una omitida |
+
+Cada job construyó el OCR desde las fuentes fijadas, verificó formatos/TSV/modelos,
+comprobó la API de accesibilidad y probó la aplicación congelada y su archivo
+extraído (runtime y primer uso). `publish` fue **skipped**: no se publicó release.
+Los paquetes nuevos no copian el OCR de la distribución ni de Homebrew.
+
+La revisión Windows posterior solo añadió su aviso MIT de pefile; no cambió el
+OCR ni el código nativo común. La fuente de `52c986b` también pasó los dos jobs
+de [source validation](https://github.com/erzod31/ManageYourLibrary/actions/runs/40171422172).
+Su repetición de builds nativos se lanzó en
+[run 40171422171](https://github.com/erzod31/ManageYourLibrary/actions/runs/40171422171);
+no se da por terminada hasta comprobar su resultado.
+
+No se construyó ni instaló un instalador nuevo en esta revisión. No se validó
+manualmente UI, voz/lector externo, firma comercial o notarización. El checkout
+privado y sus cambios previos permanecen intactos. Los binarios históricos no
+se declaran conformes; no se reescribió historia ni se modificó `main`.

@@ -1,0 +1,40 @@
+{
+  "scope": "Technical replacement of legacy OCR libraries; not retroactive legal clearance",
+  "source_revision": "52c986b3904eaf4d11767483cc31388e97f59d54",
+  "source_tree": {
+    "sha256": "EBB70DC7413074257CFEE7E0A19B53F7EB7ACF07081A98D6B106BCED10E81BB2",
+    "files": 217
+  },
+  "working_tree_during_build": "clean",
+  "python": "3.12.10",
+  "gui": {"tk": "9.1.0", "native_accessibility_api": true, "external_client_or_speech_certification": false},
+  "packages": {"pyinstaller": "6.21.0", "pypdf": "6.21.2", "pypdfium2": "5.14.0", "Pillow": "13.0.0", "ftfy": "6.3.1"},
+  "automated_tests": {"run": 503, "skipped": 2, "successful": true},
+  "format_checks": ["png", "jpg", "jpeg", "tif", "tiff", "bmp", "webp", "five_models_loaded_together", "tsv"],
+  "all_format_checks_passed": true,
+  "original_fixtures_unchanged": true,
+  "frozen_runtime_checks": {"tk_init": "passed", "bundled_languages": "passed", "image_ocr": "passed", "pdfium_ocr": "passed", "reader_isolation": "passed"},
+  "frozen_first_use_checks": {"clean_defaults": "passed", "empty_workspace": "passed", "no_background_operations": "passed", "no_automatic_network": "passed", "fresh_state": "passed"},
+  "catalog_performance_gate": "passed at 1000, 10000 and 50000 synthetic records",
+  "application_executable": {"bytes": 5274122, "sha256": "f4fd156d10e555f8f978e2237f7305fc0f5a650397196f2d800c69904c70bf3a"},
+  "ocr_executable": {
+    "bytes": 3315712,
+    "sha256": "65d98b046e5e8be1a5d73d07305277ad89f1d59edcf19959d69951c2cafc8be7",
+    "system_dependencies": ["KERNEL32.dll"],
+    "dll_files_in_ocr_payload": 0,
+    "local_windows_profile_path_prefix_occurrences": 0
+  },
+  "ocr_payload": {
+    "profile": "png-local-static-v1",
+    "inventoried_files": 32,
+    "manifest_sha256": "4a37fdd281686ac9106010902b55c0ede7f5a181745ad2f2905e865906a1dd73",
+    "license_resolution": "replaced_legacy_stack_no_gpl_lgpl_ocr_libraries",
+    "legacy_artifacts_cleared": false
+  },
+  "pefile_diagnostic_notice": {"version": "2024.8.26", "license": "MIT", "bytes": 1083, "sha256": "b44409c067c6da52bfb54bb6624fb11a7b52157c3a13ae1400232f8196e86ad3"},
+  "overall_redistribution_review": "not_complete",
+  "manual_installed_ui": "not_run",
+  "installer_built_this_review": false,
+  "code_signing": "not_performed",
+  "release_published": false
+}

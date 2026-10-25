@@ -166,6 +166,16 @@ def normalize_build_paths(text, output, *, project=ROOT, home=None):
     return text
 
 
+def source_prefix_flags(output, *, windows):
+    # libpng inserts C flags into a generated CMake script. A native Windows
+    # backslash (for example D:\a) becomes an escape there; forward slashes
+    # are accepted by MSVC's path mapper and survive CMake generation.
+    prefix = output.as_posix()
+    if windows:
+        return '/experimental:deterministic /pathmap:"' + prefix + '=/usr/src/myl-ocr"'
+    return '-ffile-prefix-map=' + prefix + '=/usr/src/myl-ocr'
+
+
 def build(output, resume=False, jobs=4):
     output = output.resolve()
     output.mkdir(parents=True, exist_ok=resume)
@@ -188,9 +198,7 @@ def build(output, resume=False, jobs=4):
             '-DCMAKE_FIND_USE_SYSTEM_PACKAGE_REGISTRY=OFF', '-DCMAKE_DISABLE_FIND_PACKAGE_PkgConfig=TRUE']
     if os.name == 'nt':
         base.append('-DCMAKE_MAKE_PROGRAM=' + shutil.which('ninja', path=env['PATH']).replace('\\', '/'))
-        flags = '/experimental:deterministic /pathmap:"' + str(output) + '=/usr/src/myl-ocr"'
-    else:
-        flags = '-ffile-prefix-map=' + str(output) + '=/usr/src/myl-ocr'
+    flags = source_prefix_flags(output, windows=os.name == 'nt')
     base += ['-DCMAKE_C_FLAGS=' + flags, '-DCMAKE_CXX_FLAGS=' + flags]
     roots = {}
     commands = []

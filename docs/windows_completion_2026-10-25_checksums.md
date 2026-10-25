@@ -99,6 +99,14 @@ ambos IDs y su visibilidad. La prueba corregida pasó localmente 16/16 (94→95)
 Esto corrige el fixture, no cambia el proveedor nativo. El resultado remoto
 debe repetirse y registrarse en su ejecución propia.
 
+La repetición remota sobre `9f32b99` confirmó 16/16, con identidades 83→84.
+Linux y macOS ARM64/Intel también completaron su construcción, diagnóstico y
+reextracción en esa revisión, con publicación omitida. El job Windows avanzó
+hasta OCR y detectó otro fallo: `libpng` inserta flags en un script CMake y la
+barra de una ruta `D:\a` se interpretaba como escape. Se usan rutas de mapeo
+con `/`; se comprobó con MSVC real que `__FILE__` conserva el prefijo neutro
+`/usr/src/myl-ocr`. Se añadió su regresión sin cambiar los codecs ni licencias.
+
 La reconstrucción final del EXE, el instalador y la validación de los paquetes
 se registrarán aquí únicamente después de ejecutarse. No se sustituye esa
 evidencia por los nombres de artefactos simulados que imprimen las pruebas unitarias.

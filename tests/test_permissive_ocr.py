@@ -7,17 +7,24 @@ import os
 import tarfile
 import tempfile
 import unittest
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from unittest.mock import patch
 
 import ocr_engine
 from tools import verify_ocr_payload as verifier
-from tools.build_permissive_ocr import extract, normalize_build_paths, verify_extracted_source
+from tools.build_permissive_ocr import extract, normalize_build_paths, source_prefix_flags, verify_extracted_source
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 class PermissiveOcrTests(unittest.TestCase):
+    def test_windows_compiler_path_map_survives_cmake_script_generation(self):
+        flags = source_prefix_flags(PureWindowsPath(r'D:\a\Project Name\dist\ocr'), windows=True)
+        self.assertNotIn('\\', flags)
+        self.assertEqual(flags, '/experimental:deterministic /pathmap:"D:/a/Project Name/dist/ocr=/usr/src/myl-ocr"')
+        self.assertEqual(source_prefix_flags(Path('/tmp/build'), windows=False),
+                         '-ffile-prefix-map=/tmp/build=/usr/src/myl-ocr')
+
     def test_build_receipts_normalize_mixed_windows_separators_and_case(self):
         options = dict(output=Path('C:/Users/SyntheticUser/build'),
                        project=Path('C:/Users/SyntheticUser/project'),

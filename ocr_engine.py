@@ -31,6 +31,12 @@ def _resource_path(relative_path: str) -> Path:
 
 
 def _tesseract_path() -> Path | None:
+    # Explicit source-development runtime; frozen apps use only their own bundle.
+    if not getattr(sys, 'frozen', False):
+        controlled = os.environ.get('MANAGE_YOUR_LIBRARY_OCR_DIR')
+        if controlled:
+            base = Path(controlled)
+            return next((p for p in (base / 'tesseract.exe', base / 'tesseract') if p.is_file()), None)
     candidates = [
         _resource_path("tesseract/tesseract.exe"),
         _resource_path("tesseract/tesseract"),
@@ -39,9 +45,15 @@ def _tesseract_path() -> Path | None:
         Path(__file__).resolve().parent / "tesseract" / "tesseract",
         Path(__file__).resolve().parent / "tesseract" / "bin" / "tesseract",
     ]
+    if not getattr(sys, 'frozen', False):
+        root = Path(__file__).resolve().parent
+        for directory in (root / 'dist/ocr/payload', root / 'platforms' / ('macos' if sys.platform == 'darwin' else 'linux') / 'tesseract'):
+            candidates.extend((directory / 'tesseract.exe', directory / 'tesseract'))
     for candidate in candidates:
         if candidate and candidate.exists() and (os.name == "nt" or os.access(candidate, os.X_OK)):
             return candidate
+    if getattr(sys, 'frozen', False):
+        return None
     system_tesseract = shutil.which("tesseract")
     if system_tesseract:
         return Path(system_tesseract)
@@ -274,24 +286,13 @@ def _run_tesseract_bytes(image_bytes: bytes, lang: str, psm="6", timeout=40, can
 
 
 def _run_tesseract_file(path: Path, lang: str, psm="6", timeout=40):
-    tesseract = _tesseract_path()
-    if not tesseract:
-        return "", "Tesseract not found"
-
-    cmd = [str(tesseract), str(path), "stdout", "-l", lang, "--psm", str(psm)]
     try:
-        flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
-        run = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-            env=_tesseract_env(tesseract),
-            creationflags=flags,
-        )
-        if run.returncode != 0 and not run.stdout.strip():
-            return "", run.stderr.strip() or f"Tesseract exited with code {run.returncode}"
-        return _normalizar_texto(run.stdout), None
+        from PIL import Image
+        # Do not bypass Pillow's normalisation with JPEG/TIFF input to the CLI.
+        with Image.open(path) as image:
+            buffer = BytesIO()
+            image.convert('RGB').save(buffer, format='PNG')
+        return _run_tesseract_bytes(buffer.getvalue(), lang, psm=psm, timeout=timeout)
     except Exception as exc:
         return "", str(exc)
 

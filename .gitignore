@@ -212,9 +212,12 @@ ai/models/
 *.gguf
 *.gguf.part
 
-# Keep bundled OCR runtime/data trackable despite generic binary ignores
+# Only model inputs and historical legal evidence are tracked. Generated OCR
+# executables belong in build/release artifacts, never Git history.
 !tesseract/
-!tesseract/tesseract.exe
+tesseract/*.exe
+tesseract/*.dll
+tesseract/tessdata/*.jar
 !tesseract/tessdata/
 !tesseract/tessdata/*.traineddata
 !platforms/linux/tesseract/

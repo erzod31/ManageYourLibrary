@@ -12,6 +12,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from tools.write_build_manifest import sha256, source_tree_fingerprint
+from tools.verify_ocr_payload import validate_payload as validate_ocr_payload
 from tools.first_use_self_test import REQUIRED_CHECKS as FIRST_USE_CHECKS
 
 PRIVATE_NAMES = {"config.json", "library_index.json", "library_history.csv", "historial.csv",
@@ -54,6 +55,9 @@ def validate_payload(folder: Path, *, version: str, fingerprint: dict) -> dict:
                 or name.startswith(("metadata_cache", "ocr_cache", "analysis_cache"))
                 or name in {".trash_manageyourlibrary", "ui_thumbnails", "__pycache__", "test_reports", "backups"}):
             raise ValueError(f"Personal state or cache in release payload: {path.name}")
+    ocr = validate_ocr_payload(folder / '_internal/tesseract')
+    if manifest.get('ocr_source_payload') != ocr or manifest['validation'].get('ocr_libraries_profile') != 'passed':
+        raise ValueError('OCR profile receipt differs from the packaged bytes')
     return manifest
 
 

@@ -247,10 +247,14 @@ document readers run in bounded disposable processes; a timeout or crash require
 review and never authorizes moving the original. See the
 [implementation and validation report](docs/IMPLEMENTACION_Y_VALIDACION_2026-10-24.md)
 for completed checks and remaining platform/accessibility limitations.
-The new Windows development packages are **not approved for public redistribution**:
-the [individual OCR review](docs/LICENCIAS_OCR_2026-10-25.md) confirms exact upstream
-installer provenance, but complete notices, corresponding source/combination
-obligations and native security review remain open. The packaging tool requires
+New builds replace the legacy OCR dependency set with a pinned source build
+without JBIG-KIT or the legacy GPL/LGPL OCR libraries. Licenses, exact sources
+and build evidence accompany the new OCR; see the
+[resolution and its limits](docs/RESOLUCION_GPL_LGPL_OCR_2026-10-25.md).
+**This does not retroactively clear the older linked releases or historical Git
+binaries.** Their [individual OCR review](docs/LICENCIAS_OCR_2026-10-25.md) remains
+pending. The overall new-release redistribution/security review is also separate
+and incomplete; the Windows packaging tool requires
 `--development` until that release
 gate is closed. This is separate from the MIT license of the project's own code.
 
@@ -265,6 +269,10 @@ python -m pip install --require-hashes -r requirements.lock
 python -B tools/run_tests.py
 python main.py
 ```
+
+For source OCR, first run `python -B tools/build_permissive_ocr.py --output dist/ocr`
+(Visual Studio 2022 C++ Build Tools required on Windows). Executables are no
+longer checked into the source tree. `python main.py` discovers `dist/ocr/payload`.
 
 Run `BUILD_EXE.bat`, then `platforms\windows\BUILD_INSTALLER.bat` (Inno Setup 6)
 and `python tools/package_windows_release.py`. Outputs are in `dist/release/`.

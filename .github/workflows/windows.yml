@@ -20,6 +20,10 @@ jobs:
           cache: pip
       - name: Install locked dependencies
         run: python -m pip install --require-hashes -r requirements.lock
+      - name: Build pinned OCR without legacy copyleft DLLs
+        run: python -B tools/build_permissive_ocr.py --output dist/ocr
+      - name: Verify OCR formats, models and TSV
+        run: python -B tools/verify_ocr_functionality.py dist/ocr/payload --output dist/ocr-formats.json
       - name: Test
         run: python -B tools/run_tests.py
       - name: Evaluate versioned synthetic identity and OCR corpus

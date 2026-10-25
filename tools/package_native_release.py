@@ -15,6 +15,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from tools.write_build_manifest import git_value, source_tree_fingerprint
+from tools.verify_ocr_payload import validate_payload as validate_ocr_payload
 RUNTIME_CHECKS = {'tk_init', 'bundled_languages', 'image_ocr', 'pdfium_ocr', 'reader_isolation'}
 FIRST_CHECKS = {'clean_defaults', 'empty_workspace', 'no_background_operations', 'no_automatic_network', 'fresh_state'}
 PRIVATE_NAMES = {'config.json', 'library_index.json', 'historial.csv', 'library_history.csv',
@@ -89,6 +90,9 @@ def main():
         raise ValueError('Manifest does not describe the current build source/version')
     if manifest['git_status'] or manifest['sha256'].lower() != sha256(executable):
         raise ValueError('Build source is dirty or executable differs from manifest')
+    if (manifest['validation'].get('ocr_libraries_profile') != 'passed'
+            or manifest.get('ocr_source_payload') != validate_ocr_payload(ROOT / 'platforms' / name / 'tesseract')):
+        raise ValueError('Native OCR source profile was not validated')
     for gate in ('automated_tests', 'source_smoke', 'catalog_performance_gate', 'frozen_smoke', 'runtime_self_test', 'first_use_self_test'):
         if manifest['validation'].get(gate) != 'passed':
             raise ValueError('Build gate was not recorded: ' + gate)
@@ -152,6 +156,7 @@ def main():
     shutil.copy2(ROOT / 'docs/NATIVE_FIRST_USE.md', release / (label + '-README.md'))
     shutil.copy2(api_report, release / (label + '-source-accessibility-api.json'))
     shutil.copy2(ROOT / 'tools/tk_sources.json', release / (label + '-gui-sources.json'))
+    shutil.copy2(ROOT / 'dist/ocr-formats.json', release / (label + '-ocr-formats.json'))
     checksums = release / (label + '-SHA256SUMS.txt')
     checksums.write_text(''.join(f'{sha256(p)}  {p.name}\n' for p in sorted(release.glob(label + '*')) if p != checksums), encoding='utf-8')
     print(archive)

@@ -51,10 +51,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y xvfb libtk8.6 patchelf libx11-dev libxft-dev libxext-dev libxss-dev libharfbuzz-dev libatk-bridge2.0-dev at-spi2-core dbus-x11 tesseract-ocr tesseract-ocr-eng tesseract-ocr-spa tesseract-ocr-fra tesseract-ocr-nld tesseract-ocr-chi-sim
-      - name: Install macOS OCR prerequisites
-        if: runner.os == 'macOS'
-        run: brew install tesseract tesseract-lang
+          sudo apt-get install -y build-essential cmake ninja-build xvfb libtk8.6 patchelf libx11-dev libxft-dev libxext-dev libxss-dev libharfbuzz-dev libatk-bridge2.0-dev at-spi2-core dbus-x11
       - name: Resolve and hash-lock native Python wheels
         run: |
           python3 -m venv .venv
@@ -68,8 +65,10 @@ jobs:
           else
             python3 tools/build_accessible_tk.py --output dist/native-gui
           fi
-      - name: Bundle native OCR and dependency licenses
+      - name: Build pinned OCR without JBIG or GPL/LGPL OCR libraries
         run: python3 tools/bundle_native_ocr.py
+      - name: Check unchanged inputs, seven image formats, all languages and TSV
+        run: python3 tools/verify_ocr_functionality.py platforms/${{ matrix.platform }}/tesseract --output dist/ocr-formats.json
       - name: Verify native accessibility properties and actions
         run: |
           if [ "$RUNNER_OS" = Linux ]; then

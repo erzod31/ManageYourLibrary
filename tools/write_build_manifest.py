@@ -9,6 +9,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+from tools.verify_ocr_payload import validate_payload as validate_ocr_payload
 
 
 def sha256(path):
@@ -80,6 +82,14 @@ def main(argv=None):
             packages[name] = importlib.metadata.version(name)
         except importlib.metadata.PackageNotFoundError:
             packages[name] = "missing"
+    ocr_directory = artifact.parent / '_internal/tesseract'
+    if args.platform in {'linux', 'macos'}:
+        # Native signing can relocate/sign Mach-O data inside .app. Retain the
+        # validated source payload receipt separately from final package hashes.
+        ocr_directory = ROOT / 'platforms' / args.platform / 'tesseract'
+    ocr = None
+    if (ocr_directory / 'native-ocr-manifest.json').is_file():
+        ocr = validate_ocr_payload(ocr_directory)
     manifest = {
         "artifact": artifact.relative_to(ROOT).as_posix() if artifact.is_relative_to(ROOT) else artifact.name,
         "size": artifact.stat().st_size,
@@ -92,6 +102,7 @@ def main(argv=None):
         "platform": args.platform,
         "packages": packages,
         "created_at": datetime.now(timezone.utc).isoformat(),
+        "ocr_source_payload": ocr,
         "validation": {
             "automated_tests": "passed" if args.validated_release_gates else "not_recorded",
             "source_smoke": "passed" if args.validated_release_gates else "not_recorded",
@@ -102,6 +113,7 @@ def main(argv=None):
             "manual_installed_ui": "not_run",
             "code_signing": "not_performed",
             "redistribution_review": "not_complete",
+            "ocr_libraries_profile": "passed" if ocr else "not_recorded",
         },
     }
     output = artifact.parent / "build-manifest.json"

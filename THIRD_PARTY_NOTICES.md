@@ -73,6 +73,49 @@ Several libraries have LGPL or alternative copyleft conditions. GCC runtime
 libraries carry the GCC Runtime Library Exception, not an MIT license.
 The project source remains MIT; that does not clear the OCR dependency set.
 
-No DLL was removed or replaced by the review. The Windows public redistribution
-gate remains `not_complete`. Native macOS/Linux dependency sets are generated
-separately and must not reuse Windows DLL conclusions as their license clearance.
+That review records the **legacy** binaries; its blocked findings are preserved
+as historical evidence, not silently changed into approvals.
+
+## Replacement OCR source profile, 2026-10-25
+
+New builds no longer distribute the legacy 57-binary Windows runtime. The old
+executables/DLLs and four unused Java debugging JARs were removed from the current
+source tree. No published history or older release asset was rewritten/deleted.
+
+`tools/ocr_source_lock.json` pins source archives, SHA-256 hashes, build switches,
+licenses/notices and six official model hashes. The existing platform builders
+use `tools/build_permissive_ocr.py` (native staging: `bundle_native_ocr.py`).
+The OCR CLI statically links only these OCR libraries:
+
+- Tesseract 5.5.3: Apache-2.0, including preserved file-level notices.
+- Leptonica 1.87.0: BSD-2-Clause, including preserved file-level notices.
+- libpng 1.6.59: Libpng license; upstream historical copyright/license text retained.
+- zlib 1.3.2: Zlib license.
+
+TIFF/JBIG, curl/archive, Pango/GLib, gettext/iconv and the other legacy OCR
+dependencies are not linked or copied. This is a **replacement**, not a claim
+that omitting license texts would remove obligations from existing binaries.
+The app still accepts its existing image formats: Pillow normalizes them to PNG;
+PDFium renders scanned PDFs before OCR. The standalone CLI is deliberately not
+a general-purpose TIFF/JBIG converter, training suite, or remote URL downloader.
+
+Each OCR payload includes full unmodified source archives, the exact recipe,
+normalized build caches/commands, verbatim license/AUTHORS files and collected
+source-level notices. Source archives also contain separately licensed **unbuilt**
+examples/contrib programs; their GPL or other notices remain intact and do not
+describe code linked into the OCR executable. The models remain Apache-2.0.
+
+The Windows build uses Microsoft's static C/C++ runtime (`/MT`); it does not
+relicense Microsoft runtime code as MIT/Apache. See the
+[Microsoft redistribution terms](https://learn.microsoft.com/en-us/cpp/windows/redistributing-visual-cpp-files?view=msvc-170)
+and [Build Tools license](https://visualstudio.microsoft.com/license-terms/vs2022-ga-diagnosticbuildtools/).
+Linux uses the target OS's glibc/libstdc++/libgcc baseline without copying those
+libraries into this OCR payload. macOS uses its OS libraries. This OCR-specific
+review is not a license clearance of all GUI/Python/PDFium package components.
+
+`verify_ocr_payload.py` rejects modified sources/notices/models, unexpected
+files and legacy DLL/JAR additions; Windows PE imports are rechecked. A verified
+`ocr_libraries_profile` is separate from the overall `redistribution_review` gate,
+which remains `not_complete` until the entire application release is reviewed.
+**Older releases and historical Git objects are not retroactively cleared.**
+See [resolution and validation scope](docs/RESOLUCION_GPL_LGPL_OCR_2026-10-25.md).

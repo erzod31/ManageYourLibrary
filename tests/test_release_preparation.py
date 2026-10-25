@@ -16,8 +16,9 @@ class ReleasePreparationTests(unittest.TestCase):
         manifest = {
             "version": "0.5.3", "git_commit": "test-commit", "source_tree": {"sha256": "TEST", "files": 1},
             "sha256": write_build_manifest.sha256(folder / "ManageYourLibrary.exe"),
+            "ocr_source_payload": {"sha256": "TEST-OCR"},
             "validation": {key: "passed" for key in (
-                "automated_tests", "source_smoke", "catalog_performance_gate", "frozen_smoke", "runtime_self_test", "first_use_self_test", "redistribution_review")},
+                "automated_tests", "source_smoke", "catalog_performance_gate", "frozen_smoke", "runtime_self_test", "first_use_self_test", "redistribution_review", "ocr_libraries_profile")},
         }
         runtime = {"version": "0.5.3", "passed": True, "frozen": True,
                    "checks": {key: "passed" for key in ("tk_init", "bundled_languages", "image_ocr", "pdfium_ocr", "reader_isolation")}}
@@ -150,7 +151,7 @@ class ReleasePreparationTests(unittest.TestCase):
             installer = root / "dist/installer/ManageYourLibrary-0.5.3-Setup-x64.exe"
             installer.parent.mkdir()
             installer.write_bytes(b"synthetic installer")
-            with patch.object(packaging, "source_tree_fingerprint", return_value=manifest["source_tree"]):
+            with patch.object(packaging, "source_tree_fingerprint", return_value=manifest["source_tree"]), patch.object(packaging, 'validate_ocr_payload', return_value=manifest['ocr_source_payload']):
                 artifacts = packaging.package(root)
             self.assertEqual(len(artifacts), 4)
             checksums = artifacts[-1].read_text(encoding="utf-8")
@@ -170,7 +171,7 @@ class ReleasePreparationTests(unittest.TestCase):
             installer = root / 'dist/installer/ManageYourLibrary-0.5.3-Setup-x64.exe'
             installer.parent.mkdir()
             installer.write_bytes(b'synthetic installer')
-            with patch.object(packaging, 'source_tree_fingerprint', return_value=manifest['source_tree']):
+            with patch.object(packaging, 'source_tree_fingerprint', return_value=manifest['source_tree']), patch.object(packaging, 'validate_ocr_payload', return_value=manifest['ocr_source_payload']):
                 with self.assertRaisesRegex(ValueError, 'Redistribution review'):
                     packaging.package(root)
                 artifacts = packaging.package(root, development=True)

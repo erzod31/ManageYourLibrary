@@ -42,6 +42,7 @@ fi
 
 TESSERACT_ARGS=()
 if [ -x "$ROOT/platforms/macos/tesseract/tesseract" ]; then
+  python3 tools/verify_ocr_payload.py "$ROOT/platforms/macos/tesseract"
   TESSERACT_ARGS+=(--add-data "$ROOT/platforms/macos/tesseract:tesseract")
   echo "Bundled macOS Tesseract found: platforms/macos/tesseract/tesseract"
 elif [ -x "$ROOT/platforms/macos/tesseract/bin/tesseract" ]; then
@@ -60,6 +61,7 @@ else
 fi
 
 if [ "${#TESSERACT_ARGS[@]}" -gt 0 ]; then
+  python3 tools/verify_ocr_payload.py "$ROOT/platforms/macos/tesseract"
   for lang in eng spa fra nld chi_sim; do
     if [ ! -f "$ROOT/platforms/macos/tesseract/tessdata/${lang}.traineddata" ] && [ ! -f "$ROOT/platforms/macos/tesseract/share/tessdata/${lang}.traineddata" ]; then
       echo "ERROR: macOS Tesseract language data is incomplete."

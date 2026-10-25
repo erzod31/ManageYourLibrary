@@ -37,6 +37,7 @@ mkdir -p "$ROOT/dist/linux"
 
 TESSERACT_ARGS=()
 if [ -x "$ROOT/platforms/linux/tesseract/tesseract" ]; then
+  python3 tools/verify_ocr_payload.py "$ROOT/platforms/linux/tesseract"
   TESSERACT_ARGS+=(--add-data "$ROOT/platforms/linux/tesseract:tesseract")
   echo "Bundled Linux Tesseract found: platforms/linux/tesseract/tesseract"
 elif [ -x "$ROOT/platforms/linux/tesseract/bin/tesseract" ]; then
@@ -55,6 +56,7 @@ else
 fi
 
 if [ "${#TESSERACT_ARGS[@]}" -gt 0 ]; then
+  python3 tools/verify_ocr_payload.py "$ROOT/platforms/linux/tesseract"
   for lang in eng spa fra nld chi_sim; do
     if [ ! -f "$ROOT/platforms/linux/tesseract/tessdata/${lang}.traineddata" ] && [ ! -f "$ROOT/platforms/linux/tesseract/share/tessdata/${lang}.traineddata" ]; then
       echo "ERROR: Linux Tesseract language data is incomplete."

@@ -86,21 +86,32 @@ not performed. Linux tar archives preserve executable permissions. Read
 
 ## OCR Runtime
 
-Windows already uses the bundled runtime in the project root:
+All new builds use the controlled PNG-only OCR source profile. The old Windows
+DLL/EXE/JAR bundle is no longer tracked or accepted by the packager. The models
+and historical legal evidence remain under `tesseract/`.
+
+Windows requires Visual Studio 2022 C++ Build Tools, CMake/Ninja and Python 3.12:
 
 ```text
-tesseract/tesseract.exe
-tesseract/tessdata/
+python -B tools/build_permissive_ocr.py --output dist/ocr
+python -B tools/verify_ocr_payload.py dist/ocr/payload
 ```
 
-Linux and macOS need their own native Tesseract runtime for release builds, so OCR behaves like the Windows build. Put it in:
+`BUILD_EXE.bat` prepares this payload if absent. An already verified external
+payload can be selected with `MANAGE_YOUR_LIBRARY_OCR_DIR`. Outputs include
+notices, exact source archives, build caches/commands and a hash inventory.
+
+Linux and macOS build on their target OS using `tools/bundle_native_ocr.py`.
+It builds the same pinned OCR sources and stages them in:
 
 ```text
 platforms/linux/tesseract/
 platforms/macos/tesseract/
 ```
 
-Release builds stop if those folders do not contain a native Tesseract binary and the required language data.
+Release builds reject an unverified runtime, missing notices/models or changed
+payload files. No arbitrary system/Homebrew OCR runtime is copied into a release.
+See [license resolution and scope](../docs/RESOLUCION_GPL_LGPL_OCR_2026-10-25.md).
 
 For development-only builds that rely on a system Tesseract from `PATH`, run the script with:
 

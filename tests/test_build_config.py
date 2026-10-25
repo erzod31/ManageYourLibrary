@@ -15,7 +15,9 @@ class WindowsBuildConfigTests(unittest.TestCase):
         script = (ROOT / "platforms" / "windows" / "BUILD_WINDOWS.bat").read_text(encoding="utf-8")
         spec = (ROOT / "platforms" / "windows" / "ManageYourLibrary.spec").read_text(encoding="utf-8")
 
-        self.assertIn('ROOT / "tesseract"', spec)
+        self.assertIn('validate_payload(OCR)', spec)
+        self.assertIn('(str(OCR), "tesseract")', spec)
+        self.assertNotIn('(str(ROOT / "tesseract"), "tesseract")', spec)
         self.assertIn('ROOT / "data"', spec)
         self.assertIn('collect_all(package)', spec)
         self.assertIn('"pypdfium2"', spec)
@@ -26,10 +28,10 @@ class WindowsBuildConfigTests(unittest.TestCase):
         for language in ("eng", "spa", "fra", "nld", "chi_sim"):
             self.assertIn(language, script)
 
-    def test_bundled_tesseract_runtime_contains_required_files(self):
+    def test_models_are_tracked_but_legacy_ocr_binaries_are_not(self):
         runtime = ROOT / "tesseract"
-
-        self.assertTrue((runtime / "tesseract.exe").is_file())
+        self.assertFalse(list(runtime.glob('*.dll')))
+        self.assertFalse((runtime / 'tesseract.exe').exists())
         for language in ("eng", "spa", "fra", "nld", "chi_sim"):
             self.assertTrue((runtime / "tessdata" / f"{language}.traineddata").is_file())
 

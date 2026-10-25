@@ -1,6 +1,9 @@
 # Linux Tesseract Runtime
 
-Put the native Linux Tesseract runtime here before building a release.
+Generated output only. Run `python3 tools/bundle_native_ocr.py` on Linux to build
+the pinned PNG-only source profile. Do not copy a distro runtime into this folder.
+The build and packaging validators require `native-ocr-manifest.json`, exact
+sources, notices and model hashes; a binary alone is not accepted.
 
 Expected layout:
 
@@ -12,7 +15,9 @@ platforms/linux/tesseract/tessdata/fra.traineddata
 platforms/linux/tesseract/tessdata/chi_sim.traineddata
 ```
 
-This layout is also accepted:
+The source builder emits the first layout, plus `nld`, `osd`, license/source
+directories and the inventory. The legacy alternative below is not a license
+approval and is rejected unless it satisfies the same controlled inventory:
 
 ```text
 platforms/linux/tesseract/bin/tesseract

@@ -46,8 +46,15 @@ if errorlevel 1 exit /b 1
 "%PYTHON_EXE%" tools\benchmark_catalog.py --check
 if errorlevel 1 exit /b 1
 
-if not exist "tesseract\tesseract.exe" goto missing_tesseract
-for %%L in (eng spa fra nld chi_sim) do if not exist "tesseract\tessdata\%%L.traineddata" goto missing_tessdata
+if not defined MANAGE_YOUR_LIBRARY_OCR_DIR set "MANAGE_YOUR_LIBRARY_OCR_DIR=%CD%\dist\ocr\payload"
+if not exist "%MANAGE_YOUR_LIBRARY_OCR_DIR%\native-ocr-manifest.json" (
+  echo Building local OCR from pinned source, without JBIG-KIT or GPL/LGPL OCR libraries...
+  "%PYTHON_EXE%" -B tools\build_permissive_ocr.py --output "%CD%\dist\ocr"
+  if errorlevel 1 exit /b 1
+)
+rem Required models: eng spa fra nld chi_sim osd. The validator also verifies notices and sources.
+"%PYTHON_EXE%" -B tools\verify_ocr_payload.py "%MANAGE_YOUR_LIBRARY_OCR_DIR%"
+if errorlevel 1 exit /b 1
 
 echo Building the diagnosable onedir application...
 "%PYTHON_EXE%" -m PyInstaller --clean --noconfirm --distpath "%MANAGE_YOUR_LIBRARY_DIST_DIR%" --workpath "%TEMP%\ManageYourLibrary_build" platforms\windows\ManageYourLibrary.spec
@@ -73,11 +80,3 @@ if errorlevel 1 exit /b 1
 
 echo DONE: %MANAGE_YOUR_LIBRARY_DIST_DIR%\ManageYourLibrary\ManageYourLibrary.exe
 exit /b 0
-
-:missing_tesseract
-echo ERROR: tesseract\tesseract.exe is missing.
-exit /b 1
-
-:missing_tessdata
-echo ERROR: Required Tesseract language data is incomplete.
-exit /b 1

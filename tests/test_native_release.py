@@ -5,7 +5,7 @@ import zipfile
 from pathlib import Path
 from unittest.mock import patch
 
-from tools.bundle_native_ocr import dependencies
+from tools.build_permissive_ocr import system_dependencies
 from tools.configure_macos_bundle import configure_bundle, BUNDLE_ID
 from tools.lock_native_wheels import wheel_requirement
 from tools.package_native_release import validate_payload, validate_report
@@ -62,15 +62,16 @@ class NativeReleaseTests(unittest.TestCase):
                 self.skipTest('Symlink creation unavailable on this host')
             self.assertEqual(set(validate_payload(root)), {'binary', 'link'})
 
-    def test_ocr_linux_does_not_bundle_glibc_but_keeps_support_libraries(self):
+    def test_ocr_linux_rejects_unknown_support_libraries(self):
         listing = 'libc.so.6 => /lib/libc.so.6 (0x1)\nlibfoo.so.1 => /lib/libfoo.so.1 (0x2)\n/lib64/ld-linux-x86-64.so.2 (0x3)'
-        with patch('tools.bundle_native_ocr.output', return_value=listing):
-            self.assertEqual(list(dependencies(Path('tesseract'), 'linux').values()), [Path('/lib/libfoo.so.1')])
+        with patch('tools.build_permissive_ocr.run', return_value=listing), patch('tools.build_permissive_ocr.os.name', 'posix'), patch('tools.build_permissive_ocr.sys.platform', 'linux'):
+            with self.assertRaises(ValueError):
+                system_dependencies('tesseract', {})
 
     def test_missing_ocr_dependency_fails(self):
-        with patch('tools.bundle_native_ocr.output', return_value='libfoo => not found'):
-            with self.assertRaises(RuntimeError):
-                dependencies(Path('tesseract'), 'linux')
+        with patch('tools.build_permissive_ocr.run', return_value='libfoo => not found'), patch('tools.build_permissive_ocr.os.name', 'posix'), patch('tools.build_permissive_ocr.sys.platform', 'linux'):
+            with self.assertRaises(ValueError):
+                system_dependencies('tesseract', {})
 
     def test_source_report_cannot_authorize_frozen_package(self):
         with tempfile.TemporaryDirectory() as temp:

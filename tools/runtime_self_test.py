@@ -51,8 +51,19 @@ def run_checks(version: str) -> dict:
             root.destroy()
 
     def bundled_languages():
+        import os
         import ocr_engine
         base = ocr_engine._resource_path("tesseract")
+        if not getattr(sys, 'frozen', False):
+            selected = os.environ.get('MANAGE_YOUR_LIBRARY_OCR_DIR')
+            if not selected:
+                candidate = ocr_engine._tesseract_path()
+                if candidate and (candidate.parent / 'native-ocr-manifest.json').is_file():
+                    selected = str(candidate.parent)
+            if selected:
+                base = Path(selected)
+                from tools.verify_ocr_payload import validate_payload
+                validate_payload(base)
         executable = base / ("tesseract.exe" if sys.platform == "win32" else "tesseract")
         if not executable.is_file() or ocr_engine._tesseract_path() != executable:
             raise RuntimeError("Expected the bundled OCR executable, not a PATH fallback")

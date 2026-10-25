@@ -1,5 +1,10 @@
 # Revisión de procedencia y licencias del OCR Windows
 
+**Alcance histórico:** esta tabla corresponde al runtime antiguo. El árbol
+actual lo sustituye por un OCR compilado sin JBIG ni las bibliotecas OCR GPL/LGPL;
+véase la [resolución](RESOLUCION_GPL_LGPL_OCR_2026-10-25.md). Los hallazgos viejos
+se conservan como pendientes para los binarios viejos; no son el inventario nuevo.
+
 Fecha: 2026-10-25. Alcance: las 56 DLL y el ejecutable del runtime heredado,
 no solo Tesseract. Revisión técnica de evidencias y obligaciones, no un dictamen
 jurídico ni una auditoría de vulnerabilidades.

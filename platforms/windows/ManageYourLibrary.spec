@@ -6,6 +6,11 @@ from PyInstaller.utils.hooks import collect_all, copy_metadata
 
 
 ROOT = Path.cwd()
+sys.path.insert(0, str(ROOT))
+from tools.verify_ocr_payload import validate_payload
+
+OCR = Path(os.environ.get('MANAGE_YOUR_LIBRARY_OCR_DIR', str(ROOT / 'dist/ocr/payload'))).resolve()
+validate_payload(OCR)
 datas = [
     (str(ROOT / "app_icon.ico"), "."),
     (str(ROOT / "VERSION"), "."),
@@ -13,7 +18,7 @@ datas = [
     (str(ROOT / "THIRD_PARTY_NOTICES.md"), "."),
     (str(Path(sys.base_prefix) / "LICENSE.txt"), "licenses/python"),
     (str(ROOT / "data"), "data"),
-    (str(ROOT / "tesseract"), "tesseract"),
+    (str(OCR), "tesseract"),
 ]
 binaries = []
 if os.environ.get('TK_LIBRARY'):

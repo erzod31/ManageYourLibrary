@@ -1,0 +1,46 @@
+{
+  "schema": 1,
+  "profile": "png-local-static-v1",
+  "components": [
+    {
+      "id": "zlib", "version": "1.3.2", "license": "Zlib",
+      "url": "https://zlib.net/zlib-1.3.2.tar.gz",
+      "sha256": "bb329a0a2cd0274d05519d61c667c062e06990d72e125ee2dfa8de64f0119d16",
+      "notices": {"LICENSE": "e32ff4e00d9d94930537635291da39e7e612703334bf6fde8c7f1686fe8a45a2"},
+      "options": {"ZLIB_BUILD_SHARED": "OFF", "ZLIB_BUILD_STATIC": "ON", "ZLIB_BUILD_TESTING": "OFF"}
+    },
+    {
+      "id": "libpng", "version": "1.6.59", "license": "Libpng",
+      "commit": "cd952f49f95bb27154ae77dbb103032d95f6e580",
+      "url": "https://codeload.github.com/pnggroup/libpng/tar.gz/cd952f49f95bb27154ae77dbb103032d95f6e580",
+      "sha256": "ef1bccad2b2a58eb3c09e06ffe3b72b8604abda8b5011e4c4bb5391989040f26",
+      "notices": {"LICENSE": "bdb0a645ea18c60507d0368379b1ac5474b92255fcc2d115e07486a7672ba526", "AUTHORS": "b55efa9a0bb709187cfb609860e926535b462a28bbf61b4294bc2e724747cb8e"},
+      "options": {"PNG_SHARED": "OFF", "PNG_STATIC": "ON", "PNG_TESTS": "OFF", "PNG_TOOLS": "OFF", "PNG_EXECUTABLES": "OFF"}
+    },
+    {
+      "id": "leptonica", "version": "1.87.0", "license": "BSD-2-Clause",
+      "commit": "13275a278eb55b5746e33f95fbf5a2c8f604b3ab",
+      "url": "https://github.com/DanBloomberg/leptonica/releases/download/1.87.0/leptonica-1.87.0.tar.gz",
+      "sha256": "c73363397f96eb1295602bf44d708a994ad42046c791bf03ea0505d829bdb6a7",
+      "notices": {"leptonica-license.txt": "87829abb5bbb00b55a107365da89e9a33f86c4250169e5a1e5588505be7d5806"},
+      "options": {"SW_BUILD": "OFF", "BUILD_PROG": "OFF", "STRICT_CONF": "ON", "ENABLE_ZLIB": "ON", "ENABLE_PNG": "ON", "ENABLE_GIF": "OFF", "ENABLE_JPEG": "OFF", "ENABLE_TIFF": "OFF", "ENABLE_WEBP": "OFF", "ENABLE_OPENJPEG": "OFF"}
+    },
+    {
+      "id": "tesseract", "version": "5.5.3", "license": "Apache-2.0",
+      "commit": "db0ec62f81b0737fbbe184d8fea40af5738f8eef",
+      "url": "https://codeload.github.com/tesseract-ocr/tesseract/tar.gz/db0ec62f81b0737fbbe184d8fea40af5738f8eef",
+      "sha256": "21dbaff9867d937c156d0b898e90b726aa339129cfebd7e1365cd5fee5046d67",
+      "notices": {"LICENSE": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30", "AUTHORS": "720862b7253993b348fe15f37ed6e0d4feb0fc8df8324284d75975d54dd29923"},
+      "options": {"BUILD_TRAINING_TOOLS": "OFF", "BUILD_TESTS": "OFF", "GRAPHICS_DISABLED": "ON", "DISABLED_LEGACY_ENGINE": "OFF", "DISABLE_TIFF": "ON", "DISABLE_CURL": "ON", "DISABLE_ARCHIVE": "ON", "OPENMP_BUILD": "OFF", "ENABLE_NATIVE": "OFF", "ENABLE_CCACHE": "OFF", "ENABLE_PRECOMPILED_HEADERS": "ON", "INSTALL_CONFIGS": "OFF"}
+    }
+  ],
+  "models_commit": "87416418657359cb625c412a48b6e1d6d41c29bd",
+  "models": {
+    "eng": "7d4322bd2a7749724879683fc3912cb542f19906c83bcc1a52132556427170b2",
+    "spa": "6f2e04d02774a18f01bed44b1111f2cd7f3ba7ac9dc4373cd3f898a40ea6b464",
+    "fra": "ced037562e8c80c13122dece28dd477d399af80911a28791a66a63ac1e3445ca",
+    "nld": "ced0e5e046a84c908a6aa7accbef9a232c4a5d9a8276691b81c6ee64d02963f6",
+    "chi_sim": "a5fcb6f0db1e1d6d8522f39db4e848f05984669172e584e8d76b6b3141e1f730",
+    "osd": "9cf5d576fcc47564f11265841e5ca839001e7e6f38ff7f7aacf46d15a96b00ff"
+  }
+}

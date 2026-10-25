@@ -42,8 +42,10 @@ static void MylTkAtkSyncVisibility(AtkObject *obj)
     visible = !acc->is_defunct && acc->tkwin && Tk_IsMapped(acc->tkwin);
     showing = !acc->is_defunct && MylTkAtkShowing(acc->tkwin);
     if (!acc->visibility_known) {
-        acc->is_visible = false;
-        acc->is_showing = false;
+        /* Initial observation is a baseline, not a false-to-true transition.
+         * Current states are already queryable through ref_state_set. */
+        acc->is_visible = visible;
+        acc->is_showing = showing;
         acc->visibility_known = true;
     }
     if (visible != acc->is_visible) {

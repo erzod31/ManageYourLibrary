@@ -5,7 +5,7 @@ import os
 import struct
 import tempfile
 import unittest
-from contextlib import ExitStack
+from contextlib import ExitStack, contextmanager
 from pathlib import Path
 from unittest.mock import patch
 
@@ -116,7 +116,7 @@ class LinuxLibraryReplacementTests(unittest.TestCase):
             with self.assertRaises(FileExistsError):
                 verifier.run_and_record(Path('absent'), Path('absent'), path)
 
-    def _orchestration(self, *, wrong_inode=False):
+    def _orchestration(self, *, wrong_inode=False, temp_alias=False):
         # Every subprocess is mocked; neither the stand-in launcher nor ELF is
         # executed. The real filesystem copy/hash/marker/maps logic is exercised.
         with tempfile.TemporaryDirectory() as temporary, ExitStack() as patches:
@@ -154,7 +154,7 @@ class LinuxLibraryReplacementTests(unittest.TestCase):
                         kwargs['stdout'].flush()
                     elif name == 'objcopy':
                         target = Path(command[-1])
-                        if target.is_relative_to(payload):
+                        if target.resolve().is_relative_to(payload.resolve()):
                             raise AssertionError('Attempt to mutate original')
                         target.write_bytes(elf_bytes())
                     elif name == 'openbox':
@@ -218,6 +218,23 @@ class LinuxLibraryReplacementTests(unittest.TestCase):
             def patched_path(value):
                 return manager if str(value) == '/usr/bin/openbox' else path_factory(value)
             patches.enter_context(patch.object(verifier, 'Path', side_effect=patched_path))
+            if temp_alias:
+                real_temporary_directory = tempfile.TemporaryDirectory
+
+                @contextmanager
+                def alias_directory(*args, **kwargs):
+                    with real_temporary_directory(*args, **kwargs) as actual:
+                        alias = directory / 'qa-temp-alias'
+                        try:
+                            alias.symlink_to(actual, target_is_directory=True)
+                        except OSError as exc:
+                            self.skipTest('Temporary-directory symlinks unavailable: ' + type(exc).__name__)
+                        try:
+                            yield str(alias)
+                        finally:
+                            alias.unlink()
+
+                patches.enter_context(patch.object(verifier.tempfile, 'TemporaryDirectory', side_effect=alias_directory))
             report = verifier.run_checks(payload, evidence)
             self.assertEqual(report['passed'], not wrong_inode, report)
             self.assertEqual(report['family_exercised'], None if wrong_inode else 'glib2.0')
@@ -231,3 +248,6 @@ class LinuxLibraryReplacementTests(unittest.TestCase):
 
     def test_failed_loaded_inode_still_stops_owned_processes_and_preserves_original(self):
         self._orchestration(wrong_inode=True)
+
+    def test_temporary_directory_alias_is_resolved_without_weakening_copy_boundary(self):
+        self._orchestration(temp_alias=True)

@@ -151,6 +151,7 @@ static TkAtkAccessible *provider(Tk_Window w)
         g_hash_table_insert(widget_map, w, g_object_ref(acc));
         if (w->top) toplevel_accessible_objects = g_list_append(toplevel_accessible_objects, acc);
     }
+    MylTkAtkSyncVisibility(ATK_OBJECT(acc)); /* Same unconditional creation baseline as provider. */
     return acc; /* Caller owns constructor reference, unlike build-only map API. */
 }
 static void activated(AtkWindow *obj, void *data)
@@ -164,6 +165,11 @@ static void state_changed(AtkObject *obj, const char *state, gboolean enabled, v
     if (g_strcmp0(state, "visible") == 0) { if (enabled) visible_on++; else visible_off++; }
     if (g_strcmp0(state, "showing") == 0) { if (enabled) showing_on++; else showing_off++; }
 }
+static void count_visibility(AtkObject *obj, const char *state, gboolean enabled, void *data)
+{
+    (void)obj; (void)enabled;
+    if (!strcmp(state, "visible") || !strcmp(state, "showing")) (*(int *)data)++;
+}
 
 int main(void)
 {
@@ -174,7 +180,7 @@ int main(void)
     TkWindow dialog = {.top=1, .mapped=1, .app=1, .parent=&main};
     TkWindow first = {.mapped=1, .app=1, .parent=&main, .nextPtr=&dialog,
                       .role=ATK_ROLE_ENTRY, .value=unicode, .interp=&entry_interp};
-    TkWindow second = {.mapped=1, .app=1, .parent=&main, .role=ATK_ROLE_TEXT,
+    TkWindow second = {.mapped=0, .app=1, .parent=&main, .role=ATK_ROLE_TEXT,
                        .value="A\n\xC3\xA9\xE4\xB9\xA6\nZ", .interp=&text_interp};
     TkWindow dialog_entry = {.mapped=1, .app=1, .parent=&dialog};
     TkWindow other_app = {.top=1, .mapped=1, .app=2};
@@ -199,32 +205,43 @@ int main(void)
     assert(MylTkAtkIndexInParent(ATK_OBJECT(one)) == 0);
     assert(MylTkAtkIndexInParent(ATK_OBJECT(two)) == 1);
     assert(MylTkAtkIndexInParent(ATK_OBJECT(app)) == -1);
+    int map_events = 0;
+    g_signal_connect(two, "state-change", G_CALLBACK(count_visibility), &map_events);
+    assert(two->visibility_known && !two->is_visible && !two->is_showing);
+    second.mapped = 1;
+    MylTkAtkSyncVisibility(ATK_OBJECT(two));
+    assert(two->is_visible && two->is_showing && map_events == 2);
+    MylTkAtkSyncVisibility(ATK_OBJECT(two));
+    assert(map_events == 2); /* Unmapped registration preserves the first real Map. */
     g_signal_connect(one, "state-change", G_CALLBACK(state_changed), NULL);
+    assert(one->visibility_known && one->is_visible && one->is_showing);
+    MylTkAtkSyncVisibility(ATK_OBJECT(one));
+    assert(!visible_on && !showing_on && !visible_off && !showing_off);
     main.mapped = 0;
     MylTkAtkSyncVisibility(ATK_OBJECT(one));
     assert(one->visibility_known && one->is_visible && !one->is_showing);
-    assert(visible_on == 1 && showing_on == 0); /* Mapped child, unmapped parent. */
+    assert(!visible_on && !showing_on && showing_off == 1); /* Only real parent Hide. */
     main.mapped = 1;
     MylTkAtkSyncVisibility(ATK_OBJECT(a));
     assert(one->is_showing && showing_on == 1);
     for (int repeat = 0; repeat < 32; repeat++) MylTkAtkSyncVisibility(ATK_OBJECT(a));
-    assert(visible_on == 1 && showing_on == 1 && !visible_off && !showing_off);
+    assert(!visible_on && showing_on == 1 && !visible_off && showing_off == 1);
     main.mapped = 0;
     MylTkAtkSyncVisibility(ATK_OBJECT(a));
-    assert(one->is_visible && !one->is_showing && showing_off == 1 && !visible_off);
+    assert(one->is_visible && !one->is_showing && showing_off == 2 && !visible_off);
     MylTkAtkSyncVisibility(ATK_OBJECT(a));
-    assert(showing_off == 1); /* Repeated Unmap/registration does not emit twice. */
+    assert(showing_off == 2); /* Repeated Unmap/registration does not emit twice. */
     main.mapped = 1;
     MylTkAtkSyncVisibility(ATK_OBJECT(a));
     assert(one->is_showing && showing_on == 2);
     first.mapped = 0;
     MylTkAtkSyncVisibility(ATK_OBJECT(one));
-    assert(!one->is_visible && !one->is_showing && visible_off == 1 && showing_off == 2);
+    assert(!one->is_visible && !one->is_showing && visible_off == 1 && showing_off == 3);
     MylTkAtkSyncVisibility(ATK_OBJECT(one));
-    assert(visible_off == 1 && showing_off == 2);
+    assert(visible_off == 1 && showing_off == 3);
     first.mapped = 1;
     MylTkAtkSyncVisibility(ATK_OBJECT(one));
-    assert(visible_on == 2 && showing_on == 3);
+    assert(visible_on == 1 && showing_on == 3);
     g_signal_connect(a, "activate", G_CALLBACK(activated), NULL);
     g_signal_connect(a, "deactivate", G_CALLBACK(deactivated), NULL);
     g_signal_connect(b, "activate", G_CALLBACK(activated), NULL);

@@ -100,6 +100,13 @@ jobs:
         if: ${{ !cancelled() && runner.os == 'Linux' && steps.linux_build.outcome == 'success' }}
         run: |
           GSETTINGS_BACKEND=memory MYL_ISOLATED_A11Y_CI=1 dbus-run-session -- xvfb-run -a python3 -B tools/verify_orca_accessibility.py --executable dist/linux/ManageYourLibrary/ManageYourLibrary --output dist/orca-accessibility.json
+      - name: Retain normalized external reader evidence
+        if: ${{ !cancelled() && runner.os == 'Linux' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: orca-presentation-linux-x64
+          path: dist/orca-accessibility.json
+          if-no-files-found: ignore
       - name: Collect exact Ubuntu library notices and corresponding source
         id: linux_sources
         if: ${{ !cancelled() && runner.os == 'Linux' && steps.linux_build.outcome == 'success' }}
@@ -126,13 +133,6 @@ jobs:
           path: dist/native-release/*
           if-no-files-found: error
           compression-level: 0
-      - name: Retain normalized external reader evidence
-        if: ${{ !cancelled() && runner.os == 'Linux' }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: orca-presentation-linux-x64
-          path: dist/orca-accessibility.json
-          if-no-files-found: ignore
       - name: Retain normalized library replacement evidence
         if: ${{ !cancelled() && runner.os == 'Linux' }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

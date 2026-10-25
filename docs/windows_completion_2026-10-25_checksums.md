@@ -355,3 +355,35 @@ firmas y versiones de DLL no conceden por sí mismas ese derecho.
 [Condiciones de redistribución Microsoft](https://learn.microsoft.com/en-us/cpp/windows/redistributing-visual-cpp-files).
 VoiceOver real y la matriz completa de accesibilidad siguen fuera de esta
 validación automatizada. Las correcciones se mantienen en la rama de pruebas.
+
+Resultados de `378a3f2`: la construcción Windows local pasó 749 pruebas
+(tres omitidas), los cinco diagnósticos congelados, procedencia y privacidad.
+Su EXE ocupa 5.367.079 bytes, SHA-256
+`DB33847A807B63292539C9FECF7AA937A2C2C5CEA11790A66814111B736C2573`.
+La revisión independiente contó 1.170 archivos y 533 módulos PYZ, sin
+`setuptools`, `packaging`, `_distutils_hack`, `distutils` ni `PyInstaller`.
+Retiene pefile y su aviso MIT. Los dos CRT locales 14.44.35211.0 conservan
+firmas Microsoft válidas. Es evidencia de esa revisión, previa al ajuste de
+rutas temporales del nuevo ensayo Linux.
+
+En [Linux CI 40208694803](https://github.com/erzod31/ManageYourLibrary/actions/runs/40208694803)
+la colección completa pasó **35 familias Ubuntu**, con otros 81 orígenes
+no-dpkg separados. La prueba GLib real pasó sus 12 controles: carga de la copia
+modificada por ruta/inode/dispositivo, diagnósticos, foco, aislamiento y cierre,
+con inventario original de 652 entradas intacto. GLib 2.72.4-0ubuntu2.10:
+SHA original `86acf2c843bcfaf5e8c24ab959737960c797da53b41658dc8ec6f257c786048c`;
+copia `243b72bf934abdb553fed5b6474f3cba1c6fc2c67aaf9cfd2bba92d273ccc31f`.
+JSON de evidencia SHA
+`53a8e298cec7c16ec53495f8f7a29208e6c07a930a9787bbfbd573f8ac4837bb`.
+Esto no aprueba otras bibliotecas o cambios ABI. El empaquetado/source tar
+quedó omitido porque Orca falló por separado.
+
+Orca v2 ya activó el script de Tk y presentó la ventana, sin audio. El buscador
+seguía detrás de eventos iniciales de paneles: el registro fabricaba cambios
+desde falso para proveedores ya visibles. La receta v3 inicializa el estado
+real al crear el proveedor, siguiendo la semántica de registro GTK, y conserva
+las transiciones Map/Unmap posteriores. No se amplía el tiempo de la prueba
+ni se acepta enumeración API como sustituto de presentación del lector.
+La corrección de ruta temporal del ensayo GLib canonicaliza además la raíz;
+los alias Windows 8.3 y macOS `/var` ya no se confunden con escapes reales.
+Una regresión por symlink cubre esa comparación donde el host lo permite.

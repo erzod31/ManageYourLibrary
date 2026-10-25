@@ -195,7 +195,7 @@ def run_checks(payload: Path, evidence: Path):
         report['version'] = version
         checks['exact_origin_and_original_inventory'] = True
         with tempfile.TemporaryDirectory(prefix='myl_glib_replacement_ci_') as temporary, ExitStack() as stack:
-            directory = Path(temporary)
+            directory = Path(temporary).resolve()
             env = silent_environment(os.environ, directory)
             copy = directory / 'app'
             shutil.copytree(payload, copy, symlinks=True)

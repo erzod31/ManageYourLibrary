@@ -64,9 +64,15 @@ preserve your profiles and book backups separately.
 Release checksums identify official bytes. Source inspection found no shared
 library SHA allowlist in normal app startup; the
 [PyInstaller 6.21 loader](https://raw.githubusercontent.com/pyinstaller/pyinstaller/v6.21.0/bootloader/src/pyi_utils_posix.c)
-uses the bundle's library search path. **Modified-library loading has not yet
-been validated on the new package.** The required native check must confirm which
-modified copies actually load and repeat GUI/accessibility/OCR tests. Record
+uses the bundle's library search path. A
+[CI check of revision 378a3f2](https://github.com/erzod31/ManageYourLibrary/actions/runs/40208694803)
+loaded a GLib 2.72.4 replacement with an inert, non-executable ELF section, a
+different hash and unchanged inspected SONAME/symbols. The owned process mapped
+that copy and passed runtime, first-use, API and real GUI-focus checks; the
+original stayed unchanged. This covers one library and that specific byte change,
+not other families or arbitrary ABI modifications. Orca remained a separate
+failed check in that revision. Other replacements need equivalent native checks.
+Record
 original/final hashes and any transformation's command, tool version and date;
 an unexplained hash difference is not proof of a specific transformation.
 Source delivery and these checks do not constitute global license approval.

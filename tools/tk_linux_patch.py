@@ -13,7 +13,7 @@ import json
 from pathlib import Path
 import re
 
-PATCH_ID = 'myl-tk91-linux-atk-2'
+PATCH_ID = 'myl-tk91-linux-atk-3'
 INPUT_HASHES = {'tkUnixAccessibility.c': 'de0a9d9e6b3e9ea1d08dbb97927e49817fa4ef84adb34ee8bea6fb10e49d9f6a'}
 NATIVE = Path(__file__).parent / 'native'
 HELPER = 'tkUnixA11yWindow.h'
@@ -114,6 +114,11 @@ def repair_provider(source):
     return obj;''', '''    TkAtkAccessible_RegisterEventHandlers(tkwin, acc);
     g_object_unref(obj); /* Transfer the constructor reference to the map. */
     return GetAtkObjectForTkWindow(tkwin); /* Borrowed, as for an existing object. */''')
+    source = replace_once(source, '''    RegisterAtkObjectForTkWindow(tkwin, obj);
+    TkAtkAccessible_RegisterEventHandlers(tkwin, acc);''', '''    RegisterAtkObjectForTkWindow(tkwin, obj);
+    /* Seed even unmapped providers before their first Map notification. */
+    MylTkAtkSyncVisibility(obj);
+    TkAtkAccessible_RegisterEventHandlers(tkwin, acc);''')
     # The bridge listens to AtkWindow's own interface signals. These unrelated
     # custom signal definitions would never produce a window:activate event.
     start = source.index('    /* Register custom AT-SPI signals. */')

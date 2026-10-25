@@ -51,7 +51,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends build-essential cmake ninja-build xvfb libtk8.6 patchelf libx11-dev libxft-dev libxext-dev libxss-dev libharfbuzz-dev libatk-bridge2.0-dev at-spi2-core dbus-x11 orca openbox
+          sudo apt-get install -y --no-install-recommends build-essential cmake ninja-build xvfb libtk8.6 tcl-dev libglib2.0-dev patchelf libx11-dev libxft-dev libxext-dev libxss-dev libharfbuzz-dev libatk-bridge2.0-dev at-spi2-core dbus-x11 orca openbox
           # Refresh the Ubuntu runtime families observed in the native payload,
           # before freezing. Runner images can retain superseded source versions
           # (observed: systemd and xz-utils). The collector still requires the
@@ -112,6 +112,21 @@ jobs:
         if: ${{ !cancelled() && runner.os == 'Linux' && steps.linux_build.outcome == 'success' }}
         run: |
           python3 -B tools/collect_linux_license_evidence.py --pyinstaller-toc dist/linux-binary-inputs.toc --output dist/linux-license-evidence
+      - name: Verify source tar on a disposable application copy
+        id: linux_source_review
+        if: ${{ !cancelled() && runner.os == 'Linux' && steps.linux_sources.outcome == 'success' }}
+        run: |
+          version="$(tr -d '\r\n' < VERSION)"
+          MYL_ISOLATED_SOURCE_CI=1 python3 -B tools/verify_linux_source_package.py --payload dist/linux/ManageYourLibrary --evidence dist/linux-license-evidence --output dist/linux-source-review --label "ManageYourLibrary-${version}-Linux-x64-source-review"
+      - name: Retain independent source writer evidence
+        if: ${{ !cancelled() && runner.os == 'Linux' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: source-review-linux-x64
+          path: dist/linux-source-review/*
+          if-no-files-found: ignore
+          compression-level: 0
+          retention-days: 7
       - name: Check modified GLib loading in a disposable application copy
         id: linux_replacement
         if: ${{ !cancelled() && runner.os == 'Linux' && steps.linux_sources.outcome == 'success' }}

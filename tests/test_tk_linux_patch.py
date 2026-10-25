@@ -39,6 +39,12 @@ class LinuxNativePatchTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'Missing pinned Linux Tk function'):
             native.replace_function(source, 'example', 'return;')
 
+    def test_remove_event_function_keeps_other_functions_and_rejects_declaration(self):
+        source = 'static void Atk_Event_Check(void *x, int flags)\n{\n    return;\n}\nstatic int next(void);\n'
+        self.assertEqual(native.remove_function(source, 'Atk_Event_Check'), '\nstatic int next(void);\n')
+        with self.assertRaisesRegex(ValueError, 'Missing pinned Linux Tk event function'):
+            native.remove_function('static void Atk_Event_Check(void *x, int flags);\n', 'Atk_Event_Check')
+
     def test_unknown_upstream_hash_does_not_change_source(self):
         with tempfile.TemporaryDirectory() as directory:
             tree, _ = self.fixture(directory)
@@ -63,13 +69,13 @@ class LinuxNativePatchTests(unittest.TestCase):
                 result = native.apply_linux_patch(tree)
                 self.assertEqual(result['patch_id'], native.PATCH_ID)
                 self.assertEqual(result['input_hashes'], hashes)
-                self.assertEqual(set(result['output_hashes']), {'tkUnixAccessibility.c', native.OUTPUT_HELPER})
+                self.assertEqual(set(result['output_hashes']), {'tkUnixAccessibility.c', *native.HELPERS.values()})
                 for name, digest in result['output_hashes'].items():
                     self.assertEqual(hashlib.sha256((tree / 'unix' / name).read_bytes()).hexdigest(), digest)
                 self.assertEqual(native.apply_linux_patch(tree), result)
 
     def test_modified_provider_or_copied_helper_rejected(self):
-        for name in ('tkUnixAccessibility.c', native.OUTPUT_HELPER):
+        for name in ('tkUnixAccessibility.c', *native.HELPERS.values()):
             with self.subTest(name=name), tempfile.TemporaryDirectory() as directory:
                 tree, hashes = self.fixture(directory)
                 with patch.object(native, 'INPUT_HASHES', hashes), patch.object(native, 'repair_provider', return_value='patched\n'):
@@ -92,15 +98,18 @@ class LinuxNativePatchTests(unittest.TestCase):
                         native.apply_linux_patch(tree)
 
     def test_changed_repository_helper_rejected_on_resume(self):
-        with tempfile.TemporaryDirectory() as directory:
-            tree, hashes = self.fixture(directory)
-            with patch.object(native, 'INPUT_HASHES', hashes), patch.object(native, 'repair_provider', return_value='patched\n'):
-                native.apply_linux_patch(tree)
-                alternate = tree / 'alternative-helper'
-                alternate.mkdir()
-                (alternate / native.HELPER).write_bytes(b'changed recipe helper')
-                with patch.object(native, 'NATIVE', alternate), self.assertRaisesRegex(ValueError, 'Different native Linux accessibility helper'):
+        for changed in native.HELPERS:
+            with self.subTest(helper=changed), tempfile.TemporaryDirectory() as directory:
+                tree, hashes = self.fixture(directory)
+                with patch.object(native, 'INPUT_HASHES', hashes), patch.object(native, 'repair_provider', return_value='patched\n'):
                     native.apply_linux_patch(tree)
+                    alternate = tree / 'alternative-helper'
+                    alternate.mkdir()
+                    for original in native.HELPERS:
+                        (alternate / original).write_bytes((native.NATIVE / original).read_bytes())
+                    (alternate / changed).write_bytes(b'changed recipe helper')
+                    with patch.object(native, 'NATIVE', alternate), self.assertRaisesRegex(ValueError, 'Different native Linux accessibility helper'):
+                        native.apply_linux_patch(tree)
 
     @unittest.skipUnless(sys.platform.startswith('linux'), 'Real ATK native helper requires Linux development libraries')
     def test_real_atk_window_focus_index_and_live_client_after_destroy(self):

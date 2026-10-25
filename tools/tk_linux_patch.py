@@ -13,11 +13,14 @@ import json
 from pathlib import Path
 import re
 
-PATCH_ID = 'myl-tk91-linux-atk-3'
+PATCH_ID = 'myl-tk91-linux-atk-4'
 INPUT_HASHES = {'tkUnixAccessibility.c': 'de0a9d9e6b3e9ea1d08dbb97927e49817fa4ef84adb34ee8bea6fb10e49d9f6a'}
 NATIVE = Path(__file__).parent / 'native'
 HELPER = 'tkUnixA11yWindow.h'
 OUTPUT_HELPER = 'mylUnixA11yWindow.h'
+LOOP_HELPER = 'tkUnixA11yLoop.h'
+OUTPUT_LOOP_HELPER = 'mylUnixA11yLoop.h'
+HELPERS = {HELPER: OUTPUT_HELPER, LOOP_HELPER: OUTPUT_LOOP_HELPER}
 RECEIPT = 'myl-linux-accessibility-patch.json'
 
 
@@ -36,12 +39,34 @@ def replace_function(source, name, body):
     return source[:match.start()] + signature + '{\n' + body.strip('\n') + '\n}' + source[match.end():]
 
 
+def remove_function(source, name):
+    match = re.search(r'^static (?:void|int) ' + re.escape(name)
+                      + r'\([^;]*?^\{\n.*?^\}', source, re.M | re.S)
+    if not match:
+        raise ValueError('Missing pinned Linux Tk event function: ' + name)
+    return source[:match.start()] + source[match.end():]
+
+
 def repair_provider(source):
     source = replace_once(source, '    bool is_focused;',
                           '    bool is_focused;\n    bool is_active;\n    bool is_defunct;\n'
                           '    bool visibility_known;\n    bool is_visible;\n    bool is_showing;')
     source = replace_once(source, '/* Configure event loop. */',
+                          '#include "mylUnixA11yLoop.h"\n'
+                          'static MylTkGlibLoop mylAtkLoop;\n'
                           '#include "mylUnixA11yWindow.h"\n\n/* Configure event loop. */')
+    source = replace_once(source, 'static GMainContext *acc_context = NULL;\n', '')
+    source = replace_once(source, 'static void Atk_Event_Setup (void *clientData, int flags);\n', '')
+    source = replace_once(source, 'static void Atk_Event_Check(void *clientData, int flags);\n', '')
+    source = replace_once(source, 'static int Atk_Event_Run(Tcl_Event *event, int flags);\n', '')
+    for name in ('Setup', 'Check', 'Run'):
+        source = remove_function(source, 'Atk_Event_' + name)
+    source = replace_once(source, '''    acc_context = ATK_CONTEXT;
+    Tcl_CreateEventSource(Atk_Event_Setup, Atk_Event_Check, 0);''', '''    if (!MylTkGlibLoopInit(&mylAtkLoop, ATK_CONTEXT)) {
+        Tcl_SetObjResult(interp, Tcl_NewStringObj(mylAtkLoop.problem
+                ? mylAtkLoop.problem : "Failed to initialize ATK event notifier", -1));
+        return TCL_ERROR;
+    }''')
     source = replace_once(source, '''    if (!acc) {
 	return state_set;
     }
@@ -283,18 +308,18 @@ def apply_linux_patch(tree: Path):
     unix = tree / 'unix'
     receipt = tree / RECEIPT
     recipe = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
-    helper = NATIVE / HELPER
     if receipt.exists():
         record = json.loads(receipt.read_text(encoding='utf-8'))
         if (record.get('patch_id') != PATCH_ID or record.get('patcher_sha256') != recipe
                 or record.get('input_hashes') != INPUT_HASHES
-                or set(record.get('output_hashes', {})) != {*INPUT_HASHES, OUTPUT_HELPER}):
+                or set(record.get('output_hashes', {})) != {*INPUT_HASHES, *HELPERS.values()}):
             raise ValueError('Different native Linux accessibility patch already applied')
         for name, expected in record['output_hashes'].items():
             if hashlib.sha256((unix / name).read_bytes()).hexdigest() != expected:
                 raise ValueError('Modified patched native Linux source: ' + name)
-        if hashlib.sha256(helper.read_bytes()).hexdigest() != record['output_hashes'][OUTPUT_HELPER]:
-            raise ValueError('Different native Linux accessibility helper')
+        for original, copied in HELPERS.items():
+            if hashlib.sha256((NATIVE / original).read_bytes()).hexdigest() != record['output_hashes'][copied]:
+                raise ValueError('Different native Linux accessibility helper: ' + original)
         return record
     source = unix / 'tkUnixAccessibility.c'
     raw = source.read_bytes()
@@ -302,12 +327,13 @@ def apply_linux_patch(tree: Path):
         raise ValueError('Unrecognized native Linux source: ' + source.name)
     repaired = repair_provider(raw.decode('utf-8'))
     # Verify every input/context/helper before modifying build-only sources.
-    helper_bytes = helper.read_bytes()
+    helpers = {copied: (NATIVE / original).read_bytes() for original, copied in HELPERS.items()}
     source.write_text(repaired, encoding='utf-8', newline='\n')
-    (unix / OUTPUT_HELPER).write_bytes(helper_bytes)
+    for copied, helper_bytes in helpers.items():
+        (unix / copied).write_bytes(helper_bytes)
     record = {'patch_id': PATCH_ID, 'input_hashes': dict(INPUT_HASHES),
               'output_hashes': {name: hashlib.sha256((unix / name).read_bytes()).hexdigest()
-                                for name in (*INPUT_HASHES, OUTPUT_HELPER)},
+                                for name in (*INPUT_HASHES, *HELPERS.values())},
               'patcher_sha256': recipe}
     receipt.write_text(json.dumps(record, indent=2) + '\n', encoding='utf-8')
     return record

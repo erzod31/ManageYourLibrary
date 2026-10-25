@@ -93,12 +93,30 @@ def build(destination, resume=False):
         lock['linux_accessibility_patch'] = apply_linux_patch(roots['tk'])
         repairs = prefix / 'licenses' / 'myl-tk-linux-repair'
         repairs.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(ROOT / 'tools/native/tkUnixA11yWindow.h', repairs / 'tkUnixA11yWindow.h')
-        shutil.copy2(ROOT / 'tools/native/test_tkUnixA11yWindow.c', repairs / 'test_tkUnixA11yWindow.c')
+        for name in ('tkUnixA11yWindow.h', 'test_tkUnixA11yWindow.c',
+                     'tkUnixA11yLoop.h', 'test_tkUnixA11yLoop.c'):
+            shutil.copy2(ROOT / 'tools/native' / name, repairs / name)
         shutil.copy2(ROOT / 'tools/tk_linux_patch.py', repairs / 'tk_linux_patch.py')
+        shutil.copy2(ROOT / 'tools/test_native_a11y_linux_loop.py', repairs / 'test_native_a11y_linux_loop.py')
         shutil.copy2(ROOT / 'LICENSE', repairs / 'LICENSE')
         shutil.copy2(roots['tk'] / 'myl-linux-accessibility-patch.json', repairs / 'patch-provenance.json')
     env = {key.upper(): value for key, value in os.environ.items()} if os.name == 'nt' else dict(os.environ)
+    if sys.platform.startswith('linux'):
+        from tools.test_native_a11y_linux_loop import REQUIRED_CHECKS
+        loop_tests = destination / 'native-loop-tests'
+        if not (loop_tests / 'result.json').is_file():
+            run([sys.executable, '-B', ROOT / 'tools/test_native_a11y_linux_loop.py',
+                 '--output', loop_tests], cwd=ROOT, env=env)
+        result = json.loads((loop_tests / 'result.json').read_text(encoding='utf-8'))
+        if (result.get('passed') is not True or set(result.get('checks', {})) != REQUIRED_CHECKS
+                or any(value is not True for value in result['checks'].values())):
+            raise RuntimeError('Linux native Tcl/GLib notifier contract failed')
+        for field, filename in (('header_sha256', 'tkUnixA11yLoop.h'),
+                                ('source_sha256', 'test_tkUnixA11yLoop.c')):
+            if result.get(field) != hashlib.sha256((ROOT / 'tools/native' / filename).read_bytes()).hexdigest():
+                raise RuntimeError('Stale native Tcl/GLib notifier evidence')
+        lock['linux_native_loop_regression'] = result
+        shutil.copy2(loop_tests / 'result.json', repairs / 'native-loop-contract.json')
     if os.name == 'nt':
         from setuptools._distutils._msvccompiler import _get_vc_env
         env.update({key.upper(): value for key, value in _get_vc_env('x86_amd64').items()})

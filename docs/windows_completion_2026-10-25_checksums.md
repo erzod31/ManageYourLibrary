@@ -387,3 +387,34 @@ ni se acepta enumeración API como sustituto de presentación del lector.
 La corrección de ruta temporal del ensayo GLib canonicaliza además la raíz;
 los alias Windows 8.3 y macOS `/var` ya no se confunden con escapes reales.
 Una regresión por symlink cubre esa comparación donde el host lo permite.
+
+`b4a80306` cerró fuente Ubuntu/macOS, Windows CI y ambos paquetes macOS.
+Linux volvió a pasar las 35 familias y la sustitución GLib; Orca presentó la
+ventana, pero sus eventos Map/SHOWING iniciales eran reales y el buscador
+seguía detrás de ellos. No se suprimen esas transiciones ni se amplía el plazo.
+El código upstream atiende GLib mediante polling de 10 ms; los logs muestran
+consultas del cliente cercanas a 20 ms. Esa observación motiva el candidato
+notifier v4, sin declararla prueba exclusiva de causalidad.
+
+El candidato integra FD y timers GLib en el notifier Tcl, con propiedad del
+contexto en el hilo dueño, duplicados de FD propios, cierre y reentrancia.
+Incluye contrato POSIX de 16 controles y benchmark de 40 muestras por modo
+contra el driver de polling. El benchmark mide IPC sintético, no AT-SPI ni
+latencia de píxel. En esta fase todavía no se ha ejecutado en Linux; no se
+declara mejora medida. La suite Windows previa ejecutó **760 pruebas en
+14,392 s**, con cinco omisiones justificadas, Ruff y sintaxis correctos.
+
+Se añade además un ensayo independiente del writer del tar de fuentes sobre
+una copia temporal. Lee de nuevo todos sus miembros, hashes y metadatos,
+sin extraer fuentes ni ejecutar software. Conserva el original y genera un
+artefacto QA separado, `publishable_release: false`, con retención de siete
+días en Actions. La puerta de empaquetado de la app y Orca sigue intacta.
+
+Windows local `b4a80306`: el ZIP extraído conservó sus 1.170 archivos por hash
+y pasó 5/5 runtime, 5/5 primer uso, 22/22 API, 16/16 COM y 14/14 voz a WAV.
+Se instaló la variante `ManageYourLibrary-QA-Licenses-20261025`, sin accesos
+directos ni acción postinstalación. Sus bytes coinciden y repitió los cinco
+diagnósticos; registro de producción intacto. Se preparó un perfil sintético
+con catálogo y planes SQLite válidos, configuración y marcadores recuperables
+para la comprobación posterior de actualización/retirada. No es una validación
+manual de UI ni una prueba con la biblioteca personal.

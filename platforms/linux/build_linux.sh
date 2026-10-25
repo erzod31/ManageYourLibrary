@@ -13,8 +13,8 @@ if ! command -v python3 >/dev/null 2>&1; then
   exit 1
 fi
 
-python3 -c 'import sys; raise SystemExit(0 if sys.version_info[:2] == (3, 12) else 1)' || {
-  echo "The release build requires Python 3.12."
+python3 -c 'import sys; raise SystemExit(0 if sys.version_info[:3] == (3, 12, 10) else 1)' || {
+  echo "The reviewed release build requires Python 3.12.10."
   exit 1
 }
 
@@ -101,6 +101,7 @@ python3 -m PyInstaller \
   --exclude-module transformers \
   --exclude-module datasets \
   --exclude-module readline \
+  --exclude-module tools.write_build_manifest \
   --hidden-import pypdf \
   --hidden-import pypdfium2 \
   --hidden-import PIL \

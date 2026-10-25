@@ -36,6 +36,7 @@ class WindowsBuildConfigTests(unittest.TestCase):
         self.assertIn('select_inputs(a.binaries, a.datas', spec)
         self.assertIn("Path(CONF['workpath'])", spec)
         self.assertIn('upx=False', spec)
+        self.assertIn("'tools.write_build_manifest'", spec)
         self.assertNotIn('upx=True', spec)
         self.assertIn('tools\\collect_python_license_evidence.py', script)
         self.assertIn('tools\\windows_dependency_policy.py', script)

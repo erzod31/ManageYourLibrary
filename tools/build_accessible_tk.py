@@ -88,6 +88,16 @@ def build(destination, resume=False):
         shutil.copy2(ROOT / 'tools/tk_windows_patch.py', repairs / 'tk_windows_patch.py')
         shutil.copy2(ROOT / 'LICENSE', repairs / 'LICENSE')
         shutil.copy2(roots['tk'] / 'myl-accessibility-patch.json', repairs / 'patch-provenance.json')
+    elif sys.platform.startswith('linux'):
+        from tools.tk_linux_patch import apply_linux_patch
+        lock['linux_accessibility_patch'] = apply_linux_patch(roots['tk'])
+        repairs = prefix / 'licenses' / 'myl-tk-linux-repair'
+        repairs.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(ROOT / 'tools/native/tkUnixA11yWindow.h', repairs / 'tkUnixA11yWindow.h')
+        shutil.copy2(ROOT / 'tools/native/test_tkUnixA11yWindow.c', repairs / 'test_tkUnixA11yWindow.c')
+        shutil.copy2(ROOT / 'tools/tk_linux_patch.py', repairs / 'tk_linux_patch.py')
+        shutil.copy2(ROOT / 'LICENSE', repairs / 'LICENSE')
+        shutil.copy2(roots['tk'] / 'myl-linux-accessibility-patch.json', repairs / 'patch-provenance.json')
     env = {key.upper(): value for key, value in os.environ.items()} if os.name == 'nt' else dict(os.environ)
     if os.name == 'nt':
         from setuptools._distutils._msvccompiler import _get_vc_env

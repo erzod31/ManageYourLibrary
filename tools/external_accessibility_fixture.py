@@ -45,6 +45,21 @@ def atomic_json(path, value):
     temporary.replace(path)
 
 
+def focus_state(root, target=None):
+    actual = root.focus_get()
+    top = actual.winfo_toplevel() if actual is not None else None
+    return {
+        'focus_matches_target': target is not None and actual == target and bool(target.winfo_viewable()),
+        'focus_widget': str(actual) if actual is not None else None,
+        'requested_focus': str(target) if target is not None else None,
+        'focused_toplevel': str(top) if top is not None else None,
+        'focused_window_title': top.title() if top is not None else None,
+        'root_mapped': bool(root.winfo_ismapped()),
+        'focused_toplevel_mapped': bool(top.winfo_ismapped()) if top is not None else False,
+        'tk_version': root.tk.call('package', 'present', 'Tk'),
+    }
+
+
 def run_fixture(control, *, version):
     from tools.verify_orca_accessibility import isolated_ci_problem
     problem = isolated_ci_problem(check_reader=False)
@@ -109,12 +124,19 @@ def run_fixture(control, *, version):
                     'close_editor': {'label': _text('search'), 'role': 'entry'},
                 }
 
-                def report_state(action='ready'):
+                def report_state(action='ready', target=None, retries=25):
+                    observed = focus_state(root, target)
+                    # Acknowledging a command proves the actual Tk focus,
+                    # rather than merely that focus_force was called.
+                    if target is not None and not observed['focus_matches_target'] and retries:
+                        root.after(40, lambda: report_state(action, target, retries - 1))
+                        return
                     atomic_json(control / 'state.json', {
                         'sequence': sequence, 'action': action, 'pid': os.getpid(), 'version': version,
                         'frozen': bool(getattr(sys, 'frozen', False)), 'expected': expected,
                         'voice_off': voice.state == 'off' and voice._thread is None,
                         'no_network': not attempts, 'errors': errors,
+                        **observed,
                     })
 
                 def poll():
@@ -128,6 +150,7 @@ def run_fixture(control, *, version):
                         if command:
                             sequence = command['sequence']
                             action = command['action']
+                            target = None
                             if action == 'shutdown':
                                 root.quit()
                                 return
@@ -138,8 +161,10 @@ def run_fixture(control, *, version):
                                 workspace.show_page('library')
                                 root.focus_force()
                                 root.after(100, workspace.search_entry.focus_force)
+                                target = workspace.search_entry
                             elif action == 'focus_authors':
-                                workspace.nav_buttons['authors'].focus_force()
+                                target = workspace.nav_buttons['authors']
+                                target.focus_force()
                             elif action == 'focus_title':
                                 workspace.show_page('library')
                                 workspace.set_view('table')
@@ -156,12 +181,14 @@ def run_fixture(control, *, version):
                                 entries = find_entries(current_dialog)
                                 if len(entries) != 9:
                                     raise RuntimeError('Unexpected synthetic metadata editor fields')
-                                entries[0].focus_force()
+                                target = entries[0]
+                                target.focus_force()
                             elif action == 'focus_author':
                                 if current_dialog is None or not current_dialog.winfo_exists():
                                     raise RuntimeError('Synthetic metadata editor is not open')
-                                entries[1].focus_force()
-                            root.after(180, lambda phase=action: report_state(phase))
+                                target = entries[1]
+                                target.focus_force()
+                            root.after(180, lambda phase=action, widget=target: report_state(phase, widget))
                     except Exception as exc:
                         errors.append(f'{type(exc).__name__}: {exc}')
                         report_state('error')

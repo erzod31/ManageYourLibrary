@@ -62,6 +62,9 @@ a = Analysis(
     datas=datas,
     hiddenimports=hiddenimports,
     excludes=[
+        # Source-only provenance imports must not bundle setuptools/build tools
+        # in the app. Frozen API checks hash sys.executable without Git.
+        'tools.write_build_manifest',
         "pandas", "pyarrow", "scipy", "sklearn", "matplotlib", "torch",
         "tensorflow", "transformers", "datasets", "numpy", "Crypto",
         "psutil", "fontTools", "yaml", "charset_normalizer",

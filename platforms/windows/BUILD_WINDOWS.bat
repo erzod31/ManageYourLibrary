@@ -9,7 +9,7 @@ if exist "%PYTHON_EXE%" goto python_ready
 set "PYTHON_EXE=python"
 where python >nul 2>nul
 if errorlevel 1 (
-  echo ERROR: Python 3.12 was not found.
+  echo ERROR: Python 3.12.10 was not found.
   exit /b 1
 )
 

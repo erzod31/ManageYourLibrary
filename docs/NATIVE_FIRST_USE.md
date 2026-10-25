@@ -33,6 +33,44 @@ tar -xzf ManageYourLibrary-0.5.3-Linux-x64.tar.gz
 The package is not an AppImage, `.deb` or `.rpm`; no installation script or sudo
 is needed. Do not run from inside an archive or move just the launcher.
 
+### Linux shared libraries: modification and evidence
+
+For builds carrying `_internal/licenses/linux-system/source-asset.json`, obtain
+the named `*-license-sources.tar` from the **same release** and verify its recorded
+SHA-256. Keep it with the application archive. It contains exact Ubuntu source
+archives, Debian patches/build recipes and provenance indexes; copyright and
+referenced license texts also accompany the app. This evidence covers the listed
+Ubuntu-owned files; Python, Tk, wheels and OCR have separate provenance.
+
+For LGPL-covered libraries, the applicable license preserves modification and
+reverse-engineering rights for debugging those modifications. See
+[LGPL 2.1 sections 4 and 6](https://raw.githubusercontent.com/systemd/systemd/v249/LICENSE.LGPL2.1)
+and, where applicable,
+[LGPL 3 section 4](https://raw.githubusercontent.com/coreutils/gnulib/master/doc/COPYING.LESSERv3).
+Retain copyright/license notices and the terms applicable to each component.
+
+Close the app, keep the original archive untouched, and work on a complete copy
+in a folder you own. Replace a library only with a compatible build for the same
+architecture, preserving its SONAME, filenames, dependencies and symlinks. Use a
+fresh disposable profile for testing, for example:
+
+```bash
+./ManageYourLibrary-test/ManageYourLibrary --profile "$PWD/myl-lgpl-test-profile"
+```
+
+To revert, close the modified copy and launch the untouched original bundle;
+preserve your profiles and book backups separately.
+
+Release checksums identify official bytes. Source inspection found no shared
+library SHA allowlist in normal app startup; the
+[PyInstaller 6.21 loader](https://raw.githubusercontent.com/pyinstaller/pyinstaller/v6.21.0/bootloader/src/pyi_utils_posix.c)
+uses the bundle's library search path. **Modified-library loading has not yet
+been validated on the new package.** The required native check must confirm which
+modified copies actually load and repeat GUI/accessibility/OCR tests. Record
+original/final hashes and any transformation's command, tool version and date;
+an unexplained hash difference is not proof of a specific transformation.
+Source delivery and these checks do not constitute global license approval.
+
 ## Safe first use
 
 New profiles start empty. Choose a writable library folder; use Import for more

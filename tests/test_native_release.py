@@ -1,4 +1,5 @@
 import tempfile
+import json
 import plistlib
 import unittest
 import zipfile
@@ -8,12 +9,41 @@ from unittest.mock import patch
 from tools.build_permissive_ocr import system_dependencies
 from tools.configure_macos_bundle import configure_bundle, BUNDLE_ID
 from tools.lock_native_wheels import wheel_requirement
-from tools.package_native_release import validate_payload, validate_report
+from tools.package_native_release import validate_payload, validate_report, validate_gui_provenance
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 class NativeReleaseTests(unittest.TestCase):
+    def test_actual_gui_record_retains_linux_patch_and_must_match_packaged_receipt(self):
+        from tools.tk_linux_patch import PATCH_ID
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            lock = {'version': '9.1.0', 'sources': [{'sha256': '1' * 64}]}
+            patch = {'patch_id': PATCH_ID, 'output_hashes': {'provider.c': '2' * 64}}
+            for name, value in (('lock', lock), ('patch', patch), ('build', {**lock, 'linux_accessibility_patch': patch})):
+                (root / name).write_text(json.dumps(value), encoding='utf-8')
+            result = validate_gui_provenance(root / 'build', root / 'lock', platform='linux', patch_receipt=root / 'patch')
+            self.assertEqual(result['linux_accessibility_patch'], PATCH_ID)
+            self.assertRegex(result['sha256'], r'^[0-9a-f]{64}$')
+            (root / 'patch').write_text(json.dumps({**patch, 'output_hashes': {}}))
+            with self.assertRaisesRegex(ValueError, 'packaged patch receipt'):
+                validate_gui_provenance(root / 'build', root / 'lock', platform='linux', patch_receipt=root / 'patch')
+            with self.assertRaisesRegex(ValueError, 'receipt is missing'):
+                validate_gui_provenance(root / 'build', root / 'lock', platform='linux')
+
+    def test_native_gui_record_rejects_changed_upstream_inputs_and_unexpected_macos_patch(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            lock = {'version': '9.1.0', 'sources': [{'sha256': '1' * 64}]}
+            (root / 'lock').write_text(json.dumps(lock))
+            (root / 'build').write_text(json.dumps(lock))
+            self.assertIsNone(validate_gui_provenance(root / 'build', root / 'lock', platform='macos')['linux_accessibility_patch'])
+            for changed in ({**lock, 'sources': []}, {**lock, 'linux_accessibility_patch': {}}):
+                (root / 'build').write_text(json.dumps(changed))
+                with self.assertRaises(ValueError):
+                    validate_gui_provenance(root / 'build', root / 'lock', platform='macos')
+
     def test_wheel_lock_records_metadata_and_bytes(self):
         with tempfile.TemporaryDirectory() as temp:
             wheel = Path(temp) / 'example.whl'

@@ -85,6 +85,25 @@ def validate_accessibility_api_report(path, *, platform, version, frozen,
     return report
 
 
+def validate_gui_provenance(path, lock_path, *, platform, patch_receipt=None):
+    """Retain the actual GUI build record, including the Linux repair."""
+    record = json.loads(path.read_text(encoding='utf-8'))
+    locked = json.loads(lock_path.read_text(encoding='utf-8'))
+    if not isinstance(record, dict) or any(record.get(key) != value for key, value in locked.items()):
+        raise ValueError('GUI build provenance differs from the pinned upstream inputs')
+    if platform == 'linux':
+        if patch_receipt is None:
+            raise ValueError('Linux GUI patch receipt is missing')
+        patch = json.loads(patch_receipt.read_text(encoding='utf-8'))
+        from tools.tk_linux_patch import PATCH_ID
+        if patch.get('patch_id') != PATCH_ID or record.get('linux_accessibility_patch') != patch:
+            raise ValueError('Linux GUI build record differs from the packaged patch receipt')
+    elif platform != 'macos' or record != locked:
+        raise ValueError('Unexpected native GUI build provenance')
+    return {'sha256': sha256(path), 'upstream_version': locked['version'],
+            'linux_accessibility_patch': record.get('linux_accessibility_patch', {}).get('patch_id')}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--platform', choices=('linux', 'macos'), required=True)
@@ -115,6 +134,11 @@ def main():
     if (manifest['validation'].get('ocr_libraries_profile') != 'passed'
             or manifest.get('ocr_source_payload') != validate_ocr_payload(ROOT / 'platforms' / name / 'tesseract')):
         raise ValueError('Native OCR source profile was not validated')
+    gui_provenance = ROOT / 'dist/native-gui/build-provenance.json'
+    patch_receipt = (payload / '_internal/licenses/tcltk/myl-tk-linux-repair/patch-provenance.json'
+                     if name == 'linux' else None)
+    manifest['gui_build_provenance'] = validate_gui_provenance(
+        gui_provenance, ROOT / 'tools/tk_sources.json', platform=name, patch_receipt=patch_receipt)
     for gate in ('automated_tests', 'source_smoke', 'catalog_performance_gate', 'frozen_smoke', 'runtime_self_test', 'first_use_self_test'):
         if manifest['validation'].get(gate) != 'passed':
             raise ValueError('Build gate was not recorded: ' + gate)
@@ -194,7 +218,7 @@ def main():
     shutil.copy2(ROOT / 'docs/NATIVE_FIRST_USE.md', release / (label + '-README.md'))
     shutil.copy2(api_report, release / (label + '-source-accessibility-api.json'))
     shutil.copy2(frozen_api_report, release / (label + '-frozen-accessibility-api.json'))
-    shutil.copy2(ROOT / 'tools/tk_sources.json', release / (label + '-gui-sources.json'))
+    shutil.copy2(gui_provenance, release / (label + '-gui-sources.json'))
     shutil.copy2(ROOT / 'dist/ocr-formats.json', release / (label + '-ocr-formats.json'))
     checksums = release / (label + '-SHA256SUMS.txt')
     checksums.write_text(''.join(f'{sha256(p)}  {p.name}\n' for p in sorted(release.glob(label + '*')) if p != checksums), encoding='utf-8')

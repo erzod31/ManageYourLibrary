@@ -52,6 +52,10 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends build-essential cmake ninja-build xvfb libtk8.6 patchelf libx11-dev libxft-dev libxext-dev libxss-dev libharfbuzz-dev libatk-bridge2.0-dev at-spi2-core dbus-x11 orca openbox
+          # Runner images can retain a superseded libsystemd0 source version.
+          # Refresh before freezing; the collector still requires exact sources.
+          sudo apt-get install -y --no-install-recommends --only-upgrade libsystemd0
+          dpkg-query --show --showformat='${binary:Package}\t${Version}\t${source:Package}\t${source:Version}\n' libsystemd0
       - name: Resolve and hash-lock native Python wheels
         run: |
           python3 -m venv .venv

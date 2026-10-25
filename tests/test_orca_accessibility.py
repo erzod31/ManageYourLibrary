@@ -8,6 +8,7 @@ from unittest.mock import Mock, patch
 import main
 from tools import external_accessibility_fixture as fixture
 from tools import verify_orca_accessibility as orca
+from tools import inspect_atspi_fixture as atspi
 
 
 ISOLATED = {'GITHUB_ACTIONS': 'true', 'MYL_ISOLATED_A11Y_CI': '1', 'GSETTINGS_BACKEND': 'memory',
@@ -91,6 +92,62 @@ class OrcaControllerTests(unittest.TestCase):
         enumeration_only = "name='MYL QA Search' role='entry' value='Synthetic title 42'"
         self.assertFalse(orca.phase_evidence(enumeration_only, expected)['passed'])
         self.assertFalse(orca.phase_evidence('\n'.join(pieces), dict(expected, role='button'))['passed'])
+        self.assertFalse(orca.phase_evidence('\n'.join(pieces).replace('focused (1,', 'focused (0,'), expected)['passed'])
+
+    def test_failed_debug_writes_are_incomplete_evidence_even_without_traceback(self):
+        self.assertEqual(orca.reader_diagnostic_errors(STARTUP), [])
+        for marker in ('Exception when trying to write text', 'TypeError when trying to write text',
+                       'Traceback (most recent call last)', 'ERROR: Could not process object:focus'):
+            self.assertTrue(orca.reader_diagnostic_errors(STARTUP + marker))
+
+    def test_test_errors_are_distinguished_from_deliberate_termination_messages(self):
+        marker = 'Exception when trying to write text'
+        after_only = orca.trace_integrity(STARTUP, STARTUP + marker)
+        self.assertTrue(after_only['reader_no_exceptions'])
+        self.assertEqual(after_only['during_test_errors'], [])
+        self.assertEqual(after_only['termination_messages'], [marker])
+        before = STARTUP + marker
+        during = orca.trace_integrity(before, before + '\nowned process terminated')
+        self.assertFalse(during['reader_no_exceptions'])
+        self.assertEqual(during['during_test_errors'], [marker])
+        self.assertEqual(during['termination_messages'], [])
+
+    def test_capture_errors_overflow_or_changed_trace_always_invalidate_evidence(self):
+        for options in ({'capture_error': 'reader_trace_write_failed'}, {'overflow': True}):
+            result = orca.trace_integrity(STARTUP, STARTUP, **options)
+            self.assertFalse(result['reader_no_exceptions'])
+            self.assertFalse(result['capture_complete'])
+        result = orca.trace_integrity(STARTUP, 'different trace')
+        self.assertFalse(result['prefix_preserved'])
+        self.assertFalse(result['reader_no_exceptions'])
+
+    def test_split_utf8_does_not_look_like_modified_raw_capture(self):
+        raw = (STARTUP + 'Synthetic ▼ control').encode('utf-8')
+        offset = raw.index('▼'.encode('utf-8')) + 1
+        result = orca.trace_integrity(raw[:offset], raw)
+        self.assertTrue(result['prefix_preserved'])
+        self.assertTrue(result['capture_complete'])
+
+    def test_focus_context_keeps_object_details_and_active_script_decisions(self):
+        text = ('noise\nOBJECT EVENT: object:state-changed:focused (1, 0, 0)\n'
+                "name='Synthetic search' role='entry'\nstates='focused active showing'\n"
+                'EVENT MANAGER: Change active script: True\nSPEECH OUTPUT: Synthetic search\n')
+        result = orca.focus_trace_context(text)
+        for wanted in ("role='entry'", "states='focused active showing'", 'Change active script: True', 'SPEECH OUTPUT:'):
+            self.assertIn(wanted, result)
+        self.assertLessEqual(len(orca.focus_trace_context(text * 1000)), 22000)
+
+    def test_api_snapshot_is_owned_pid_read_only_bounded_and_not_pass_evidence(self):
+        evidence = {'scope': 'atspi_api_diagnostic_not_reader_certification', 'applications': []}
+        with patch.object(orca.subprocess, 'run', return_value=Mock(stdout=json.dumps(evidence))) as run:
+            self.assertEqual(orca.api_snapshot(123, ISOLATED), evidence)
+        args, kwargs = run.call_args
+        self.assertEqual(args[0][-2:], ['--pid', '123'])
+        self.assertEqual(kwargs['timeout'], 4)
+        self.assertEqual(kwargs['env'], ISOLATED)
+        with patch.object(orca.subprocess, 'run', side_effect=orca.subprocess.TimeoutExpired('synthetic', 4)):
+            self.assertEqual(orca.api_snapshot(123, ISOLATED)['error'], 'TimeoutExpired')
+        self.assertNotIn('passed', evidence)
 
     def test_report_and_log_limits_and_normalization_hide_profile_paths(self):
         text = r"C:\users\SyntheticOwner\profile /home/SyntheticOwner/config /Users/SyntheticOwner/log /tmp/myl_orca_fixture_abcd/value"
@@ -125,6 +182,20 @@ class OrcaControllerTests(unittest.TestCase):
 
 
 class ExternalFixtureTests(unittest.TestCase):
+    def test_focus_acknowledgment_requires_the_requested_mapped_widget(self):
+        root, target, other = Mock(), Mock(), Mock()
+        root.focus_get.return_value = other
+        self.assertFalse(fixture.focus_state(root, target)['focus_matches_target'])
+        root.focus_get.return_value = target
+        target.winfo_viewable.return_value = False
+        self.assertFalse(fixture.focus_state(root, target)['focus_matches_target'])
+        target.winfo_viewable.return_value = True
+        result = fixture.focus_state(root, target)
+        self.assertTrue(result['focus_matches_target'])
+        self.assertEqual(result['focus_widget'], result['requested_focus'])
+        root.focus_get.return_value = None
+        self.assertIsNone(fixture.focus_state(root, target)['focused_toplevel'])
+
     def test_protocol_is_bounded_sequential_and_cannot_execute_arbitrary_commands(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / 'command.json'
@@ -155,3 +226,41 @@ class ExternalFixtureTests(unittest.TestCase):
                               ['--profile', 'normal', '--external-accessibility-fixture', 'qa']):
                 with self.assertRaises(ValueError):
                     main.cli(arguments)
+
+
+class AtspiDiagnosticTests(unittest.TestCase):
+    class Node:
+        def __init__(self, name='', role='panel', children=(), states=(), pid=123, index=0):
+            self.name, self.role, self.children, self.states = name, role, list(children), states
+            self.pid, self.index = pid, index
+
+        @property
+        def childCount(self):
+            return len(self.children)
+
+        def __getitem__(self, index): return self.children[index]
+        def __iter__(self): return iter(self.children)
+        def get_process_id(self): return self.pid
+        def getState(self): return Mock(getStates=lambda: self.states)
+        def getRoleName(self): return self.role
+        def getIndexInParent(self): return self.index
+
+    def test_diagnostic_only_reads_owned_app_and_retains_actual_active_and_focus_states(self):
+        focused = self.Node('Synthetic search', 'entry', states=('focused', 'showing'), index=2)
+        window = self.Node('Synthetic window', 'frame', [focused], ('active', 'showing'))
+        app = self.Node('Synthetic app', 'application', [window])
+        foreign = Mock(get_process_id=lambda: 999)
+        result = atspi.inspect_fixture(123, [foreign, app], str)
+        self.assertEqual(result['applications'][0]['windows'][0]['states'], ['active', 'showing'])
+        self.assertEqual(result['applications'][0]['focused'][0]['index_in_parent'], 2)
+        foreign.getState.assert_not_called()
+        self.assertNotIn('passed', result)
+
+    def test_api_diagnostic_traversal_is_bounded_and_rejects_non_owned_pid(self):
+        root = self.Node('application', children=[self.Node(children=[self.Node() for _ in range(10)]) for _ in range(10)])
+        result = atspi.inspect_fixture(123, [root], str, maximum=3)
+        self.assertTrue(result['truncated'])
+        self.assertLessEqual(result['visited'], 3)
+        for pid in (True, 0, -1, '123'):
+            with self.assertRaises(ValueError):
+                atspi.inspect_fixture(pid, [], str)

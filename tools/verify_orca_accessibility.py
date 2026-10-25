@@ -106,12 +106,20 @@ def reader_command(reader, preferences, trace):
             '--debug', '--debug-file=' + str(trace)]
 
 
-def read_bounded(path):
+def read_bounded_bytes(path):
     if not path.is_file():
-        return ''
+        return b''
     if path.stat().st_size > MAX_LOG_BYTES:
         raise RuntimeError('External reader log exceeded its bound')
-    return path.read_text(encoding='utf-8', errors='replace')
+    with path.open('rb') as handle:
+        raw = handle.read(MAX_LOG_BYTES + 1)
+    if len(raw) > MAX_LOG_BYTES:
+        raise RuntimeError('External reader log exceeded its bound')
+    return raw
+
+
+def read_bounded(path):
+    return read_bounded_bytes(path).decode('utf-8', errors='replace')
 
 
 def normalize_log(text, directory):
@@ -136,7 +144,7 @@ def phase_evidence(trace, expected):
     presentation = [line for line in trace.splitlines() if 'SPEECH OUTPUT:' in line]
     spoken = ' '.join(presentation)
     role = r'\bbutton\b' if expected['role'] == 'button' else r'\b(?:entry|text|edit)\b'
-    focus = bool(re.search(r'OBJECT EVENT:\s+(?:object:state-changed:focused|focus:)', trace))
+    focus = bool(re.search(r'OBJECT EVENT:\s+(?:object:state-changed:focused|focus:)\s+\(1,', trace))
     label = bool(expected['label']) and expected['label'] in spoken
     value = not expected.get('value') or expected['value'] in spoken
     role_presented = bool(re.search(role, spoken, re.I))
@@ -144,6 +152,57 @@ def phase_evidence(trace, expected):
             'focus_event_consumed': focus, 'label_presented': label,
             'synthetic_value_presented': value, 'role_presented': role_presented,
             'presentation_lines': presentation[-12:]}
+
+
+def reader_diagnostic_errors(trace):
+    # Orca's debug.println catches failed writes without printing a traceback.
+    # Such a log cannot prove that all output-safety diagnostics were retained.
+    markers = ('Traceback (most recent call last)', 'Exception when trying to write text',
+               'TypeError when trying to write text', 'ERROR: Could not process ',
+               'ERROR: Could not set active script ', 'ERROR: Could not get script ')
+    return [marker for marker in markers if marker in trace]
+
+
+def trace_integrity(before_termination, after_termination, *, overflow=False, capture_error=None):
+    prefix_preserved = after_termination.startswith(before_termination)
+    suffix = after_termination[len(before_termination):] if prefix_preserved else ''
+    # Compare actual bytes when available: a PTY read may split a UTF-8
+    # character, which must not be mistaken for modified capture contents.
+    before_text = before_termination.decode('utf-8', errors='replace') if isinstance(before_termination, bytes) else before_termination
+    suffix_text = suffix.decode('utf-8', errors='replace') if isinstance(suffix, bytes) else suffix
+    during = reader_diagnostic_errors(before_text)
+    after = reader_diagnostic_errors(suffix_text)
+    return {'reader_no_exceptions': not during and prefix_preserved and not overflow and not capture_error,
+            'during_test_errors': during, 'termination_messages': after,
+            'prefix_preserved': prefix_preserved,
+            'capture_complete': prefix_preserved and not overflow and not capture_error}
+
+
+def focus_trace_context(trace):
+    """Keep adjacent name/role/state and script decisions, not event headers alone."""
+    lines = trace.splitlines()
+    selected = set()
+    markers = ('OBJECT EVENT:', 'EVENT MANAGER: object:state-changed:focused',
+               'EVENT MANAGER: window:', 'active window', 'activeWindow', 'activeScript',
+               'locusOfFocus', 'active script', 'SPEECH OUTPUT:', 'ERROR', 'Exception',
+               'Speech is not enabled', 'Braille is not enabled')
+    for index, line in enumerate(lines):
+        if any(marker in line for marker in markers):
+            selected.update(range(max(0, index - 1), min(len(lines), index + 14)))
+    return '\n'.join(lines[index] for index in sorted(selected))[-22000:]
+
+
+def api_snapshot(fixture_pid, env):
+    """Read the owned synthetic app only; API inspection is never a pass criterion."""
+    try:
+        result = subprocess.run(['/usr/bin/python3', '-B', str(ROOT / 'tools/inspect_atspi_fixture.py'),
+                                 '--pid', str(fixture_pid)], env=env, stdin=subprocess.DEVNULL,
+                                capture_output=True, text=True, timeout=4, check=True)
+        if len(result.stdout) > 16000:
+            return {'error': 'api_diagnostic_exceeded_bound'}
+        return json.loads(result.stdout)
+    except (OSError, ValueError, subprocess.SubprocessError) as exc:
+        return {'error': type(exc).__name__, 'scope': 'atspi_api_diagnostic_not_reader_certification'}
 
 
 def stop_owned(process):
@@ -259,6 +318,10 @@ def run_checks(executable):
     deadline = time.monotonic() + TOTAL_SECONDS
     processes = []
     collector = None
+    fixture = None
+    phase = None
+    previous = ''
+    ready = None
     with tempfile.TemporaryDirectory(prefix='myl_orca_ci_') as temporary, ExitStack() as stack:
         directory = Path(temporary)
         env = silent_environment(os.environ, directory)
@@ -327,6 +390,9 @@ def run_checks(executable):
                 command.write_text(json.dumps({'sequence': sequence, 'action': phase}), encoding='utf-8')
                 command.replace(control / 'command.json')
                 wait_until(lambda seq=sequence: state().get('sequence') == seq, 4, 'fixture ' + phase)
+                acknowledged = state()
+                if acknowledged.get('focus_matches_target') is not True:
+                    raise RuntimeError('Synthetic fixture did not acquire the requested real Tk focus')
                 def presented():
                     current = read_bounded(trace)
                     if not silent_startup(current):
@@ -347,9 +413,31 @@ def run_checks(executable):
             report['reason'] = normalize_log(f'{type(exc).__name__}: {exc}', directory)
             # Keep bounded, normalized reader/fixture diagnostics, never raw
             # keystroke or full desktop logs. All fixture values are synthetic.
+            before_cleanup = diagnostic_text(trace)
             report['diagnostics'] = {name: normalize_log(diagnostic_text(directory / name)[-12000:], directory)
-                                     for name in ('orca-debug.log', 'fixture.log')}
+                                     for name in ('orca-debug.log', 'fixture.log', 'wm.log')}
+            report['pre_cleanup_trace_context'] = normalize_log(focus_trace_context(before_cleanup), directory)
+            if phase is not None and ready is not None:
+                partial = phase_evidence(before_cleanup[len(previous):], ready['expected'][phase])
+                partial['presentation_lines'] = [normalize_log(line, directory) for line in partial['presentation_lines']]
+                report['failed_phase'] = {'action': phase, 'expected': ready['expected'][phase], 'evidence': partial}
+            if fixture is not None and fixture.poll() is None:
+                try:
+                    report['fixture_state_before_cleanup'] = json.loads(normalize_log(json.dumps(state()), directory))
+                except (OSError, ValueError) as state_error:
+                    report['fixture_state_before_cleanup'] = {'error': type(state_error).__name__}
+                snapshot = api_snapshot(fixture.pid, env)
+                report['atspi_before_cleanup'] = json.loads(normalize_log(json.dumps(snapshot), directory))
         finally:
+            # Separate reader behavior during the test from diagnostics emitted
+            # only after our explicit termination of the synthetic processes.
+            try:
+                test_trace = read_bounded_bytes(trace)
+            except (OSError, RuntimeError):
+                test_trace = b''
+                report['status'] = 'failed'
+                report['reason'] = 'Reader test trace was unreadable or exceeded its bound'
+            report['test_trace_sha256'] = hashlib.sha256(test_trace).hexdigest()
             for process in reversed(processes):
                 try:
                     stop_owned(process)
@@ -365,21 +453,36 @@ def run_checks(executable):
                     report['status'] = 'failed'
                     report['reason'] = collector.capture_error
             try:
-                full_trace = read_bounded(trace)
-                report['trace_sha256'] = hashlib.sha256(full_trace.encode('utf-8')).hexdigest()
+                full_trace_bytes = read_bounded_bytes(trace)
+                full_trace = full_trace_bytes.decode('utf-8', errors='replace')
+                report['trace_sha256'] = hashlib.sha256(full_trace_bytes).hexdigest()
             except (OSError, RuntimeError):
                 full_trace = ''
+                full_trace_bytes = b''
                 report['trace_sha256'] = None
                 report['status'] = 'failed'
                 report['reason'] = 'Reader trace was unreadable or exceeded its bound'
-            checks['reader_no_exceptions'] = 'Traceback (most recent call last)' not in full_trace
+            integrity = trace_integrity(test_trace, full_trace_bytes,
+                                        overflow=collector.overflow if collector else False,
+                                        capture_error=collector.capture_error if collector else None)
+            diagnostic_errors = integrity['during_test_errors']
+            checks['reader_no_exceptions'] = integrity['reader_no_exceptions']
+            cleanup_messages = integrity['termination_messages']
+            if cleanup_messages:
+                report['cleanup_diagnostic_messages'] = cleanup_messages
+            if not integrity['capture_complete']:
+                report['status'] = 'failed'
+                report['trace_integrity'] = integrity
+                report.setdefault('reason', 'Reader trace was incomplete or changed during cleanup')
+            if diagnostic_errors:
+                report['diagnostic_integrity_errors'] = diagnostic_errors
+                if report['status'] == 'passed':
+                    report['status'] = 'failed'
+                    report['reason'] = 'Reader diagnostics contain an exception or failed capture write'
             if 'output_disabled_at_start' in checks:
                 checks['output_disabled_at_start'] = checks['output_disabled_at_start'] and silent_startup(full_trace)
             if report['status'] != 'passed':
-                chosen = [line for line in full_trace.splitlines() if any(word in line for word in (
-                    'SPEECH OUTPUT:', 'Speech is not enabled', 'Braille is not enabled',
-                    'Traceback', 'Exception', 'OBJECT EVENT:', 'ERROR', 'SEVERE'))]
-                report['normalized_trace_excerpt'] = normalize_log('\n'.join(chosen[-80:]), directory)
+                report['normalized_trace_excerpt'] = normalize_log(focus_trace_context(full_trace), directory)
     report['passed'] = report['status'] == 'passed' and set(checks) == REQUIRED_CHECKS and all(checks.values())
     if not report['passed'] and report['status'] == 'passed':
         report['status'] = 'failed'

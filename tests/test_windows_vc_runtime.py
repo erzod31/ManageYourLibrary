@@ -59,7 +59,7 @@ class WindowsVcRuntimeTests(unittest.TestCase):
 
     def test_selects_signed_redist_by_file_version_not_older_folder_name(self):
         selection = runtime.select_redist()
-        self.assertEqual(selection['roots']['crt'], self.crt)
+        self.assertEqual(selection['roots']['crt'], self.crt.resolve())
         self.assertEqual(set(selection['files']), set(runtime.NAMES))
         receipt = selection['receipt']
         self.assertEqual(receipt['compiler_toolset_version'], '14.44.35207')

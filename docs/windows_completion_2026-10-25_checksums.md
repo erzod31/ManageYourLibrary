@@ -288,3 +288,37 @@ omitidas por permisos de symlinks de Windows; Ruff y whitespace correctos.
 La primera construcción de diagnóstico encontró un `WORKPATH` no expuesto en
 el namespace de PyInstaller; se corrigió usando su `CONF['workpath']` real.
 No se presenta aquella construcción interrumpida como un EXE validado.
+
+La construcción limpia posterior de `d6abca2` sí terminó: 711 pruebas
+(dos omitidas), smoke/rendimiento, verificadores de procedencia/avisos y los
+cinco diagnósticos congelados correctos (5/5, 5/5, 22/22, 16/16 y 14/14).
+Su EXE tiene SHA-256
+`A265FE8F73637C0FE940D9B09EDFF0B2053C4E1A34C43C0E99D9E0F5159FDB76`.
+La revisión independiente confirmó 38 PE internos AMD64 más la app: 23 Python,
+7 de wheels, 5 GUI/bridge, 1 OCR y 2 CRT. Confirmó 16 avisos Python y
+14 complementarios, sin UCRT/API-set app-local ni rutas de perfil Windows
+detectadas en los archivos y módulos comprimidos inspeccionados.
+
+Esa revisión también encontró `setuptools`, `_distutils_hack` y `packaging`
+arrastrados por una importación de procedencia que solo se necesita desde
+fuente. `d6abca2` no queda aprobado globalmente: la exclusión posterior debe
+verificarse contra otro build, sin atribuirle los resultados de este EXE.
+
+Los workflows de `d6abca2` detectaron fallos adicionales reales:
+
+- Windows y macOS: una prueba comparaba la ruta temporal original con su forma
+  canónica (nombre Windows 8.3 o `/var` frente a `/private/var`). Se corrige la
+  comparación de la prueba; la selección de DLL no cambia.
+- Linux: las comprobaciones congeladas pasaron, pero Orca 42.0 no presentó
+  el primer foco esperado. El lector se ejecutó sin voz/braille y se cerró;
+  ese ensayo se registra como fallido, no como certificación externa.
+- El colector Ubuntu rechazó `systemd=249.11-0ubuntu3.22`, ausente de los
+  índices autenticados actuales. Se actualizará `libsystemd0` antes de congelar
+  para que binario y fuentes sean de la misma versión, sin sustituir fuentes
+  ni relajar sus controles.
+
+Ejecuciones intermedias: [Windows](https://github.com/erzod31/ManageYourLibrary/actions/runs/40204613778),
+[nativos](https://github.com/erzod31/ManageYourLibrary/actions/runs/40204613794) y
+[fuente](https://github.com/erzod31/ManageYourLibrary/actions/runs/40204613781).
+No se publicó ninguna versión. Estos resultados preceden a las correcciones
+siguientes y no validan sus bytes futuros.

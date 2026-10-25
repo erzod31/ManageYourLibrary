@@ -85,6 +85,7 @@ typedef struct _TkAtkAccessible {
     Tk_Window tkwin;
     Tcl_Interp *interp;
     bool is_focused, is_active, is_defunct;
+    bool visibility_known, is_visible, is_showing;
 } TkAtkAccessible;
 typedef struct _TkAtkAccessibleClass { AtkObjectClass parent_class; } TkAtkAccessibleClass;
 #define TK_ATK_TYPE_ACCESSIBLE (tk_atk_accessible_get_type())
@@ -92,6 +93,9 @@ static GList *toplevel_accessible_objects;
 static AtkObject *tk_root_accessible;
 static GHashTable *widget_map;
 static int finalized, handlers_removed, active_signals, inactive_signals, defunct_signals;
+static int visible_on, visible_off, showing_on, showing_off;
+static AtkObject *GetAtkObjectForTkWindow(Tk_Window w)
+{ return g_hash_table_lookup(widget_map, w); }
 static void TkAtkAccessible_DestroyHandler(void *p, XEvent *e) { (void)p; (void)e; }
 static void TkAtkAccessible_FocusHandler(void *p, XEvent *e) { (void)p; (void)e; }
 static void TkAtkAccessible_CreateHandler(void *p, XEvent *e) { (void)p; (void)e; }
@@ -157,6 +161,8 @@ static void state_changed(AtkObject *obj, const char *state, gboolean enabled, v
 {
     (void)obj; (void)data;
     if (g_strcmp0(state, "defunct") == 0 && enabled) defunct_signals++;
+    if (g_strcmp0(state, "visible") == 0) { if (enabled) visible_on++; else visible_off++; }
+    if (g_strcmp0(state, "showing") == 0) { if (enabled) showing_on++; else showing_off++; }
 }
 
 int main(void)
@@ -193,6 +199,32 @@ int main(void)
     assert(MylTkAtkIndexInParent(ATK_OBJECT(one)) == 0);
     assert(MylTkAtkIndexInParent(ATK_OBJECT(two)) == 1);
     assert(MylTkAtkIndexInParent(ATK_OBJECT(app)) == -1);
+    g_signal_connect(one, "state-change", G_CALLBACK(state_changed), NULL);
+    main.mapped = 0;
+    MylTkAtkSyncVisibility(ATK_OBJECT(one));
+    assert(one->visibility_known && one->is_visible && !one->is_showing);
+    assert(visible_on == 1 && showing_on == 0); /* Mapped child, unmapped parent. */
+    main.mapped = 1;
+    MylTkAtkSyncVisibility(ATK_OBJECT(a));
+    assert(one->is_showing && showing_on == 1);
+    for (int repeat = 0; repeat < 32; repeat++) MylTkAtkSyncVisibility(ATK_OBJECT(a));
+    assert(visible_on == 1 && showing_on == 1 && !visible_off && !showing_off);
+    main.mapped = 0;
+    MylTkAtkSyncVisibility(ATK_OBJECT(a));
+    assert(one->is_visible && !one->is_showing && showing_off == 1 && !visible_off);
+    MylTkAtkSyncVisibility(ATK_OBJECT(a));
+    assert(showing_off == 1); /* Repeated Unmap/registration does not emit twice. */
+    main.mapped = 1;
+    MylTkAtkSyncVisibility(ATK_OBJECT(a));
+    assert(one->is_showing && showing_on == 2);
+    first.mapped = 0;
+    MylTkAtkSyncVisibility(ATK_OBJECT(one));
+    assert(!one->is_visible && !one->is_showing && visible_off == 1 && showing_off == 2);
+    MylTkAtkSyncVisibility(ATK_OBJECT(one));
+    assert(visible_off == 1 && showing_off == 2);
+    first.mapped = 1;
+    MylTkAtkSyncVisibility(ATK_OBJECT(one));
+    assert(visible_on == 2 && showing_on == 3);
     g_signal_connect(a, "activate", G_CALLBACK(activated), NULL);
     g_signal_connect(a, "deactivate", G_CALLBACK(deactivated), NULL);
     g_signal_connect(b, "activate", G_CALLBACK(activated), NULL);
@@ -254,7 +286,6 @@ int main(void)
     /* Emulate a live external client after the Tk owner is destroyed. */
     GWeakRef weak;
     g_weak_ref_init(&weak, one);
-    g_signal_connect(one, "state-change", G_CALLBACK(state_changed), NULL);
     int old_finalized = finalized;
     MylTkAtkDetach(one);
     assert(finalized == old_finalized);

@@ -10,6 +10,8 @@ import base64
 import hashlib
 import json
 import re
+import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from email.parser import BytesParser
@@ -17,6 +19,8 @@ from pathlib import Path, PurePosixPath
 
 CATALOG = Path(__file__).with_name('wheel_redistribution_sources.json')
 MAX_NOTICE = 128 * 1024
+DOWNLOAD_ATTEMPTS = 3
+TRANSIENT_HTTP = {429, 500, 502, 503, 504}
 
 
 def _sha256(data):
@@ -65,6 +69,30 @@ def _expected_receipt(data, catalog_hash):
             'scope': 'exact_supplemental_notices_not_global_redistribution_approval'}
 
 
+def _download_notice(item):
+    """Retry transient availability failures, never content or origin failures."""
+    request = urllib.request.Request(item['url'], headers={'User-Agent': 'ManageYourLibrary-license-evidence/1'})
+    for attempt in range(DOWNLOAD_ATTEMPTS):
+        try:
+            with urllib.request.urlopen(request, timeout=30) as response:
+                original = urllib.parse.urlsplit(item['url'])
+                final = urllib.parse.urlsplit(response.geturl())
+                if final.scheme != 'https' or final.netloc != original.netloc:
+                    raise ValueError('Unexpected notice download redirect')
+                return response.read(MAX_NOTICE + 1)
+        except urllib.error.HTTPError as error:
+            if error.code not in TRANSIENT_HTTP or attempt + 1 == DOWNLOAD_ATTEMPTS:
+                raise
+            error.close()
+        except urllib.error.URLError as error:
+            if not isinstance(error.reason, TimeoutError) or attempt + 1 == DOWNLOAD_ATTEMPTS:
+                raise
+        except TimeoutError:
+            if attempt + 1 == DOWNLOAD_ATTEMPTS:
+                raise
+        time.sleep(attempt + 1)
+
+
 def collect_notices(output: Path):
     """Fetch only fixed, hash-verified notice texts into a NEW directory.
 
@@ -77,13 +105,7 @@ def collect_notices(output: Path):
         raise FileExistsError('Notice output must be a new directory')
     output.mkdir(parents=True, exist_ok=False)
     for item in data['supplemental_notices']:
-        request = urllib.request.Request(item['url'], headers={'User-Agent': 'ManageYourLibrary-license-evidence/1'})
-        with urllib.request.urlopen(request, timeout=30) as response:
-            original = urllib.parse.urlsplit(item['url'])
-            final = urllib.parse.urlsplit(response.geturl())
-            if final.scheme != 'https' or final.netloc != original.netloc:
-                raise ValueError('Unexpected notice download redirect')
-            raw = response.read(MAX_NOTICE + 1)
+        raw = _download_notice(item)
         if len(raw) > MAX_NOTICE:
             raise ValueError('Oversized supplemental notice')
         decoded = base64.b64decode(raw, validate=True) if item['encoding'] == 'base64' else raw

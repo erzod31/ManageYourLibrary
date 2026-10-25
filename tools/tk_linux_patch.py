@@ -13,7 +13,7 @@ import json
 from pathlib import Path
 import re
 
-PATCH_ID = 'myl-tk91-linux-atk-1'
+PATCH_ID = 'myl-tk91-linux-atk-2'
 INPUT_HASHES = {'tkUnixAccessibility.c': 'de0a9d9e6b3e9ea1d08dbb97927e49817fa4ef84adb34ee8bea6fb10e49d9f6a'}
 NATIVE = Path(__file__).parent / 'native'
 HELPER = 'tkUnixA11yWindow.h'
@@ -38,7 +38,8 @@ def replace_function(source, name, body):
 
 def repair_provider(source):
     source = replace_once(source, '    bool is_focused;',
-                          '    bool is_focused;\n    bool is_active;\n    bool is_defunct;')
+                          '    bool is_focused;\n    bool is_active;\n    bool is_defunct;\n'
+                          '    bool visibility_known;\n    bool is_visible;\n    bool is_showing;')
     source = replace_once(source, '/* Configure event loop. */',
                           '#include "mylUnixA11yWindow.h"\n\n/* Configure event loop. */')
     source = replace_once(source, '''    if (!acc) {
@@ -243,6 +244,33 @@ static guint window_deactivate_signal_id;
             && eventPtr->type != MapNotify && eventPtr->type != UnmapNotify)) {''')
     source = replace_once(source, '''    /* Update geometry on configure. */''',
                           '    MylTkAtkSyncActiveWindows();\n    /* Update geometry on configure. */')
+    source = replace_function(source, 'TkAtkAccessible_ConfigureHandler', '''
+    TkAtkAccessible *acc = (TkAtkAccessible *)clientData;
+    if (!eventPtr || !acc || !acc->tkwin || acc->is_defunct) return;
+    if (eventPtr->type == ConfigureNotify) {
+        gint x, y, width, height;
+        tk_get_extents(ATK_COMPONENT(acc), &x, &y, &width, &height, ATK_XY_SCREEN);
+        return; /* Geometry alone does not change visible/showing state. */
+    }
+    if (eventPtr->type == MapNotify || eventPtr->type == UnmapNotify) {
+        MylTkAtkSyncActiveWindows();
+        MylTkAtkSyncVisibility(ATK_OBJECT(acc));
+    }''')
+    source = replace_once(source, '''    if (acc->tkwin && Tk_IsMapped(acc->tkwin)) {
+	atk_state_set_add_state(state_set, ATK_STATE_VISIBLE);
+	atk_state_set_add_state(state_set, ATK_STATE_SHOWING);
+    }''', '''    if (acc->tkwin && Tk_IsMapped(acc->tkwin))
+        atk_state_set_add_state(state_set, ATK_STATE_VISIBLE);
+    if (MylTkAtkShowing(acc->tkwin))
+        atk_state_set_add_state(state_set, ATK_STATE_SHOWING);''')
+    # All registration/ancestor/Init sites share transition-only state events.
+    # The input is hash-locked; require the exact remaining notification count.
+    pattern = (r'atk_object_notify_state_change\((ATK_OBJECT\(accessible\)|acc|pAcc|childAcc|top), '
+               r'ATK_STATE_(?:VISIBLE|SHOWING), TRUE\);')
+    source, count = re.subn(pattern, r'MylTkAtkSyncVisibility(\1);', source)
+    if count != 11:
+        raise ValueError('Unexpected pinned Tk visibility notification count: ' + str(count))
+    source = re.sub(r'(MylTkAtkSyncVisibility\([^;]+\);)\n[ \t]*\1', r'\1', source)
     return source
 
 

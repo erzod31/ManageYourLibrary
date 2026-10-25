@@ -21,6 +21,48 @@ static void MylTkAtkSetWindowParent(AtkObject *obj)
         atk_object_set_parent(obj, tk_root_accessible);
 }
 
+static gboolean MylTkAtkShowing(Tk_Window window)
+{
+    for (Tk_Window current = window; current; current = Tk_Parent(current)) {
+        if (!Tk_IsMapped(current)) return FALSE;
+        if (Tk_IsTopLevel(current)) return TRUE;
+    }
+    return FALSE;
+}
+
+/* Geometry updates and repeated registration are not visibility changes.
+ * Keep VISIBLE (mapped itself) distinct from SHOWING (mapped ancestors too).
+ * A parent Map/Unmap changes descendants' SHOWING without unmapping their
+ * own native windows, so synchronize the real subtree on those transitions. */
+static void MylTkAtkSyncVisibility(AtkObject *obj)
+{
+    TkAtkAccessible *acc = (TkAtkAccessible *)obj;
+    gboolean visible, showing;
+    if (!acc || (!acc->tkwin && !acc->is_defunct)) return;
+    visible = !acc->is_defunct && acc->tkwin && Tk_IsMapped(acc->tkwin);
+    showing = !acc->is_defunct && MylTkAtkShowing(acc->tkwin);
+    if (!acc->visibility_known) {
+        acc->is_visible = false;
+        acc->is_showing = false;
+        acc->visibility_known = true;
+    }
+    if (visible != acc->is_visible) {
+        acc->is_visible = visible;
+        atk_object_notify_state_change(obj, ATK_STATE_VISIBLE, visible);
+    }
+    if (showing != acc->is_showing) {
+        acc->is_showing = showing;
+        atk_object_notify_state_change(obj, ATK_STATE_SHOWING, showing);
+    }
+    if (acc->tkwin && !acc->is_defunct) {
+        for (TkWindow *child = ((TkWindow *)acc->tkwin)->childList; child; child = child->nextPtr) {
+            if (Tk_IsTopLevel((Tk_Window)child)) continue;
+            AtkObject *provider = GetAtkObjectForTkWindow((Tk_Window)child);
+            if (provider) MylTkAtkSyncVisibility(provider);
+        }
+    }
+}
+
 /* The same privacy check guards every provider value path, including text
  * change notifications. A failed Entry -show query must not reveal content. */
 static gchar *MylTkAtkQuery(Tk_Window window, const char *first, const char *second)
@@ -230,7 +272,7 @@ static void MylTkAtkDetach(TkAtkAccessible *acc)
     atk_object_set_parent(obj, NULL);
     atk_object_notify_state_change(obj, ATK_STATE_FOCUSED, FALSE);
     atk_object_notify_state_change(obj, ATK_STATE_ACTIVE, FALSE);
-    atk_object_notify_state_change(obj, ATK_STATE_SHOWING, FALSE);
+    MylTkAtkSyncVisibility(obj);
     atk_object_notify_state_change(obj, ATK_STATE_DEFUNCT, TRUE);
     g_object_unref(obj);
 }

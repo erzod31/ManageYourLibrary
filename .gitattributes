@@ -2,6 +2,8 @@
 * text=auto
 *.sh text eol=lf
 *.bat text eol=crlf
+# Receipts hash source catalogs as bytes; keep those inputs equal across hosts.
+*.json text eol=lf
 # Preserve exact bytes of third-party legal notices matched to package receipts.
 tesseract/licenses/reviewed-package-notices/** -text
 tesseract/licenses/reviewed-package-notices/** whitespace=-trailing-space,-blank-at-eof

@@ -7,7 +7,8 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import call, patch
+from urllib.error import HTTPError, URLError
 
 from tools import verify_wheel_redistribution as verifier
 
@@ -110,9 +111,83 @@ class WheelRedistributionTests(unittest.TestCase):
             root = Path(directory)
             self.fixture(root)
             output = root / 'bad-notices'
-            with patch.object(verifier.urllib.request, 'urlopen', return_value=Response(b'tampered')), self.assertRaises(ValueError):
-                verifier.collect_notices(output)
+            with patch.object(verifier.urllib.request, 'urlopen', return_value=Response(b'tampered')) as request, \
+                    patch.object(verifier.time, 'sleep') as sleep:
+                with self.assertRaises(ValueError):
+                    verifier.collect_notices(output)
+                request.assert_called_once()
+                sleep.assert_not_called()
             self.assertFalse((output / 'receipt.json').exists())
+
+    def test_transient_http_failure_retries_the_same_pinned_request_then_succeeds(self):
+        for code in (429, 500, 502, 503, 504):
+            with self.subTest(code=code), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                _, catalog, _ = self.fixture(root)
+                output = root / 'retry-notices'
+                url = catalog['supplemental_notices'][0]['url']
+                failure = HTTPError(url, code, 'transient', {}, None)
+                with patch.object(verifier.urllib.request, 'urlopen', side_effect=[
+                        failure, Response(b'Unmodified synthetic license\n')]) as request, \
+                        patch.object(verifier.time, 'sleep') as sleep:
+                    verifier.collect_notices(output)
+                self.assertEqual(request.call_count, 2)
+                self.assertEqual([c.args[0].full_url for c in request.call_args_list], [url, url])
+                self.assertEqual([c.kwargs['timeout'] for c in request.call_args_list], [30, 30])
+                sleep.assert_called_once_with(1)
+                self.assertEqual((output / 'codec/LICENSE.txt').read_bytes(), b'Unmodified synthetic license\n')
+                self.assertTrue((output / 'receipt.json').is_file())
+
+    def test_persistent_transient_failure_is_bounded_and_has_no_success_receipt(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _, catalog, _ = self.fixture(root)
+            url = catalog['supplemental_notices'][0]['url']
+            failures = [HTTPError(url, 503, 'unavailable', {}, None) for _ in range(3)]
+            output = root / 'unavailable-notices'
+            with patch.object(verifier.urllib.request, 'urlopen', side_effect=failures) as request, \
+                    patch.object(verifier.time, 'sleep') as sleep:
+                with self.assertRaises(HTTPError):
+                    verifier.collect_notices(output)
+                self.assertEqual(request.call_count, 3)
+                self.assertEqual(sleep.call_args_list, [call(1), call(2)])
+            self.assertFalse((output / 'receipt.json').exists())
+
+    def test_transport_timeouts_at_open_or_read_retry_then_succeed(self):
+        for phase in ('open', 'wrapped', 'read'):
+            with self.subTest(phase=phase), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                self.fixture(root)
+                first = TimeoutError('timed out')
+                if phase == 'wrapped':
+                    first = URLError(first)
+                elif phase == 'read':
+                    first = Response(b'')
+                    first.read = lambda _limit: (_ for _ in ()).throw(TimeoutError('timed out reading'))
+                output = root / 'timeout-notices'
+                with patch.object(verifier.urllib.request, 'urlopen', side_effect=[
+                        first, Response(b'Unmodified synthetic license\n')]) as request, \
+                        patch.object(verifier.time, 'sleep') as sleep:
+                    verifier.collect_notices(output)
+                self.assertEqual(request.call_count, 2)
+                sleep.assert_called_once_with(1)
+                self.assertTrue((output / 'receipt.json').is_file())
+
+    def test_not_found_and_non_timeout_transport_errors_are_not_retried(self):
+        failures = [HTTPError('https://example.invalid/pinned-license', 404, 'not found', {}, None),
+                    URLError(ConnectionRefusedError('refused'))]
+        for failure in failures:
+            with self.subTest(error=type(failure).__name__), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                self.fixture(root)
+                output = root / 'permanent-failure'
+                with patch.object(verifier.urllib.request, 'urlopen', side_effect=failure) as request, \
+                        patch.object(verifier.time, 'sleep') as sleep:
+                    with self.assertRaises(type(failure)):
+                        verifier.collect_notices(output)
+                    request.assert_called_once()
+                    sleep.assert_not_called()
+                self.assertFalse((output / 'receipt.json').exists())
 
     def test_oversized_notice_has_no_success_receipt(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -52,10 +52,20 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends build-essential cmake ninja-build xvfb libtk8.6 patchelf libx11-dev libxft-dev libxext-dev libxss-dev libharfbuzz-dev libatk-bridge2.0-dev at-spi2-core dbus-x11 orca openbox
-          # Runner images can retain a superseded libsystemd0 source version.
-          # Refresh before freezing; the collector still requires exact sources.
-          sudo apt-get install -y --no-install-recommends --only-upgrade libsystemd0
-          dpkg-query --show --showformat='${binary:Package}\t${Version}\t${source:Package}\t${source:Version}\n' libsystemd0
+          # Refresh the Ubuntu runtime families observed in the native payload,
+          # before freezing. Runner images can retain superseded source versions
+          # (observed: systemd and xz-utils). The collector still requires the
+          # exact source version of every binary actually selected by Analysis.
+          runtime_packages=(
+            libsystemd0 liblzma5 libzstd1 zlib1g libexpat1 libssl3 libsqlite3-0
+            libcap2 libgcrypt20 libgpg-error0 libdbus-1-3 libfreetype6 libfontconfig1
+            libglib2.0-0 libharfbuzz0b libpng16-16 libbrotli1 libbsd0 libmd0 libpcre3
+            libuuid1 libffi8 libbz2-1.0 liblz4-1 libgcc-s1 libstdc++6 libtinfo6
+            libx11-6 libxau6 libxdmcp6 libxcb1 libxext6 libxft2 libxi6 libxrender1
+            libxss1 libatspi2.0-0 libatk-bridge2.0-0 libatk1.0-0
+          )
+          sudo apt-get install -y --no-install-recommends --only-upgrade "${runtime_packages[@]}"
+          dpkg-query --show --showformat='${binary:Package}\t${Version}\t${source:Package}\t${source:Version}\n' "${runtime_packages[@]}"
       - name: Resolve and hash-lock native Python wheels
         run: |
           python3 -m venv .venv
@@ -95,6 +105,11 @@ jobs:
         if: ${{ !cancelled() && runner.os == 'Linux' && steps.linux_build.outcome == 'success' }}
         run: |
           python3 -B tools/collect_linux_license_evidence.py --pyinstaller-toc dist/linux-binary-inputs.toc --output dist/linux-license-evidence
+      - name: Check modified GLib loading in a disposable application copy
+        id: linux_replacement
+        if: ${{ !cancelled() && runner.os == 'Linux' && steps.linux_sources.outcome == 'success' }}
+        run: |
+          GSETTINGS_BACKEND=memory MYL_ISOLATED_A11Y_CI=1 dbus-run-session -- xvfb-run -a python3 -B tools/verify_linux_library_replacement.py --payload dist/linux/ManageYourLibrary --evidence dist/linux-license-evidence --output dist/linux-library-replacement.json
       - name: Package and re-test Linux archive with source evidence
         if: runner.os == 'Linux'
         run: dbus-run-session -- xvfb-run -a python3 tools/package_native_release.py --platform linux
@@ -117,6 +132,13 @@ jobs:
         with:
           name: orca-presentation-linux-x64
           path: dist/orca-accessibility.json
+          if-no-files-found: ignore
+      - name: Retain normalized library replacement evidence
+        if: ${{ !cancelled() && runner.os == 'Linux' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: linux-library-replacement-x64
+          path: dist/linux-library-replacement.json
           if-no-files-found: ignore
       - name: Retain failed diagnostics
         if: failure()

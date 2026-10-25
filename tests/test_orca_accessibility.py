@@ -138,16 +138,31 @@ class OrcaControllerTests(unittest.TestCase):
         self.assertLessEqual(len(orca.focus_trace_context(text * 1000)), 22000)
 
     def test_api_snapshot_is_owned_pid_read_only_bounded_and_not_pass_evidence(self):
-        evidence = {'scope': 'atspi_api_diagnostic_not_reader_certification', 'applications': []}
+        evidence = {'scope': 'atspi_api_diagnostic_not_reader_certification', 'status': 'complete', 'applications': []}
         with patch.object(orca.subprocess, 'run', return_value=Mock(stdout=json.dumps(evidence))) as run:
             self.assertEqual(orca.api_snapshot(123, ISOLATED), evidence)
         args, kwargs = run.call_args
         self.assertEqual(args[0][-2:], ['--pid', '123'])
+        self.assertIn('--windows-only', args[0])
         self.assertEqual(kwargs['timeout'], 4)
         self.assertEqual(kwargs['env'], ISOLATED)
         with patch.object(orca.subprocess, 'run', side_effect=orca.subprocess.TimeoutExpired('synthetic', 4)):
             self.assertEqual(orca.api_snapshot(123, ISOLATED)['error'], 'TimeoutExpired')
         self.assertNotIn('passed', evidence)
+
+    def test_timeout_retains_last_complete_partial_api_snapshot(self):
+        partial = {'scope': 'atspi_api_diagnostic_not_reader_certification', 'status': 'in_progress',
+                   'applications': [{'windows': [{'role': 'window', 'states': ['active', 'showing']}]}]}
+        output = (json.dumps(partial) + '\n{"unfinished":').encode()
+        error = orca.subprocess.TimeoutExpired('synthetic', 4, output=output)
+        with patch.object(orca.subprocess, 'run', side_effect=error):
+            result = orca.api_snapshot(123, ISOLATED)
+        self.assertEqual(result['applications'], partial['applications'])
+        self.assertEqual(result['controller_status'], 'timed_out_partial_diagnostic')
+        self.assertNotIn('passed', result)
+        self.assertIsNone(orca.api_progress('x' * 64001))
+        self.assertIsNone(orca.api_progress('{"passed":true}'))
+        self.assertIsNone(orca.api_progress(json.dumps({'scope': partial['scope'], 'status': {}})))
 
     def test_report_and_log_limits_and_normalization_hide_profile_paths(self):
         text = r"C:\users\SyntheticOwner\profile /home/SyntheticOwner/config /Users/SyntheticOwner/log /tmp/myl_orca_fixture_abcd/value"
@@ -264,3 +279,19 @@ class AtspiDiagnosticTests(unittest.TestCase):
         for pid in (True, 0, -1, '123'):
             with self.assertRaises(ValueError):
                 atspi.inspect_fixture(pid, [], str)
+
+    def test_window_only_progress_retains_active_window_without_deep_focus_queries(self):
+        hidden_descendant = Mock()
+        window = self.Node('Synthetic window', 'window', [hidden_descendant], ('active', 'showing'))
+        app = self.Node('application', children=[window])
+        updates = []
+        result = atspi.inspect_fixture(123, [app], str, maximum=8, depth_limit=0,
+                                       progress=lambda report: updates.append(json.loads(json.dumps(report))))
+        self.assertEqual(result['visited'], 1)
+        self.assertFalse(result['descendant_traversal_enabled'])
+        self.assertTrue(result['truncated'])
+        self.assertEqual(result['applications'][0]['windows'][0]['states'], ['active', 'showing'])
+        self.assertEqual(updates[0]['status'], 'in_progress')
+        self.assertEqual(updates[-1]['status'], 'complete')
+        self.assertTrue(any(update['applications'] and update['applications'][0]['windows'] for update in updates[:-1]))
+        hidden_descendant.getState.assert_not_called()

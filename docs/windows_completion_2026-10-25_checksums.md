@@ -322,3 +322,36 @@ Ejecuciones intermedias: [Windows](https://github.com/erzod31/ManageYourLibrary/
 [fuente](https://github.com/erzod31/ManageYourLibrary/actions/runs/40204613781).
 No se publicó ninguna versión. Estos resultados preceden a las correcciones
 siguientes y no validan sus bytes futuros.
+
+La iteración `d611ee5` cerró Windows en CI y el paquete macOS ARM64, incluidas
+API congelada y extracción. Intel se detuvo antes de PyInstaller por HTTP 503
+en la descarga de un aviso; se añaden tres intentos acotados para errores
+transitorios, manteniendo URL, hash y rechazo de contenido incorrecto.
+Linux compiló el proveedor reparado y pasó sus 732 pruebas (una omitida),
+pero Orca seguía sin presentar el foco: las señales estándar de activación ya
+llegaban y los eventos redundantes de visibilidad inundaban su cola.
+La receta v2 conserva estados reales y emite solo sus transiciones.
+
+El colector superó `systemd` y rechazó otra versión antigua, ahora
+`xz-utils=5.2.5-2ubuntu1.1`. La preparación del host actualizará explícitamente
+las familias Ubuntu observadas en el inventario nativo antes de congelar;
+la selección y las fuentes se siguen comprobando después sobre los bytes
+realmente utilizados. La prueba de fuente Ubuntu también detectó falta de
+cabeceras ATK en ese workflow; se añaden esos prerrequisitos sin omitir el
+contrato nativo. Los catálogos JSON fijan LF en Git para que sus hashes no
+dependan de la conversión de finales de línea de cada checkout.
+
+Se prepara una prueba de sustitución sobre **una copia temporal** de GLib:
+sección ELF no ejecutable, SONAME/símbolos conservados, hash distinto,
+diagnósticos congelados, foco GUI real y mapa de carga del PID propio.
+Sus 11 pruebas offline verifican parsers, orquestación y limpieza simulada;
+todavía no se atribuye a ellas ejecución Linux real ni aprobación LGPL global.
+La suite conjunta previa a esta iteración ejecutó **749 pruebas en 13,558 s**,
+con tres omisiones justificadas en Windows; Ruff, whitespace, YAML de cuatro
+workflows y sintaxis de 19 bloques shell correctos.
+
+La licencia aplicable a redistribución Microsoft continúa sin acreditarse;
+firmas y versiones de DLL no conceden por sí mismas ese derecho.
+[Condiciones de redistribución Microsoft](https://learn.microsoft.com/en-us/cpp/windows/redistributing-visual-cpp-files).
+VoiceOver real y la matriz completa de accesibilidad siguen fuera de esta
+validación automatizada. Las correcciones se mantienen en la rama de pruebas.

@@ -192,15 +192,38 @@ def focus_trace_context(trace):
     return '\n'.join(lines[index] for index in sorted(selected))[-22000:]
 
 
+def api_progress(stdout):
+    if isinstance(stdout, bytes):
+        stdout = stdout.decode('utf-8', errors='replace')
+    if not stdout or len(stdout) > 64000:
+        return None
+    latest = None
+    for line in stdout.splitlines():
+        try:
+            value = json.loads(line)
+        except ValueError:
+            continue
+        if (isinstance(value, dict)
+                and value.get('scope') == 'atspi_api_diagnostic_not_reader_certification'
+                and value.get('status') in ('in_progress', 'complete')):
+            latest = value
+    return latest
+
+
 def api_snapshot(fixture_pid, env):
     """Read the owned synthetic app only; API inspection is never a pass criterion."""
     try:
         result = subprocess.run(['/usr/bin/python3', '-B', str(ROOT / 'tools/inspect_atspi_fixture.py'),
-                                 '--pid', str(fixture_pid)], env=env, stdin=subprocess.DEVNULL,
+                                 '--windows-only', '--pid', str(fixture_pid)], env=env, stdin=subprocess.DEVNULL,
                                 capture_output=True, text=True, timeout=4, check=True)
-        if len(result.stdout) > 16000:
-            return {'error': 'api_diagnostic_exceeded_bound'}
-        return json.loads(result.stdout)
+        evidence = api_progress(result.stdout)
+        return evidence or {'error': 'api_diagnostic_missing_or_exceeded_bound'}
+    except subprocess.TimeoutExpired as exc:
+        evidence = api_progress(exc.stdout)
+        if evidence is not None:
+            evidence['controller_status'] = 'timed_out_partial_diagnostic'
+            return evidence
+        return {'error': type(exc).__name__, 'scope': 'atspi_api_diagnostic_not_reader_certification'}
     except (OSError, ValueError, subprocess.SubprocessError) as exc:
         return {'error': type(exc).__name__, 'scope': 'atspi_api_diagnostic_not_reader_certification'}
 

@@ -39,6 +39,43 @@ dependencies. A future Qt distribution would require a separate license review.
 
 OCR runs locally. The app does not send documents to external OCR services.
 
+## Required image-library acknowledgements
+
+This software is based in part on the work of the Independent JPEG Group.
+This software is based in part on the work of the FreeType Team.
+FreeType components are distributed under the FreeType License (FTL) option,
+not its alternative GPL option. The complete applicable upstream texts remain
+in the Pillow/PDFium license directories.
+
+## Supplemental runtime evidence (development)
+
+New builds carry the complete pinned CPython history/license document and
+supplemental dependency notices under `licenses/python-runtime`, rather than
+assuming the short Windows `LICENSE.txt` contains every source-level notice.
+Windows collection verifies the installed Python native family against the
+official hash-pinned CPython 3.12.10 AMD64 embed archive. The unmodified
+`_tkinter` sources are recompiled against the isolated Tcl/Tk 9.1 runtime;
+the project-specific Tk Windows repair has separate notices and source receipt.
+
+`licenses/wheels` retains exact supplemental AVIF notices, including the AOM
+license and patent text, the applicable dav1d copyright, and preserved
+third-party terms. A license present in a general wheel notice/SBOM is not
+by itself proof that an optional library was linked. Hash-bound Windows
+wheel observations distinguish compiled features from optional components.
+
+Windows development builds target Windows 10 or later, with the OS-provided
+Universal CRT/API sets. They do not redistribute arbitrary copies from an
+ambient application PATH. Selected Python, wheel, isolated GUI and controlled
+OCR native inputs have a portable per-file origin/hash receipt; this is not a
+legal approval, a vulnerability audit, or a waiver of Microsoft runtime terms.
+The two application-local Visual C++ runtime DLLs are selected only from the
+installed compiler's Microsoft desktop x64 REDIST directory, with valid
+Microsoft Authenticode signatures and file versions at least as new as the
+selected toolset. They replace an older Python-supplied runtime when required
+by the newly compiled GUI; the receipt distinguishes these Microsoft files
+from the original Python archive. Build success does not determine the owner's
+Microsoft license eligibility or approve the full application release.
+
 ## Optional Windows app voice (development)
 
 The opt-in app voice calls the installed Windows SAPI API through Python ctypes.

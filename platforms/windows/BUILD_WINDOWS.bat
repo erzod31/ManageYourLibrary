@@ -21,9 +21,9 @@ if exist "%MANAGE_YOUR_LIBRARY_DIST_DIR%\ManageYourLibrary" (
   exit /b 1
 )
 
-"%PYTHON_EXE%" -c "import sys; raise SystemExit(0 if sys.version_info[:2] == (3, 12) else 1)"
+"%PYTHON_EXE%" -c "import sys; raise SystemExit(0 if sys.version_info[:3] == (3, 12, 10) else 1)"
 if errorlevel 1 (
-  echo ERROR: The locked Windows build requires Python 3.12.
+  echo ERROR: The locked Windows runtime and license evidence require Python 3.12.10.
   exit /b 1
 )
 
@@ -61,8 +61,22 @@ rem Required models: eng spa fra nld chi_sim osd. The validator also verifies no
 "%PYTHON_EXE%" -B tools\verify_ocr_payload.py "%MANAGE_YOUR_LIBRARY_OCR_DIR%"
 if errorlevel 1 exit /b 1
 
+echo Collecting hash-verified Python and wheel license evidence...
+set "MANAGE_YOUR_LIBRARY_PYTHON_LICENSE_DIR=%MANAGE_YOUR_LIBRARY_DIST_DIR%\license-staging\python"
+set "MANAGE_YOUR_LIBRARY_WHEEL_LICENSE_DIR=%MANAGE_YOUR_LIBRARY_DIST_DIR%\license-staging\wheels"
+"%PYTHON_EXE%" -B tools\collect_python_license_evidence.py --output "%MANAGE_YOUR_LIBRARY_PYTHON_LICENSE_DIR%"
+if errorlevel 1 exit /b 1
+"%PYTHON_EXE%" -B tools\verify_wheel_redistribution.py --collect-notices "%MANAGE_YOUR_LIBRARY_WHEEL_LICENSE_DIR%"
+if errorlevel 1 exit /b 1
+
 echo Building the diagnosable onedir application...
 "%PYTHON_EXE%" -m PyInstaller --clean --noconfirm --distpath "%MANAGE_YOUR_LIBRARY_DIST_DIR%" --workpath "%TEMP%\ManageYourLibrary_build" platforms\windows\ManageYourLibrary.spec
+if errorlevel 1 exit /b 1
+
+echo Verifying controlled native origins and complete wheel notices...
+"%PYTHON_EXE%" -B tools\windows_dependency_policy.py "%MANAGE_YOUR_LIBRARY_DIST_DIR%\ManageYourLibrary"
+if errorlevel 1 exit /b 1
+"%PYTHON_EXE%" -B tools\verify_wheel_redistribution.py --payload "%MANAGE_YOUR_LIBRARY_DIST_DIR%\ManageYourLibrary"
 if errorlevel 1 exit /b 1
 
 echo Running frozen smoke test...

@@ -1,0 +1,102 @@
+{
+  "schema": 1,
+  "profile": "windows-x64-cp312-pillow13-pdfium8076-v1",
+  "scope": "pinned_windows_wheel_bytes_and_notices_not_global_release_approval",
+  "families": [
+    {
+      "name": "pillow",
+      "version": "13.0.0",
+      "metadata": "pillow-13.0.0.dist-info/METADATA",
+      "wheel": {
+        "filename": "pillow-13.0.0-cp312-cp312-win_amd64.whl",
+        "url": "https://files.pythonhosted.org/packages/ff/cd/73a79ecdc822076002eb24b5e1e4a530b0bb5310fcb6d239abbec877110b/pillow-13.0.0-cp312-cp312-win_amd64.whl",
+        "sha256": "ff3fe9eb621fbb9db4c4be33ab946f6bac5f98ab50ca8d3260503653656c961b"
+      },
+      "binaries": {
+        "PIL/_avif.cp312-win_amd64.pyd": "3c31d65c8b3b4c91ac2838d5c843a6b2479d775b6904fe654d60b56d41772411",
+        "PIL/_imaging.cp312-win_amd64.pyd": "7140f56d38dd6cd51512f8122386bcb914c5df2a82eb5f719c973527d9213cee",
+        "PIL/_imagingcms.cp312-win_amd64.pyd": "2640857cace64d69735bdcaa3987e9ad70f85168abc1a8662079c77ac44b5301",
+        "PIL/_imagingft.cp312-win_amd64.pyd": "985228f6086171978abb5d04f2f625c489fdc9d7f0a92f2077a621ff184a599e",
+        "PIL/_imagingtk.cp312-win_amd64.pyd": "e1c87f73e96d2269395624d03b3808300f4b0f795f5fad1ecc3d1492e5dcc7c2",
+        "PIL/_webp.cp312-win_amd64.pyd": "bb9c64d38a6e4857bd3358e14dbe6cf3a4593b1efcd1185fdba1ef8931550896"
+      },
+      "notices": {
+        "pillow-13.0.0.dist-info/licenses/LICENSE": "988ffe8ab3480b0f4e9a0ab2702bffd73d9fb6b47198043fb3ba101a62fac236",
+        "pillow-13.0.0.dist-info/sboms/pillow-13.0.0.cdx.json": "fe1ca6e3a4f73e7018a3805a75a19377453f342d203712f37387ad6ee853fd44"
+      },
+      "inventory": {"directory": "PIL", "suffix": ".pyd"},
+      "observed_evidence": {
+        "method": "separate_trusted_venv_probe_and_exact_official_wheel_comparison",
+        "runtime_versions": {"freetype2": "2.14.3", "libjpeg_turbo": "3.2.0", "libtiff": "4.7.2", "webp": "1.6.0", "avif": "1.4.2", "zlib_ng": "2.3.3", "jpg_2000": "2.5.4"},
+        "libimagequant": false,
+        "fribidi": false,
+        "raqm": false,
+        "jbig_codec": "not_configured; minimal in-memory TIFF Compression=34661 rejected by native libtiff",
+        "avif_codecs": "dav1d [dec]:1.5.3-0-gb546257, aom [enc]:3.14.1",
+        "avif_notice_policy": "Retain all libaom third_party root license texts conservatively, including optional unbuilt tests/tools; notice presence is not evidence that every component is linked. libyuv FetchContent pin from libavif v1.4.2 is 644251f252a84bf8ce91ff0aca86a9b16b069ab8.",
+        "caveat": "harfbuzz feature=false refers to RAQM; FreeType can still statically use HarfBuzz. Generic SBOM optional/excluded entries are not a per-wheel link receipt.",
+        "build_recipe": "https://raw.githubusercontent.com/python-pillow/Pillow/13.0.0/.github/workflows/wheels.yml"
+      }
+    },
+    {
+      "name": "pypdfium2",
+      "version": "5.14.0",
+      "metadata": "pypdfium2-5.14.0.dist-info/METADATA",
+      "wheel": {
+        "filename": "pypdfium2-5.14.0-py3-none-win_amd64.whl",
+        "url": "https://files.pythonhosted.org/packages/00/dc/ca7874924c9cfd701ad53f89529968523790e70473e0b71e834668316148/pypdfium2-5.14.0-py3-none-win_amd64.whl",
+        "sha256": "149fd5c6397b8df8bf7911a93506eff0be874f877afe7ac936cf5d37d21a6a06"
+      },
+      "upstream_binary_archive": {
+        "url": "https://github.com/bblanchon/pdfium-binaries/releases/download/chromium/8076/pdfium-win-x64.tgz",
+        "sha256": "808d36da9bc5a3104315fb307c80998121f565ee53953633bf33e80d7429e5ac",
+        "pdfium_version": "156.0.8076.0",
+        "flags": [],
+        "comparison": "pdfium.dll and all 15 BUILD_LICENSES texts match the official archive byte-for-byte"
+      },
+      "binaries": {"pypdfium2_raw/pdfium.dll": "69f1e860f6742fbaafcc4db80e785eec9a4ee0da36ea6d1dc0867ea0f18baea6"},
+      "notices": {
+        "pypdfium2-5.14.0.dist-info/licenses/LICENSES/Apache-2.0.txt": "3ddf9be5c28fe27dad143a5dc76eea25222ad1dd68934a047064e56ed2fa40c5",
+        "pypdfium2-5.14.0.dist-info/licenses/LICENSES/BSD-3-Clause.txt": "ad9a9e823df025f42389c1812eae28019f657d1ed7b3a4ebfd5010b0736a0da4",
+        "pypdfium2-5.14.0.dist-info/licenses/LICENSES/CC-BY-4.0.txt": "f1b1748301cd4274f46733c218d510929661b4990855de5fc645dacd69c4371c",
+        "pypdfium2_raw/version.json": "363ee2f6a236c8b262326634ee79c661a6020c9df1fcef734dd928ee6924113a",
+        "pypdfium2/version.json": "4fea9865d76e0996f34fd409258c82e683393c273a58f4def53de27837965547",
+        "pypdfium2-5.14.0.dist-info/licenses/data/windows_x64/BUILD_LICENSES/abseil.txt": "f54fff0b905df5b3464527c652a30e903b172d6dcab4d89b5e6f105d5e4a4603",
+        "pypdfium2-5.14.0.dist-info/licenses/data/windows_x64/BUILD_LICENSES/agg23.txt": "c110d3ea2ad77467ce0dcff7d3337e6c8be8049a5103f4b9bd5fd911a77972e5",
+        "pypdfium2-5.14.0.dist-info/licenses/data/windows_x64/BUILD_LICENSES/fast_float.txt": "bf1b57355feca8fce77ee95f48002f8d4789fb71b30ec7599c06cda4901fbb2b",
+        "pypdfium2-5.14.0.dist-info/licenses/data/windows_x64/BUILD_LICENSES/freetype.txt": "f4b133e25df1f86ad3ffea453aa0e613f0474f34778dbbb3e437e7b2724937d8",
+        "pypdfium2-5.14.0.dist-info/licenses/data/windows_x64/BUILD_LICENSES/icu.txt": "93679f4389d53b6835d89843f251844fb9bc455b35bab036d3c8e7abe497a47a",
+        "pypdfium2-5.14.0.dist-info/licenses/data/windows_x64/BUILD_LICENSES/lcms.txt": "7312b68c5b25e9bf2b828706fb4e29588f22705112f411fd42e1f7d84c3d139a",
+        "pypdfium2-5.14.0.dist-info/licenses/data/windows_x64/BUILD_LICENSES/libjpeg_turbo.ijg": "db16a04128171879c60708d171b88d97345a2dd20f9bfc173680a4497c73f704",
+        "pypdfium2-5.14.0.dist-info/licenses/data/windows_x64/BUILD_LICENSES/libjpeg_turbo.md": "be2b2b5ab168bce87bc3e31f2a5c5adba4b7f6e9e51d618e958d1d46972ebd95",
+        "pypdfium2-5.14.0.dist-info/licenses/data/windows_x64/BUILD_LICENSES/libopenjpeg.txt": "c5ab0890a737c2dfa7ba675036554f6d17741d98629b0c2a145354d00617e6b2",
+        "pypdfium2-5.14.0.dist-info/licenses/data/windows_x64/BUILD_LICENSES/libpng.txt": "452390433ba0f88aa3e2b122c647741b72a0c117cd6ed7a329b49785aecb5511",
+        "pypdfium2-5.14.0.dist-info/licenses/data/windows_x64/BUILD_LICENSES/llvm-libc.txt": "3b6226c32e168c83b891d8d6f0d3c29c2116dc3ef93dc93c307b54f279ecf383",
+        "pypdfium2-5.14.0.dist-info/licenses/data/windows_x64/BUILD_LICENSES/pdfium-binaries.txt": "8854f4388f1ca13b3ad9baa42e95f5546b4c0b17109c159256d3eca7be39b09b",
+        "pypdfium2-5.14.0.dist-info/licenses/data/windows_x64/BUILD_LICENSES/pdfium.txt": "961eacd9633fff6d051db7208b755e9210e30efac7adec3e6a6d52798f0ccf0e",
+        "pypdfium2-5.14.0.dist-info/licenses/data/windows_x64/BUILD_LICENSES/simdutf.txt": "c172a0ba936ff31230febb5dad869e25cb7c1a07480c7a381be8cf011bb52719",
+        "pypdfium2-5.14.0.dist-info/licenses/data/windows_x64/BUILD_LICENSES/zlib.txt": "33fd641c9f3b0e0be64bc78fea9e94807674cdd70c48477599226cb8956565fe"
+      },
+      "inventory": {"directory": "pypdfium2_raw", "suffix": ".dll"},
+      "observed_evidence": {"imports": ["KERNEL32.dll", "ADVAPI32.dll", "GDI32.dll", "USER32.dll"], "libgcc": "not_imported_in_this_windows_binary"}
+    }
+  ],
+  "supplemental_directory": "licenses/wheels",
+  "supplemental_notices": [
+    {"path": "avif/libaom-3.14.1-LICENSE.txt", "url": "https://aomedia.googlesource.com/aom/+/refs/tags/v3.14.1/LICENSE?format=TEXT", "encoding": "base64", "sha256": "4764a286d8b2faeaf42f4418e7d7a28d58fc8fd4d00a3d0a7f44b0a4099de7f2"},
+    {"path": "avif/libaom-3.14.1-PATENTS.txt", "url": "https://aomedia.googlesource.com/aom/+/refs/tags/v3.14.1/PATENTS?format=TEXT", "encoding": "base64", "sha256": "661fb8e504744e95587b556b94a58343448300606a41bea8c7a9b97125696e61"},
+    {"path": "avif/libaom-third-party-fastfeat-LICENSE.txt", "url": "https://aomedia.googlesource.com/aom/+/refs/tags/v3.14.1/third_party/fastfeat/LICENSE?format=TEXT", "encoding": "base64", "sha256": "499041ddee5227b6f29ca06c17803e5fe24d60f243c69635cd76b7ba08d0ddd5"},
+    {"path": "avif/libaom-third-party-googletest-LICENSE.txt", "url": "https://aomedia.googlesource.com/aom/+/refs/tags/v3.14.1/third_party/googletest/src/LICENSE?format=TEXT", "encoding": "base64", "sha256": "9702de7e4117a8e2b20dafab11ffda58c198aede066406496bef670d40a22138"},
+    {"path": "avif/libaom-third-party-highway-LICENSE-BSD3.txt", "url": "https://aomedia.googlesource.com/aom/+/refs/tags/v3.14.1/third_party/highway/LICENSE-BSD3?format=TEXT", "encoding": "base64", "sha256": "d25e82e26acd42ca3ccc9993622631163425b869b9e16284226d534cff6470f2"},
+    {"path": "avif/libaom-third-party-libwebm-LICENSE.txt", "url": "https://aomedia.googlesource.com/aom/+/refs/tags/v3.14.1/third_party/libwebm/LICENSE.TXT?format=TEXT", "encoding": "base64", "sha256": "5aec868f669e384a22372a4e8a1a6cd7d44c64cd451f960ca69cc170d1e13acf"},
+    {"path": "avif/libaom-third-party-libwebm-PATENTS.txt", "url": "https://aomedia.googlesource.com/aom/+/refs/tags/v3.14.1/third_party/libwebm/PATENTS.TXT?format=TEXT", "encoding": "base64", "sha256": "cc3273e0694ea5896145e0677699b53471b03ea43021ddc50e7923fbb9f5023c"},
+    {"path": "avif/libaom-third-party-libyuv-LICENSE.txt", "url": "https://aomedia.googlesource.com/aom/+/refs/tags/v3.14.1/third_party/libyuv/LICENSE?format=TEXT", "encoding": "base64", "sha256": "2b2cc1180c7e6988328ad2033b04b80117419db9c4c584918bbb3cfec7e9364f"},
+    {"path": "avif/libaom-third-party-vector-LICENSE.txt", "url": "https://aomedia.googlesource.com/aom/+/refs/tags/v3.14.1/third_party/vector/LICENSE?format=TEXT", "encoding": "base64", "sha256": "ff6c857ce2708e87701323078aef115c1872a1f80a9649f86dc899b48083bc60"},
+    {"path": "avif/libaom-third-party-x86inc-LICENSE.txt", "url": "https://aomedia.googlesource.com/aom/+/refs/tags/v3.14.1/third_party/x86inc/LICENSE?format=TEXT", "encoding": "base64", "sha256": "719d8fa235f2068e0ae6d6a7dceb0a7720d7840f0f0ebed29957989e6ded3cd8"},
+    {"path": "avif/libyuv-644251f252a84bf8ce91ff0aca86a9b16b069ab8-PATENTS.txt", "url": "https://chromium.googlesource.com/libyuv/libyuv/+/644251f252a84bf8ce91ff0aca86a9b16b069ab8/PATENTS?format=TEXT", "encoding": "base64", "sha256": "4da84211f947c6f9f7dd8fbce513e1522e01833407ae732b8c9a2bbb75fed495"},
+    {"path": "avif/dav1d-1.5.3-COPYING.txt", "url": "https://raw.githubusercontent.com/videolan/dav1d/1.5.3/COPYING", "encoding": "utf-8", "sha256": "dd92c3c2247c5651606fc23a5e2d6a1ebc5ace9a3e49cbde0e12f05ad1cb1ee5"},
+    {"path": "xz/xz-5.8.4-COPYING.txt", "url": "https://raw.githubusercontent.com/tukaani-project/xz/v5.8.4/COPYING", "encoding": "utf-8", "sha256": "616a3ad264ce29b8f1cb97e53037b139d406899ca8d1f799651e17bfa09830b8"},
+    {"path": "xz/xz-5.8.4-COPYING.0BSD.txt", "url": "https://raw.githubusercontent.com/tukaani-project/xz/v5.8.4/COPYING.0BSD", "encoding": "utf-8", "sha256": "0b01625d853911cd0e2e088dcfb743261034a091bb379246cb25a14cc4c74bf1"}
+  ],
+  "required_acknowledgements": ["This software is based in part on the work of the Independent JPEG Group.", "This software is based in part on the work of the FreeType Team."]
+}

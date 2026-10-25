@@ -249,3 +249,42 @@ Referencias primarias: [guía de NVDA](https://api.nvaccess.org/documentation/us
 [salida SAPI a un stream](https://learn.microsoft.com/en-us/previous-versions/windows/desktop/ms723597(v=vs.85)),
 [parámetros del instalador](https://jrsoftware.org/ishelp/topic_setupcmdline.htm),
 [parámetros de desinstalación](https://jrsoftware.org/ishelp/topic_uninstcmdline.htm).
+
+## Continuación: procedencia y accesibilidad externa
+
+La auditoría posterior encontró dos defectos no detectados por las pruebas
+anteriores: 44 UCRT/API-set de una aplicación ajena recogidos por el PATH de
+Windows, y una puerta Unix que aceptaba un subconjunto de comprobaciones de
+accesibilidad sin ligarlo al ejecutable. Los paquetes anteriores se conservan
+como evidencia de desarrollo; sus resultados no aprueban estos cambios nuevos.
+
+La corrección selecciona únicamente entradas nativas de Python, ruedas,
+runtime GUI aislado, OCR controlado y Microsoft REDIST identificado. Windows
+10+ proporciona UCRT/API sets; las copias app-local se excluyen antes de COLLECT.
+Se comprueban hashes de todos los PE seleccionados y del CRT Microsoft firmado,
+con versión suficiente para el toolset de Tk. El inventario distingue 23 PE
+del Python base de los dos CRT seleccionados por separado; los 25 originales
+del Python base se contrastaron con su ZIP oficial, sin confundir ambos grupos.
+
+Se añaden avisos Python, AVIF/AOM/dav1d/0BSD y reconocimientos FreeType/IJG,
+sin cambiar los textos upstream ni dar por revisado todo el producto. Unix
+incluye además los avisos Tcl/Tk que faltaban. El módulo interactivo readline,
+innecesario en esta GUI, queda excluido; las bibliotecas Linux necesarias no se
+eliminan para ocultar obligaciones. Un colector en el host original relaciona
+los binarios con dpkg y exige fuentes de la versión exacta desde índices Ubuntu
+autenticados, conservando copyright, fuentes e índices. La entrega separada de
+fuentes no supone por sí misma aprobación legal ni de reemplazabilidad LGPL.
+
+La nueva puerta de API exige el conjunto exacto, versión, plataforma y
+procedencia de fuente o SHA del ejecutable, y repite API en el archivo extraído.
+Se prepara además Orca real únicamente en CI Linux/Xvfb/D-Bus temporal, sin
+salida de voz/braille, sin dispositivos de audio y con preferencias desechables.
+No se instala ni activa ningún lector en Windows; VoiceOver no queda probado
+por ese ensayo Linux. Resultados de construcción/CI se anotarán después de
+ejecutar estas versiones, no a partir de las pruebas internas del controlador.
+
+Verificación previa al commit de este bloque: 711 pruebas, 13,327 s, dos
+omitidas por permisos de symlinks de Windows; Ruff y whitespace correctos.
+La primera construcción de diagnóstico encontró un `WORKPATH` no expuesto en
+el namespace de PyInstaller; se corrigió usando su `CONF['workpath']` real.
+No se presenta aquella construcción interrumpida como un EXE validado.

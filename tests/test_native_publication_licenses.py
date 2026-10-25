@@ -1,4 +1,5 @@
 import json
+import hashlib
 import tempfile
 import unittest
 from pathlib import Path
@@ -11,9 +12,16 @@ class NativePublicationLicenseTests(unittest.TestCase):
         paths = []
         for name, architecture in sorted(EXPECTED):
             path = directory / (name + '-' + architecture + '-manifest.json')
-            path.write_text(json.dumps({'platform': name, 'architecture': architecture,
+            manifest = {'platform': name, 'architecture': architecture,
                 'validation': {'redistribution_review': 'passed', 'ocr_libraries_profile': 'passed'},
-                'ocr_source_payload': {'resolution': 'replaced_legacy_stack_no_gpl_lgpl_ocr_libraries'}}))
+                'ocr_source_payload': {'resolution': 'replaced_legacy_stack_no_gpl_lgpl_ocr_libraries'}}
+            if name == 'linux':
+                source = directory / 'linux-license-sources.tar'
+                source.write_bytes(b'Synthetic corresponding source evidence')
+                manifest['linux_os_library_evidence'] = {'archive': source.name,
+                    'sha256': hashlib.sha256(source.read_bytes()).hexdigest(),
+                    'source_asset_required_with_release': True}
+            path.write_text(json.dumps(manifest))
             paths.append(path)
         return paths
 
@@ -49,6 +57,19 @@ class NativePublicationLicenseTests(unittest.TestCase):
             path.write_text(json.dumps(value))
             with self.assertRaisesRegex(ValueError, 'controlled OCR'):
                 check(directory)
+
+    def test_linux_source_asset_must_be_present_and_match_its_receipt(self):
+        for action in ('remove', 'change'):
+            with self.subTest(action=action), tempfile.TemporaryDirectory() as temp:
+                directory = Path(temp)
+                self.fixtures(directory)
+                path = directory / 'linux-license-sources.tar'
+                if action == 'remove':
+                    path.unlink()
+                else:
+                    path.write_bytes(b'Changed')
+                with self.assertRaisesRegex(ValueError, 'Linux source asset'):
+                    check(directory)
 
 
 if __name__ == '__main__':

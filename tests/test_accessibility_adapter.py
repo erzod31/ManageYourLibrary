@@ -110,7 +110,8 @@ class AccessibilityAdapterTests(unittest.TestCase):
         path = Mock()
         path.read_text.return_value = json.dumps({'passed': True, 'backend': 'tk_native', 'checks': {}})
         with self.assertRaises(ValueError):
-            validate_accessibility_api_report(path)
+            validate_accessibility_api_report(path, platform='linux', version='0.5.3', frozen=False,
+                                              source_commit='a' * 40, source_tree={'sha256': 'b' * 64, 'files': 1})
 
 
 if __name__ == '__main__':

@@ -33,6 +33,11 @@ def cli(argv=None):
     if len(argv) == 2 and argv[0] == '--reader-worker':
         from core.reader_worker import worker_main
         return worker_main(argv[1])
+    if '--external-accessibility-fixture' in argv:
+        if len(argv) != 2 or argv[0] != '--external-accessibility-fixture':
+            raise ValueError('--external-accessibility-fixture requires only a fresh control directory')
+        from tools.external_accessibility_fixture import run_fixture
+        return run_fixture(Path(argv[1]), version=_version())
     if '--profile' in argv:
         import os
         position = argv.index('--profile')

@@ -5,6 +5,7 @@ import json
 import os
 import platform
 import plistlib
+import re
 import shutil
 import subprocess
 import sys
@@ -16,6 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from tools.write_build_manifest import git_value, source_tree_fingerprint
 from tools.verify_ocr_payload import validate_payload as validate_ocr_payload
+from tools.verify_accessibility import BASE_CHECKS, WINDOWS_CHECKS
 RUNTIME_CHECKS = {'tk_init', 'bundled_languages', 'image_ocr', 'pdfium_ocr', 'reader_isolation'}
 FIRST_CHECKS = {'clean_defaults', 'empty_workspace', 'no_background_operations', 'no_automatic_network', 'fresh_state'}
 PRIVATE_NAMES = {'config.json', 'library_index.json', 'historial.csv', 'library_history.csv',
@@ -55,17 +57,31 @@ def validate_report(path, checks, version):
     return report
 
 
-def validate_accessibility_api_report(path):
+def validate_accessibility_api_report(path, *, platform, version, frozen,
+                                      source_commit=None, source_tree=None, executable_sha256=None):
     report = json.loads(path.read_text(encoding='utf-8'))
-    required = {'search_name', 'icon_button_names', 'registered_navigation_action',
-                'selected_row_value', 'full_path_value', 'disabled_action_guard',
-                'metadata_fields_named', 'metadata_initial_focus',
-                'native_provider_errors', 'no_callback_errors'}
+    if platform not in {'linux', 'macos'}:
+        raise ValueError('Unsupported native accessibility platform')
+    required = WINDOWS_CHECKS if platform == 'macos' else BASE_CHECKS
     checks = report.get('checks', {})
     if (report.get('passed') is not True or report.get('backend') != 'tk_native'
-            or not required.issubset(checks) or not all(value is True for value in checks.values())
+            or report.get('platform') != platform or report.get('version') != version
+            or report.get('windowing_system') != ('aqua' if platform == 'macos' else 'x11')
+            or report.get('frozen') is not frozen or set(checks) != required
+            or not all(value is True for value in checks.values())
             or report.get('errors')):
         raise ValueError('Native accessibility API report is incomplete or failed')
+    if frozen:
+        if (not isinstance(executable_sha256, str) or not re.fullmatch(r'[0-9a-fA-F]{64}', executable_sha256)
+                or str(report.get('executable_sha256', '')).lower() != executable_sha256.lower()):
+            raise ValueError('Frozen accessibility report does not match the executable')
+    elif (not isinstance(source_commit, str) or not re.fullmatch(r'(?:[0-9a-fA-F]{40}|[0-9a-fA-F]{64})', source_commit)
+            or not isinstance(source_tree, dict)
+            or not re.fullmatch(r'[0-9a-fA-F]{64}', str(source_tree.get('sha256', '')))
+            or type(source_tree.get('files')) is not int or source_tree['files'] <= 0
+            or report.get('git_commit') != source_commit or report.get('source_tree') != source_tree
+            or report.get('git_status') != ''):
+        raise ValueError('Source accessibility report does not match the clean source tree')
     return report
 
 
@@ -81,15 +97,21 @@ def main():
     executable = payload / ('Contents/MacOS/ManageYourLibrary' if name == 'macos' else 'ManageYourLibrary')
     evidence = base if name == 'macos' else payload
     api_report = ROOT / 'dist/accessibility-self-test.json'
-    validate_accessibility_api_report(api_report)
+    source_commit = git_value('rev-parse', 'HEAD')
+    source_tree = source_tree_fingerprint()
+    validate_accessibility_api_report(api_report, platform=name, version=version, frozen=False,
+                                      source_commit=source_commit, source_tree=source_tree)
     validate_report(evidence / 'runtime-self-test.json', RUNTIME_CHECKS, version)
     validate_report(evidence / 'first-use-self-test.json', FIRST_CHECKS, version)
     manifest = json.loads((evidence / 'build-manifest.json').read_text(encoding='utf-8'))
-    if (manifest['version'] != version or manifest['git_commit'] != git_value('rev-parse', 'HEAD')
-            or manifest['source_tree'] != source_tree_fingerprint()):
+    if (manifest['version'] != version or manifest['git_commit'] != source_commit
+            or manifest['source_tree'] != source_tree):
         raise ValueError('Manifest does not describe the current build source/version')
     if manifest['git_status'] or manifest['sha256'].lower() != sha256(executable):
         raise ValueError('Build source is dirty or executable differs from manifest')
+    frozen_api_report = evidence / 'accessibility-self-test.json'
+    validate_accessibility_api_report(frozen_api_report, platform=name, version=version, frozen=True,
+                                      executable_sha256=manifest['sha256'])
     if (manifest['validation'].get('ocr_libraries_profile') != 'passed'
             or manifest.get('ocr_source_payload') != validate_ocr_payload(ROOT / 'platforms' / name / 'tesseract')):
         raise ValueError('Native OCR source profile was not validated')
@@ -103,10 +125,13 @@ def main():
             raise ValueError('Finder-visible version does not match the release')
         subprocess.run(['codesign', '--verify', '--deep', '--strict', str(payload)], check=True)
         manifest['validation']['code_signing'] = 'ad_hoc_only; no Developer ID; not notarized'
-    files = validate_payload(payload)
     release = ROOT / 'dist' / 'native-release'
     release.mkdir(parents=True, exist_ok=True)
     label = f'ManageYourLibrary-{version}-' + ('macOS' if name == 'macos' else 'Linux') + '-' + architecture
+    if name == 'linux':
+        from tools.package_linux_license_evidence import prepare
+        manifest['linux_os_library_evidence'] = prepare(payload, ROOT / 'dist/linux-license-evidence', release, label)
+    files = validate_payload(payload)
     archive = release / (label + ('.zip' if name == 'macos' else '.tar.gz'))
     if archive.exists():
         raise ValueError('Refusing to overwrite an existing release archive')
@@ -139,14 +164,27 @@ def main():
                     print(report.read_text(encoding='utf-8'), flush=True)
                 raise RuntimeError('Extracted application failed ' + flag + ' diagnostics')
             validate_report(report, check_set, version)
+        extracted_api_report = extracted / 'accessibility.json'
+        result = subprocess.run([str(launcher), '--accessibility-self-test', str(extracted_api_report)], timeout=90)
+        if result.returncode:
+            if extracted_api_report.is_file():
+                shutil.copy2(extracted_api_report, evidence / 'extracted-accessibility-self-test.json')
+                print(extracted_api_report.read_text(encoding='utf-8'), flush=True)
+            raise RuntimeError('Extracted application failed accessibility diagnostics')
+        validate_accessibility_api_report(extracted_api_report, platform=name, version=version, frozen=True,
+                                          executable_sha256=manifest['sha256'])
+        # Diagnostic reports stay outside the extracted payload. Checks must
+        # not silently modify signed resources or the original application.
+        if validate_payload(restored) != files:
+            raise ValueError('Extracted diagnostics modified the application payload')
     manifest.update({
         'architecture': architecture, 'build_os': platform.platform(),
         'archive': {'name': archive.name, 'sha256': sha256(archive), 'size': archive.stat().st_size},
-        'extracted_archive_checks': 'frozen smoke, runtime OCR/Tk/PDFium and clean first use passed',
+        'extracted_archive_checks': 'frozen smoke, runtime OCR/Tk/PDFium, clean first use and native accessibility API passed',
         'github_run_id': os.environ.get('GITHUB_RUN_ID', ''),
         'minimum_tested_os': 'macOS 15' if name == 'macos' else 'Ubuntu 22.04 x64 (glibc 2.35)',
         'payload_sha256': files,
-        'accessibility_scope': 'source native API properties/actions; not external client or speech certification',
+        'accessibility_scope': 'source and frozen/extracted native API properties/actions; not external client or speech certification',
     })
     (release / (label + '-manifest.json')).write_text(json.dumps(manifest, indent=2), encoding='utf-8')
     for filename in ('runtime-self-test.json', 'first-use-self-test.json'):
@@ -155,6 +193,7 @@ def main():
     shutil.copy2(ROOT / 'platforms' / name / 'tesseract/native-ocr-manifest.json', release / (label + '-ocr-manifest.json'))
     shutil.copy2(ROOT / 'docs/NATIVE_FIRST_USE.md', release / (label + '-README.md'))
     shutil.copy2(api_report, release / (label + '-source-accessibility-api.json'))
+    shutil.copy2(frozen_api_report, release / (label + '-frozen-accessibility-api.json'))
     shutil.copy2(ROOT / 'tools/tk_sources.json', release / (label + '-gui-sources.json'))
     shutil.copy2(ROOT / 'dist/ocr-formats.json', release / (label + '-ocr-formats.json'))
     checksums = release / (label + '-SHA256SUMS.txt')

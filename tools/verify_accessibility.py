@@ -4,6 +4,7 @@ This verifies native API properties and registered actions inside the process.
 External assistive-client interoperability and speech output are separate checks.
 """
 import argparse
+import hashlib
 import json
 import sys
 import tempfile
@@ -21,6 +22,31 @@ BASE_CHECKS = {'navigation_' + key for key in ('library', 'authors', 'series', '
     'voice_controls_visible_all_pages',
 }
 WINDOWS_CHECKS = BASE_CHECKS | {'platform_provider_label_slot'}
+
+
+def execution_provenance():
+    """Bind source checks to their tree, frozen checks to executable bytes.
+
+    A frozen app has no trustworthy Git checkout. Its executable hash is
+    matched to the separately validated build manifest by the packager.
+    """
+    root = Path(__file__).resolve().parents[1]
+    frozen = bool(getattr(sys, 'frozen', False))
+    platform = {'darwin': 'macos', 'win32': 'windows'}.get(sys.platform, sys.platform)
+    result = {'frozen': frozen, 'platform': platform}
+    try:
+        result['version'] = (root / 'VERSION').read_text(encoding='utf-8').strip()
+    except OSError:
+        result['version'] = 'unknown'
+    if frozen:
+        with Path(sys.executable).open('rb') as handle:
+            result['executable_sha256'] = hashlib.file_digest(handle, 'sha256').hexdigest()
+    else:
+        from tools.write_build_manifest import git_value, source_tree_fingerprint
+        result.update(git_commit=git_value('rev-parse', 'HEAD'),
+                      git_status=git_value('status', '--short'),
+                      source_tree=source_tree_fingerprint())
+    return result
 
 
 def run():
@@ -128,10 +154,11 @@ def run():
             expected = WINDOWS_CHECKS if root.tk.call('tk', 'windowingsystem') in {'win32', 'aqua'} else BASE_CHECKS
             return {'passed': set(checks) == expected and all(checks.values()), 'backend': 'tk_native',
                     'tk': root.tk.call('package', 'present', 'Tk'), 'checks': checks,
+                    'windowing_system': root.tk.call('tk', 'windowingsystem'),
                     'errors': errors + root._myl_a11y_errors,
                     'external_assistive_client': 'not_run',
                     'screen_reader_speech': 'not_run', 'profile': 'synthetic_disposable',
-                    'frozen': bool(getattr(sys, 'frozen', False))}
+                    **execution_provenance()}
         finally:
             if app:
                 app.workspace.shutdown()

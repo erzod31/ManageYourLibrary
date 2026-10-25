@@ -33,6 +33,13 @@ class WindowsBuildConfigTests(unittest.TestCase):
         self.assertIn('ROOT / "app_icon.ico"', spec)
         self.assertIn("--require-hashes", script)
         self.assertIn('tools\\verify_binary_privacy.py', script)
+        self.assertIn('select_inputs(a.binaries, a.datas', spec)
+        self.assertIn("Path(CONF['workpath'])", spec)
+        self.assertIn('upx=False', spec)
+        self.assertNotIn('upx=True', spec)
+        self.assertIn('tools\\collect_python_license_evidence.py', script)
+        self.assertIn('tools\\windows_dependency_policy.py', script)
+        self.assertIn('tools\\verify_wheel_redistribution.py', script)
         self.assertNotIn("rapidfuzz", (script + spec).lower())
         self.assertNotIn(r"c:\users", script.lower())
         for language in ("eng", "spa", "fra", "nld", "chi_sim"):

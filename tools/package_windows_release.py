@@ -18,6 +18,9 @@ from tools.local_speech_self_test import REQUIRED_CHECKS as LOCAL_VOICE_CHECKS
 from tools.verify_accessibility import WINDOWS_CHECKS as ACCESSIBILITY_CHECKS
 from tools.verify_windows_accessibility_provider import REQUIRED_CHECKS as PROVIDER_CHECKS
 from tools.verify_binary_privacy import require_clean_tree
+from tools.windows_dependency_policy import verify_payload as verify_native_origins
+from tools.verify_wheel_redistribution import verify_windows_payload as verify_wheel_notices
+from tools.verify_python_license_payload import verify_windows_payload as verify_python_notices
 
 PRIVATE_NAMES = {"config.json", "library_index.json", "library_history.csv", "historial.csv",
                  "undo_log.jsonl", "file_transactions.jsonl", "trash_manifest.jsonl",
@@ -59,6 +62,10 @@ def validate_payload(folder: Path, *, version: str, fingerprint: dict) -> dict:
                 or report.get('version') != version or set(report.get('checks', {})) != required
                 or any(value is not True for value in report['checks'].values()) or report.get('errors')):
             raise ValueError('Frozen accessibility/voice evidence is incomplete or failed: ' + name)
+        if name == 'accessibility-self-test.json' and (
+                report.get('platform') != 'windows' or report.get('windowing_system') != 'win32'
+                or str(report.get('executable_sha256', '')).lower() != manifest['sha256'].lower()):
+            raise ValueError('Frozen accessibility API evidence does not match this Windows executable')
     for path in folder.rglob("*"):
         name = path.name.lower()
         if path.is_symlink():
@@ -68,6 +75,12 @@ def validate_payload(folder: Path, *, version: str, fingerprint: dict) -> dict:
                 or name in {".trash_manageyourlibrary", "ui_thumbnails", "__pycache__", "test_reports", "backups"}):
             raise ValueError(f"Personal state or cache in release payload: {path.name}")
     require_clean_tree(folder)
+    if manifest.get('windows_native_origins') != verify_native_origins(folder):
+        raise ValueError('Windows native origin receipt differs from packaged bytes')
+    if manifest.get('windows_wheel_notices') != verify_wheel_notices(folder):
+        raise ValueError('Windows wheel notice receipt differs from packaged bytes')
+    if manifest.get('windows_python_notices') != verify_python_notices(folder):
+        raise ValueError('Windows Python notice receipt differs from packaged bytes')
     ocr = validate_ocr_payload(folder / '_internal/tesseract')
     if manifest.get('ocr_source_payload') != ocr or manifest['validation'].get('ocr_libraries_profile') != 'passed':
         raise ValueError('OCR profile receipt differs from the packaged bytes')

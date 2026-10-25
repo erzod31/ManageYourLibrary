@@ -46,12 +46,12 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
-          python-version: '3.12'
+          python-version: '3.12.10'
       - name: Install Linux build/runtime prerequisites
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential cmake ninja-build xvfb libtk8.6 patchelf libx11-dev libxft-dev libxext-dev libxss-dev libharfbuzz-dev libatk-bridge2.0-dev at-spi2-core dbus-x11
+          sudo apt-get install -y --no-install-recommends build-essential cmake ninja-build xvfb libtk8.6 patchelf libx11-dev libxft-dev libxext-dev libxss-dev libharfbuzz-dev libatk-bridge2.0-dev at-spi2-core dbus-x11 orca openbox
       - name: Resolve and hash-lock native Python wheels
         run: |
           python3 -m venv .venv
@@ -76,11 +76,24 @@ jobs:
           else
             python3 tools/verify_accessibility.py --output dist/accessibility-self-test.json
           fi
-      - name: Build and test Linux frozen application and archive
+      - name: Build and test Linux frozen application
+        id: linux_build
         if: runner.os == 'Linux'
         run: |
-          xvfb-run -a bash platforms/linux/build_linux.sh
-          xvfb-run -a python3 tools/package_native_release.py --platform linux
+          dbus-run-session -- xvfb-run -a bash platforms/linux/build_linux.sh
+      - name: Check real Orca presentation without audio in isolated Linux CI
+        id: orca_check
+        if: ${{ !cancelled() && runner.os == 'Linux' && steps.linux_build.outcome == 'success' }}
+        run: |
+          GSETTINGS_BACKEND=memory MYL_ISOLATED_A11Y_CI=1 dbus-run-session -- xvfb-run -a python3 -B tools/verify_orca_accessibility.py --executable dist/linux/ManageYourLibrary/ManageYourLibrary --output dist/orca-accessibility.json
+      - name: Collect exact Ubuntu library notices and corresponding source
+        id: linux_sources
+        if: ${{ !cancelled() && runner.os == 'Linux' && steps.linux_build.outcome == 'success' }}
+        run: |
+          python3 -B tools/collect_linux_license_evidence.py --pyinstaller-toc dist/linux-binary-inputs.toc --output dist/linux-license-evidence
+      - name: Package and re-test Linux archive with source evidence
+        if: runner.os == 'Linux'
+        run: dbus-run-session -- xvfb-run -a python3 tools/package_native_release.py --platform linux
       - name: Build and test macOS frozen application and archive
         if: runner.os == 'macOS'
         run: |
@@ -94,6 +107,13 @@ jobs:
           path: dist/native-release/*
           if-no-files-found: error
           compression-level: 0
+      - name: Retain normalized external reader evidence
+        if: ${{ !cancelled() && runner.os == 'Linux' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: orca-presentation-linux-x64
+          path: dist/orca-accessibility.json
+          if-no-files-found: ignore
       - name: Retain failed diagnostics
         if: failure()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

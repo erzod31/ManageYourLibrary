@@ -29,6 +29,7 @@ SolidCompression=yes
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 PrivilegesRequired=lowest
+MinVersion=10.0
 SetupIconFile={#SourceRoot}\app_icon.ico
 UninstallDisplayIcon={app}\ManageYourLibrary.exe
 WizardStyle=modern

@@ -91,6 +91,16 @@ def main(argv=None):
     ocr = None
     if (ocr_directory / 'native-ocr-manifest.json').is_file():
         ocr = validate_ocr_payload(ocr_directory)
+    native_origins = None
+    wheel_notices = None
+    python_notices = None
+    if args.platform == 'windows-x64':
+        from tools.windows_dependency_policy import verify_payload
+        from tools.verify_wheel_redistribution import verify_windows_payload
+        native_origins = verify_payload(artifact.parent)
+        wheel_notices = verify_windows_payload(artifact.parent)
+        from tools.verify_python_license_payload import verify_windows_payload
+        python_notices = verify_windows_payload(artifact.parent)
     manifest = {
         "artifact": artifact.relative_to(ROOT).as_posix() if artifact.is_relative_to(ROOT) else artifact.name,
         "size": artifact.stat().st_size,
@@ -104,6 +114,9 @@ def main(argv=None):
         "packages": packages,
         "created_at": datetime.now(timezone.utc).isoformat(),
         "ocr_source_payload": ocr,
+        'windows_native_origins': native_origins,
+        'windows_wheel_notices': wheel_notices,
+        'windows_python_notices': python_notices,
         "validation": {
             "automated_tests": "passed" if args.validated_release_gates else "not_recorded",
             "source_smoke": "passed" if args.validated_release_gates else "not_recorded",

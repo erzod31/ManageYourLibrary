@@ -271,7 +271,7 @@ For a separate test profile, run `python -B main.py --profile PATH_TO_NEW_PROFIL
 Do not open a migrated profile with an older application; its legacy JSON is a
 backup, not the updated SQLite catalog. Test with synthetic books or copies first.
 
-Use Python 3.12 for the Windows build:
+Use Python 3.12.10 for the pinned Windows build and its license evidence:
 
 ```text
 python -m pip install --require-hashes -r requirements.lock
@@ -292,6 +292,11 @@ first; do not replace the system Python/Tk. The build gates include frozen
 native accessibility, compact layout, first use and real SAPI output to a
 temporary WAV without playing it. The app-scoped shortcut Ctrl+Shift+M stops
 its own voice, including while an editor is open; it never controls NVDA.
+New development Windows packages require Windows 10 or later and use the OS
+Universal CRT/API sets. The build rejects native inputs from unrelated ambient
+PATH directories and records the selected Python, GUI, wheel and OCR origins.
+It also collects hash-pinned Python/image-library notices. These technical
+checks do not open the separate whole-application redistribution approval gate.
 Linux/macOS scripts require native OCR runtimes. Source CI does not certify
 native Unix release packages. The native workflow also runs on the audit branch
 to build and exercise test artifacts; publishing remains a separate explicit

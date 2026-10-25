@@ -71,6 +71,11 @@ if [ "${#TESSERACT_ARGS[@]}" -gt 0 ]; then
   done
 fi
 
+python3 -B tools/collect_python_license_evidence.py --notices-only --output "$ROOT/dist/license-staging/python"
+python3 -B tools/verify_wheel_redistribution.py --collect-notices "$ROOT/dist/license-staging/wheels"
+GUI_LICENSES="$(python3 -c 'import os; from pathlib import Path; print(Path(os.environ["TK_LIBRARY"]).parent.parent / "licenses")')"
+test -d "$GUI_LICENSES"
+
 python3 -m PyInstaller \
   --clean \
   --noconfirm \
@@ -84,6 +89,9 @@ python3 -m PyInstaller \
   --add-data "$ROOT/VERSION:." \
   --add-data "$ROOT/LICENSE:." \
   --add-data "$ROOT/THIRD_PARTY_NOTICES.md:." \
+  --add-data "$ROOT/dist/license-staging/python:licenses/python-runtime" \
+  --add-data "$ROOT/dist/license-staging/wheels:licenses/wheels" \
+  --add-data "$GUI_LICENSES:licenses/tcltk" \
   --add-data "$ROOT/data:data" \
   "${TESSERACT_ARGS[@]}" \
   --collect-all pypdfium2 \
@@ -98,6 +106,7 @@ python3 -m PyInstaller \
   --exclude-module tensorflow \
   --exclude-module transformers \
   --exclude-module datasets \
+  --exclude-module readline \
   --hidden-import pypdf \
   --hidden-import pypdfium2 \
   --hidden-import PIL \
@@ -111,6 +120,7 @@ python3 tools/configure_macos_bundle.py
 # Diagnostic reports stay outside the signed .app to preserve its resource seal.
 "$ROOT/dist/macos/ManageYourLibrary.app/Contents/MacOS/ManageYourLibrary" --runtime-self-test "$ROOT/dist/macos/runtime-self-test.json"
 "$ROOT/dist/macos/ManageYourLibrary.app/Contents/MacOS/ManageYourLibrary" --first-use-self-test "$ROOT/dist/macos/first-use-self-test.json"
+"$ROOT/dist/macos/ManageYourLibrary.app/Contents/MacOS/ManageYourLibrary" --accessibility-self-test "$ROOT/dist/macos/accessibility-self-test.json"
 python3 tools/write_build_manifest.py "$ROOT/dist/macos/ManageYourLibrary.app/Contents/MacOS/ManageYourLibrary" --platform macos --validated-release-gates --validated-runtime --validated-first-use
 mv "$ROOT/dist/macos/ManageYourLibrary.app/Contents/MacOS/build-manifest.json" "$ROOT/dist/macos/build-manifest.json"
 

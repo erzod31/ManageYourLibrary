@@ -252,7 +252,7 @@ def build(output, resume=False, jobs=4):
         shutil.copy2(roots['tesseract'] / 'tessdata/configs' / config, configs)
     shutil.copy2(roots['tesseract'] / 'LICENSE', licenses / 'TESSDATA-APACHE-2.0.txt')
     (licenses / 'README.txt').write_text(
-        'OCR libraries: Tesseract (Apache-2.0), Leptonica (BSD-2-Clause), libpng (Libpng), zlib (Zlib).\n'
+        'OCR libraries: Tesseract (Apache-2.0), Leptonica (BSD-2-Clause), libpng (libpng-2.0), zlib (Zlib).\n'
         'Models: tessdata_fast (Apache-2.0), exact commit in sources/ocr_source_lock.json.\n'
         'No JBIG-KIT, TIFF, GPL/LGPL OCR library or GCC DLL is linked or copied.\n'
         'Windows is built with the Microsoft C/C++ static runtime (/MT); Microsoft toolchain terms apply.\n'

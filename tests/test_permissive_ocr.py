@@ -47,7 +47,7 @@ class PermissiveOcrTests(unittest.TestCase):
                 'models': {'eng': hashlib.sha256(b'model').hexdigest()}}
         (root / 'tools/ocr_source_lock.json').write_text(json.dumps(lock))
         files = {'tesseract': b'fake executable', 'sources/example.tar.gz': b'source',
-                 'sources/ocr_source_lock.json': b'lock', 'sources/build_permissive_ocr.py': b'builder',
+                 'sources/ocr_source_lock.json': (root / 'tools/ocr_source_lock.json').read_bytes(), 'sources/build_permissive_ocr.py': b'builder',
                  'sources/build-commands.json': b'commands', 'sources/example-CMakeCache.txt': b'cache',
                  'licenses/example/LICENSE': b'notice', 'licenses/example/SOURCE-NOTICES.txt': b'attribution',
                  'licenses/TESSDATA-APACHE-2.0.txt': b'apache', 'tessdata/configs/tsv': b'tsv',

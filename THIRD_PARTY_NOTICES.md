@@ -89,7 +89,7 @@ The OCR CLI statically links only these OCR libraries:
 
 - Tesseract 5.5.3: Apache-2.0, including preserved file-level notices.
 - Leptonica 1.87.0: BSD-2-Clause, including preserved file-level notices.
-- libpng 1.6.59: Libpng license; upstream historical copyright/license text retained.
+- libpng 1.6.59: PNG Reference Library License v2 (`libpng-2.0`); historical text retained.
 - zlib 1.3.2: Zlib license.
 
 TIFF/JBIG, curl/archive, Pango/GLib, gettext/iconv and the other legacy OCR

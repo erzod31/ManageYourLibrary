@@ -75,6 +75,8 @@ def validate_payload(directory):
             raise ValueError('Unapproved trained-data model: ' + name)
     if not required <= set(files):
         raise ValueError('OCR provenance/notice inventory is incomplete')
+    if sha256(directory / 'sources/ocr_source_lock.json') != sha256(lock_path):
+        raise ValueError('Delivered source recipe differs from the approved lock')
     if manifest['platform'] == 'win32':
         import pefile
         with pefile.PE(str(directory / binary)) as pe:

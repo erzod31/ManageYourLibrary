@@ -10,7 +10,7 @@
       "options": {"ZLIB_BUILD_SHARED": "OFF", "ZLIB_BUILD_STATIC": "ON", "ZLIB_BUILD_TESTING": "OFF"}
     },
     {
-      "id": "libpng", "version": "1.6.59", "license": "Libpng",
+      "id": "libpng", "version": "1.6.59", "license": "libpng-2.0",
       "commit": "cd952f49f95bb27154ae77dbb103032d95f6e580",
       "url": "https://codeload.github.com/pnggroup/libpng/tar.gz/cd952f49f95bb27154ae77dbb103032d95f6e580",
       "sha256": "ef1bccad2b2a58eb3c09e06ffe3b72b8604abda8b5011e4c4bb5391989040f26",

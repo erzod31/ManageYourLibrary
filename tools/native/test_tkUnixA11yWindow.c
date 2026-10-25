@@ -277,10 +277,14 @@ int main(void)
     }
     attributes = atk_text_get_run_attributes(ATK_TEXT(one), -1, &start, &end);
     assert(attributes == NULL && start == 0 && end == 5); /* Actual caret. */
-    for (gint offset = -2; offset <= 6; offset += 8) {
-        attributes = atk_text_get_run_attributes(ATK_TEXT(one), offset, &start, &end);
-        assert(attributes == NULL && start == -1 && end == -1);
-    }
+    /* ATK rejects offsets below -1 before entering the vfunc; its public
+     * wrapper does not promise output bounds for that invalid request. */
+    attributes = atk_text_get_run_attributes(ATK_TEXT(one), -2, &start, &end);
+    assert(attributes == NULL);
+    attributes = MylTkAtkTextRunAttributes(ATK_TEXT(one), -2, &start, &end);
+    assert(attributes == NULL && start == -1 && end == -1);
+    attributes = atk_text_get_run_attributes(ATK_TEXT(one), 6, &start, &end);
+    assert(attributes == NULL && start == -1 && end == -1);
     assert(MylTkAtkTextRunAttributes(ATK_TEXT(one), 0, NULL, NULL) == NULL);
     attributes = atk_text_get_run_attributes(ATK_TEXT(two), 3, &start, &end);
     assert(attributes == NULL && start == 0 && end == 6); /* Unicode, multiple lines. */

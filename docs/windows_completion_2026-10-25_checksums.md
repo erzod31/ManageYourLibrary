@@ -5,6 +5,12 @@ accesibilidad completa. Las publicaciones existentes y el repositorio privado
 se conservan. El usuario autorizó una prueba breve de voz local y NVDA portátil;
 no autorizó instalar el lector ni añadirlo al inicio.
 
+Este informe es el estado de cierre. Las menciones a «lector real pendiente»,
+«sin commit» o «sin EXE nuevo» del informe ampliado describen sus fases anteriores,
+no los resultados posteriores registrados aquí. La autorización adicional del
+usuario permitió instalar y desinstalar **una copia QA de la app**, no NVDA ni
+la instalación habitual de Manage Your Library.
+
 ## Lector real y voz local
 
 Se probó la app desde fuente con Tcl/Tk 9.1.0 y el parche
@@ -107,11 +113,139 @@ barra de una ruta `D:\a` se interpretaba como escape. Se usan rutas de mapeo
 con `/`; se comprobó con MSVC real que `__FILE__` conserva el prefijo neutro
 `/usr/src/myl-ocr`. Se añadió su regresión sin cambiar los codecs ni licencias.
 
-La reconstrucción final del EXE, el instalador y la validación de los paquetes
-se registrarán aquí únicamente después de ejecutarse. No se sustituye esa
-evidencia por los nombres de artefactos simulados que imprimen las pruebas unitarias.
-La revisión global de redistribución, la firma de código, una matriz completa
-de DPI y VoiceOver/Orca no quedan aprobados por esta sesión de NVDA.
+## Construcción final comprobada
+
+Código: [`e510e59b4753d97c298c5bb407a371345e3a640a`](https://github.com/erzod31/ManageYourLibrary/commit/e510e59b4753d97c298c5bb407a371345e3a640a),
+árbol limpio al construir. Huella de 244 entradas:
+`8B3D46948F94E99D32880450238048396A95B266054E22FA60DF36A104400871`.
+Los cambios posteriores de este informe derivado no son entradas de compilación.
+Autor y committer: `erzod31`, dirección privada correcta con el separador `+`.
+
+Python 3.12.10 x64; Tcl/Tk 9.1.0 con el parche fijado. Dependencias bloqueadas:
+pypdf 6.21.2, pypdfium2 5.14.0, Pillow 13.0.0, ftfy 6.3.1 y PyInstaller 6.21.0.
+Se usaron los scripts de plataforma existentes, el runtime GUI neutro y OCR
+controlado reconstruido con los flags CMake corregidos. No se reutilizaron las
+DLL antiguas del OCR.
+
+- Build local: **622 pruebas, 13,864 s, dos omitidas** por permisos Windows de
+  symlinks. Compatibilidad Tk 8.6.15: **622 pruebas, 13,479 s, dos omitidas**;
+  esto no hace accesible su proveedor antiguo.
+- Puerta de catálogos de 1.000, 10.000 y 50.000 registros: correcta.
+- Corpus de evaluación: 12 casos sintéticos, cinco decisiones automáticas y
+  cero decisiones inseguras; tres fixtures OCR exactos. No es una estimación
+  de precisión sobre bibliotecas reales ni implicó operaciones con libros.
+- OCR nuevo: 32 archivos de inventario y seis modelos verificados; siete
+  formatos con originales intactos, carga conjunta de cinco idiomas y TSV.
+- Ruff sin caché (`E9,F63,F7,F82,F401,F811,F841`) y controles Git de whitespace:
+  correctos.
+
+Los diagnósticos se repitieron con el EXE construido, el ZIP **extraído** y la
+copia instalada después de actualizar su payload QA:
+
+| Diagnóstico congelado | Build | ZIP extraído | Instalado QA final |
+| --- | --- | --- | --- |
+| Runtime Tk/OCR/PDFium/lector aislado | 5/5 | 5/5 | 5/5 |
+| Primer uso vacío y sin red automática | 5/5 | 5/5 | 5/5 |
+| API de accesibilidad y disposición | 22/22 | 22/22 | 22/22 |
+| Contrato COM y llamadas desde trabajadores | 16/16 | 16/16 | 16/16 |
+| Motor real de voz, solo a WAV temporal | 14/14 | 14/14 | 14/14 |
+
+CRC del ZIP correcto; sus **1.181 archivos** coinciden por SHA-256 con el
+payload original. Los diagnósticos no modificaron esos archivos. El control de
+rutas Windows pasó sobre 261 archivos nativos/textuales, incluido el manifiesto.
+Los estados personales, libros y cachés siguen rechazados por el empaquetador.
+
+## Instalación, conservación y retirada QA
+
+Se compiló una variante desde el mismo `.iss`, con AppId
+`ManageYourLibrary-QA-A11y-20261025`, destino neutro y sin sección de accesos
+directos. Instalación silenciosa sin reinicios ni cierre de otras aplicaciones;
+la acción postinstalación no se ejecuta en modo silencioso. No se usó el AppId
+de producción. Sus registros de instalación se compararon antes/después: sin
+cambios.
+
+Se abrió realmente la app instalada con `--profile` separado: biblioteca vacía,
+sin carpeta preseleccionada, voz apagada, botones visibles en Biblioteca y
+Configuración, cambio de tema y Ctrl+K al buscador. Esa inspección se hizo
+sobre `9f32b99`; después se reinstaló con el payload de `e510e59`, misma versión
+0.5.3, y se repitieron los cinco diagnósticos congelados de la tabla.
+
+Los diez archivos del perfil QA —incluidas configuración y bases de catálogo y
+planes, más marcadores sintéticos de historial/cuarentena— y el original
+sintético externo conservaron sus hashes en reinstalación y desinstalación.
+La comprobación inicial de retirada se adelantó a la autolimpieza asíncrona del
+desinstalador; se revisó su log y se comprobó el estado final, sin borrar a mano.
+Resultado: carpeta instalada y registro QA ausentes, perfil y original intactos.
+La copia QA puede reinstalarse desde su instalador conservado. Esto no valida
+todas las migraciones de perfiles reales, downgrades o versiones antiguas.
+
+Al finalizar no quedaron ventanas QA ni procesos NVDA activos. No se instaló
+el lector ni se modificó el inicio de Windows.
+
+## Rendimiento de interfaz, alcance acotado
+
+Benchmark con 4.158 registros sintéticos, pool de 30 carátulas y cinco
+repeticiones: sin errores, sin callbacks medidos de más de 50 ms. Medianas:
+división 0,02 ms, recolocación de carátulas 0,21 ms, selección 6,10 ms,
+cambio de tema 30,36 ms. Favorito completo, 126,49 ms de mediana.
+RSS final 101,95 MiB; pico 104,57 MiB. No se observó pausa GC superior a 5 ms.
+
+Son tiempos de callbacks instrumentados, **no** latencia de entrada a píxel ni
+garantía de 60 FPS. El mayor intervalo de heartbeat fue 77,57 ms en interacción
+y 399,45 ms al arrancar; construcción de la UI, 647,92 ms. Se conservan esos
+límites en lugar de declarar la interfaz universalmente libre de pausas.
+
+## Validaciones remotas del código final
+
+- [Windows, ejecución 40186318597](https://github.com/erzod31/ManageYourLibrary/actions/runs/40186318597):
+  correcta. Dos pasadas de 622 pruebas, **sin omisiones** (33,373 s y 42,743 s),
+  compilación del GUI reparado, OCR, corpus y build congelado con sus puertas.
+- [Linux/macOS, ejecución 40186318615](https://github.com/erzod31/ManageYourLibrary/actions/runs/40186318615):
+  Ubuntu 22.04 x64, macOS 15 ARM64 y macOS 15 Intel correctos; 622 pruebas por
+  destino, una omitida. Incluye API nativa, OCR, empaquetado y reextracción con
+  nuevos diagnósticos. `publish`: **skipped**.
+- [Fuente multiplataforma, ejecución 40186318637](https://github.com/erzod31/ManageYourLibrary/actions/runs/40186318637):
+  correcta en Linux y macOS.
+
+Son resultados de `e510e59`, no de commits futuros ni de versiones publicadas
+antes. El push quedó limitado a `codex/audit-optimizations`; no se fusionó `main`,
+creó tag ni publicó una release. Los cambios del repositorio privado permanecen
+fuera de este trabajo.
+
+## Artefactos locales de desarrollo
+
+Se entregan el ZIP completo y el instalador con etiqueta `development`;
+el EXE no funciona como archivo independiente de su carpeta `_internal`.
+Los SHA-256 se volvieron a calcular y contrastar con `SHA256SUMS`:
+
+| Archivo | Bytes | SHA-256 |
+| --- | ---: | --- |
+| `ManageYourLibrary.exe` | 5.335.178 | `47D05E0EEC163F801BFBE83D58A17E11F0709909109DDF529283A9C8CD508F50` |
+| `ManageYourLibrary-0.5.3-development-Windows-x64-portable.zip` | 63.700.856 | `9E16F8278515E896763E819969D33FE0B8824965E38A2901B102028FFE2C864D` |
+| `ManageYourLibrary-0.5.3-development-Setup-x64.exe` | 53.373.613 | `F405E8AFC8580D8A1070682B66263E75F63FD25CA402C6B44612DCA323F9ABB6` |
+| `build-manifest-0.5.3-development.json` | — | `22B4EBCD486566A8C3439B493A76CEACA0BE377F9F77BBB334175145BF715AE2` |
+
+La validación QA usa una variante de instalador con identidad aislada; no
+certifica los accesos directos o el registro de producción del instalador normal.
+El manifiesto original conserva `manual_installed_ui: not_run`: no se ha
+convertido una inspección limitada en aprobación de toda la matriz manual.
+No hay firma de código ni notarización nueva. macOS conserva únicamente firma
+ad-hoc de CI.
+
+## Límites y publicación
+
+Las comprobaciones pendientes de voz local Windows y lector real descritas en
+la primera fase se ejercitaron con la autorización recibida. Eso no certifica
+accesibilidad completa, todos los lectores, braille, DPI o inteligibilidad humana.
+VoiceOver/Orca y la matriz amplia de instalación/migración siguen fuera de la
+evidencia disponible.
+
+El reemplazo OCR nuevo no distribuye JBIG-KIT ni las DLL OCR GPL/LGPL antiguas.
+No regulariza las releases históricas. La **revisión global de redistribución**
+de toda la app continúa `not_complete` y no se levantó artificialmente para
+crear paquetes públicos. Estos artefactos son de prueba, no una release aprobada.
 
 Referencias primarias: [guía de NVDA](https://api.nvaccess.org/documentation/userGuide.html#SpeechViewer),
-[salida SAPI a un stream](https://learn.microsoft.com/en-us/previous-versions/windows/desktop/ms723597(v=vs.85)).
+[salida SAPI a un stream](https://learn.microsoft.com/en-us/previous-versions/windows/desktop/ms723597(v=vs.85)),
+[parámetros del instalador](https://jrsoftware.org/ishelp/topic_setupcmdline.htm),
+[parámetros de desinstalación](https://jrsoftware.org/ishelp/topic_uninstcmdline.htm).

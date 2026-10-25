@@ -53,9 +53,13 @@ New builds carry the complete pinned CPython history/license document and
 supplemental dependency notices under `licenses/python-runtime`, rather than
 assuming the short Windows `LICENSE.txt` contains every source-level notice.
 Windows collection verifies the installed Python native family against the
-official hash-pinned CPython 3.12.10 AMD64 embed archive. The unmodified
-`_tkinter` sources are recompiled against the isolated Tcl/Tk 9.1 runtime;
-the project-specific Tk Windows repair has separate notices and source receipt.
+official hash-pinned CPython 3.12.10 AMD64 embed archive. The original `_tkinter`
+download remains intact; a separate source copy backports CPython's Tcl 9
+thread detection fix and is compiled against the isolated Tcl/Tk 9.1 runtime.
+`licenses/tcltk/myl-tkinter-tcl9-repair` carries original/patched C sources,
+the pinned CPython license, recipe and threading contract. CPython code retains
+its PSF/historical terms; the patching tools retain the project license.
+The Tk Windows/Linux provider repairs have separate source receipts.
 
 `licenses/wheels` retains exact supplemental AVIF notices, including the AOM
 license and patent text, the applicable dav1d copyright, and preserved

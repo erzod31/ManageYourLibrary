@@ -1,4 +1,4 @@
-"""Build pinned Tcl/Tk 9.1 and CPython's unmodified bridge in an isolated venv.
+"""Build pinned Tcl/Tk 9.1 and a minimally repaired CPython bridge in a venv.
 
 Only build output and the selected virtual environment are modified. Never
 replace the system Python's DLLs or its tkinter module. Native CI runs this on
@@ -21,11 +21,11 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 
-def run(command, *, cwd, env):
+def run(command, *, cwd, env, timeout=None):
     command = list(map(str, command))
     command[0] = shutil.which(command[0], path=env.get('PATH')) or command[0]
     print('Building:', ' '.join(map(str, command)), flush=True)
-    subprocess.run(command, cwd=cwd, env=env, check=True)
+    subprocess.run(command, cwd=cwd, env=env, check=True, timeout=timeout)
 
 
 def build(destination, resume=False):
@@ -77,6 +77,18 @@ def build(destination, resume=False):
             if not resume:
                 target.write_bytes(raw)
     prefix = destination / 'runtime'
+    # Preserve the hash-verified download; compile a separate, receipted copy.
+    # Tcl 9 removed tcl_platform(threaded), so the old detector silently chose
+    # CPython's non-threaded polling loop and admitted foreign-thread eval.
+    from tools.tkinter_tcl9_patch import OUTPUT, RECEIPT, apply_bridge_patch
+    lock['tkinter_tcl9_patch'] = apply_bridge_patch(modules)
+    bridge_repairs = prefix / 'licenses' / 'myl-tkinter-tcl9-repair'
+    bridge_repairs.mkdir(parents=True, exist_ok=True)
+    for name in ('_tkinter.c', OUTPUT, RECEIPT, 'CPYTHON-LICENSE'):
+        shutil.copy2(modules / name, bridge_repairs / name)
+    shutil.copy2(ROOT / 'tools/tkinter_tcl9_patch.py', bridge_repairs / 'tkinter_tcl9_patch.py')
+    shutil.copy2(ROOT / 'tools/verify_tkinter_threading.py', bridge_repairs / 'verify_tkinter_threading.py')
+    shutil.copy2(ROOT / 'LICENSE', bridge_repairs / 'PROJECT-LICENSE')
     if os.name == 'nt':
         from tools.tk_windows_patch import apply_windows_patch
         lock['windows_accessibility_patch'] = apply_windows_patch(roots['tk'])
@@ -187,7 +199,7 @@ def build(destination, resume=False):
         for name in libraries:
             if not (lib / ('lib' + name + suffix)).is_file():
                 raise FileNotFoundError('Missing exact GUI link library: ' + name)
-    extension = Extension('_tkinter', [str(modules / n) for n in ('_tkinter.c', 'tkappinit.c')],
+    extension = Extension('_tkinter', [str(modules / n) for n in (OUTPUT, 'tkappinit.c')],
         include_dirs=[str(prefix / 'include'), str(Path(sysconfig.get_path('include')) / 'internal')],
         library_dirs=[str(lib)], libraries=libraries,
         define_macros=[('WITH_APPINIT', '1')] + ([('TCL_WITH_EXTERNAL_TOMMATH', '1')] if os.name == 'nt' else []),
@@ -233,6 +245,25 @@ def build(destination, resume=False):
     if activation.exists() and (not resume or activation.read_text().splitlines()[0] != str(bridge)):
         raise FileExistsError('Virtual environment already contains a custom Tk activation')
     activation.write_text(str(bridge) + '\nimport myl_tk_runtime_bootstrap\n', encoding='utf-8')
+    # A fresh interpreter must load this exact built bridge, exercise a real
+    # mainloop and marshal a worker callback to its owner. This is not a reader
+    # test, and the outer deadline also bounds a broken Tcl/mainloop shutdown.
+    from tools.verify_tkinter_threading import (
+        validate_report as validate_threading_report,
+    )
+    built_bridge = Path(command.get_ext_fullpath('_tkinter'))
+    bridge_sha256 = hashlib.sha256(built_bridge.read_bytes()).hexdigest()
+    contract_sha256 = hashlib.sha256((ROOT / 'tools/verify_tkinter_threading.py').read_bytes()).hexdigest()
+    threading_contract = destination / ('bridge-threading-' + bridge_sha256 + '.json')
+    if not threading_contract.exists():
+        run([sys.executable, '-B', ROOT / 'tools/verify_tkinter_threading.py',
+             '--output', threading_contract, '--expected-bridge-sha256', bridge_sha256],
+            cwd=ROOT, env=env, timeout=15)
+    lock['tkinter_threading_contract'] = validate_threading_report(
+        json.loads(threading_contract.read_text(encoding='utf-8')),
+        expected_bridge_sha256=bridge_sha256, expected_contract_sha256=contract_sha256,
+        expected_platform=sys.platform)
+    shutil.copy2(threading_contract, bridge_repairs / 'threading-contract.json')
     if sys.platform.startswith('linux'):
         run(['ldd', next(bridge.glob('_tkinter*.so'))], cwd=ROOT, env=env)
     run([sys.executable, '-B', '-c',

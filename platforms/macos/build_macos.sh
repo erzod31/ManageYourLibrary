@@ -121,8 +121,9 @@ python3 tools/configure_macos_bundle.py
 # Diagnostic reports stay outside the signed .app to preserve its resource seal.
 "$ROOT/dist/macos/ManageYourLibrary.app/Contents/MacOS/ManageYourLibrary" --runtime-self-test "$ROOT/dist/macos/runtime-self-test.json"
 "$ROOT/dist/macos/ManageYourLibrary.app/Contents/MacOS/ManageYourLibrary" --first-use-self-test "$ROOT/dist/macos/first-use-self-test.json"
+python3 -B tools/verify_tkinter_threading.py --frozen-executable "$ROOT/dist/macos/ManageYourLibrary.app/Contents/MacOS/ManageYourLibrary" --output "$ROOT/dist/macos/tkinter-threading-self-test.json"
 "$ROOT/dist/macos/ManageYourLibrary.app/Contents/MacOS/ManageYourLibrary" --accessibility-self-test "$ROOT/dist/macos/accessibility-self-test.json"
-python3 tools/write_build_manifest.py "$ROOT/dist/macos/ManageYourLibrary.app/Contents/MacOS/ManageYourLibrary" --platform macos --validated-release-gates --validated-runtime --validated-first-use
+python3 tools/write_build_manifest.py "$ROOT/dist/macos/ManageYourLibrary.app/Contents/MacOS/ManageYourLibrary" --platform macos --validated-release-gates --validated-runtime --validated-first-use --validated-tkinter-threading --tkinter-threading-report "$ROOT/dist/macos/tkinter-threading-self-test.json"
 mv "$ROOT/dist/macos/ManageYourLibrary.app/Contents/MacOS/build-manifest.json" "$ROOT/dist/macos/build-manifest.json"
 
 echo

@@ -60,6 +60,40 @@ def source_tree_fingerprint():
     return {"sha256": digest.hexdigest().upper(), "files": count}
 
 
+def validate_threading_evidence(artifact, report_path, platform, version):
+    """Bind frozen mainloop evidence to final EXE, extension and source receipt."""
+    from tools.verify_tkinter_threading import validate_report
+    artifact, report_path = Path(artifact), Path(report_path)
+    platform_name = {'windows-x64': 'win32', 'linux': 'linux', 'macos': 'darwin'}.get(platform)
+    if platform_name is None:
+        raise ValueError('Unsupported threading evidence platform')
+    payload = artifact.parents[2] if platform == 'macos' else artifact.parent
+    suffix = '.pyd' if platform == 'windows-x64' else '.so'
+    bridges = {path.resolve() for path in payload.rglob('_tkinter*' + suffix) if path.is_file()}
+    if len(bridges) != 1 or not next(iter(bridges)).is_relative_to(payload.resolve()):
+        raise ValueError('Frozen threading evidence needs one application-local _tkinter extension')
+    bridge_hash = sha256(bridges.pop()).lower()
+    contract_hash = sha256(ROOT / 'tools/verify_tkinter_threading.py').lower()
+    relative = Path('licenses/tcltk/myl-tkinter-tcl9-repair')
+    roots = [payload / '_internal'] if platform != 'macos' else [payload / 'Contents/Resources', payload / 'Contents/Frameworks']
+    contracts = {(root / relative / 'verify_tkinter_threading.py').resolve() for root in roots
+                 if (root / relative / 'verify_tkinter_threading.py').is_file()}
+    if len(contracts) != 1:
+        raise ValueError('Missing or ambiguous packaged bridge contract source')
+    contract = contracts.pop()
+    if not contract.is_relative_to(payload.resolve()) or sha256(contract).lower() != contract_hash:
+        raise ValueError('Packaged bridge contract source differs from current source')
+    builder = json.loads((contract.parent / 'threading-contract.json').read_text(encoding='utf-8'))
+    # Ad-hoc signing changes the macOS extension after the builder contract;
+    # the frozen contract must bind the final signed extension separately.
+    validate_report(builder, expected_bridge_sha256=bridge_hash if platform != 'macos' else None,
+                    expected_contract_sha256=contract_hash, expected_platform=platform_name)
+    report = json.loads(report_path.read_text(encoding='utf-8'))
+    return validate_report(report, expected_bridge_sha256=bridge_hash, expected_contract_sha256=contract_hash,
+                           expected_platform=platform_name, expected_version=version, expected_frozen=True,
+                           expected_executable_sha256=sha256(artifact).lower())
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -73,6 +107,8 @@ def main(argv=None):
     parser.add_argument("--validated-runtime", action="store_true")
     parser.add_argument("--validated-first-use", action="store_true")
     parser.add_argument('--validated-windows-accessibility', action='store_true')
+    parser.add_argument('--validated-tkinter-threading', action='store_true')
+    parser.add_argument('--tkinter-threading-report', type=Path)
     args = parser.parse_args(sys.argv[1:] if argv is None else argv)
     artifact = args.artifact.resolve()
     if not artifact.exists():
@@ -94,9 +130,14 @@ def main(argv=None):
     native_origins = None
     wheel_notices = None
     python_notices = None
+    threading_contract = None
+    if args.validated_tkinter_threading:
+        threading_contract = validate_threading_evidence(
+            artifact, args.tkinter_threading_report or artifact.parent / 'tkinter-threading-self-test.json',
+            args.platform, (ROOT / 'VERSION').read_text(encoding='utf-8').strip())
     if args.platform == 'windows-x64':
-        from tools.windows_dependency_policy import verify_payload
         from tools.verify_wheel_redistribution import verify_windows_payload
+        from tools.windows_dependency_policy import verify_payload
         native_origins = verify_payload(artifact.parent)
         wheel_notices = verify_windows_payload(artifact.parent)
         from tools.verify_python_license_payload import verify_windows_payload
@@ -117,6 +158,7 @@ def main(argv=None):
         'windows_native_origins': native_origins,
         'windows_wheel_notices': wheel_notices,
         'windows_python_notices': python_notices,
+        'tkinter_threading_self_test': threading_contract,
         "validation": {
             "automated_tests": "passed" if args.validated_release_gates else "not_recorded",
             "source_smoke": "passed" if args.validated_release_gates else "not_recorded",
@@ -125,6 +167,7 @@ def main(argv=None):
             "runtime_self_test": "passed" if args.validated_runtime else "not_recorded",
             "first_use_self_test": "passed" if args.validated_first_use else "not_recorded",
             'windows_accessibility_self_tests': 'passed' if args.validated_windows_accessibility else 'not_recorded',
+            'tkinter_threading_self_test': 'passed' if threading_contract else 'not_recorded',
             "manual_installed_ui": "not_run",
             "code_signing": "not_performed",
             "redistribution_review": "not_complete",

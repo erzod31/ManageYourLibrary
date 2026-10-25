@@ -52,6 +52,12 @@ executable. Windows uses the platform-specific hash lock. Linux and macOS use
 exact versions from `requirements-build.txt`; a release made on either platform
 must generate and retain a native wheel hash lock in its CI provenance.
 
+The GUI builder compiles a separate, hash-locked CPython bridge source copy with
+the upstream Tcl 9 thread detection fix. It verifies worker-to-owner dispatch
+in a real mainloop; the platform scripts repeat that contract in the frozen app.
+Original sources, the patch, CPython license and results accompany the runtime.
+This changes neither the installed system Python nor the app's voice settings.
+
 Only a build executed and tested on its target operating system is a validated
 release. Passing Windows tests does not validate Linux or macOS artifacts.
 

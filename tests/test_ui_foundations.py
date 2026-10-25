@@ -5,6 +5,7 @@ import time
 import unittest
 import zipfile
 from pathlib import Path
+from unittest.mock import patch
 
 from PIL import Image
 
@@ -311,11 +312,13 @@ class CoverServiceTests(unittest.TestCase):
             return Response()
 
         service = CoverService(self.root / "remote-cache", size=(80, 112), urlopen_func=open_cover)
-        cached = service.thumbnail_path(source, remote_url=url)
-
-        self.assertTrue(cached.exists())
-        self.assertEqual(cached.suffix, ".webp")
-        self.assertEqual(service.thumbnail_path(source, remote_url=url), cached)
+        # Injected transport exercises the parser locally as a worker; the
+        # production parent always sends only URL/size to an isolated process.
+        with patch('core.cover_service.in_worker', return_value=True):
+            cached = service.thumbnail_path(source, remote_url=url)
+            self.assertTrue(cached.exists())
+            self.assertEqual(cached.suffix, ".webp")
+            self.assertEqual(service.thumbnail_path(source, remote_url=url), cached)
         self.assertEqual(len(calls), 1)
 
     def test_remote_cover_rejects_unknown_hosts_without_request(self):

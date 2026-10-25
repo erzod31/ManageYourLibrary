@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import os
 import posixpath
 import threading
-import tempfile
 import time
 import urllib.parse
 import urllib.request
@@ -15,10 +15,11 @@ from pathlib import Path, PurePosixPath
 from xml.etree import ElementTree
 
 from PIL import Image, ImageOps, UnidentifiedImageError
-from .pdf_runtime import serialized_pdfium
-from .document_readers import _read_zip_member, _xml_root
-from .reader_worker import in_worker, run_reader, decode_image_result, ReaderFailure
+
 from .cancellation import CancellationToken
+from .document_readers import _read_zip_member, _xml_root
+from .pdf_runtime import serialized_pdfium
+from .reader_worker import ReaderFailure, decode_image_result, in_worker, run_reader
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tif", ".tiff"}
 MAX_ARCHIVE_IMAGE_BYTES = 20 * 1024 * 1024
@@ -27,6 +28,7 @@ MAX_IMAGE_PIXELS = 24_000_000
 MAX_ARCHIVE_ENTRIES = 10_000
 DEFAULT_CACHE_BYTES = 100 * 1024 * 1024
 REMOTE_TIMEOUT_SECONDS = 6
+REMOTE_WORKER_TIMEOUT_SECONDS = 21
 MISS_CACHE_SECONDS = 6 * 60 * 60
 REMOTE_MISS_CACHE_SECONDS = 30
 ALLOWED_COVER_HOSTS = {"covers.openlibrary.org"}
@@ -62,7 +64,9 @@ class CoverService:
         self.cache_dir = Path(cache_dir)
         self.size = tuple(size)
         self.max_cache_bytes = max(1, int(max_cache_bytes))
-        self.urlopen_func = urlopen_func or urllib.request.build_opener(SafeCoverRedirect()).open
+        # Injectable only for parser tests running locally as a reader worker.
+        # Parent cover jobs never open a network connection or send this object.
+        self.urlopen_func = urlopen_func
         self._last_prune = 0.0
         self.cancellation = CancellationToken()
 
@@ -98,6 +102,7 @@ class CoverService:
         image = self._extract(source)
         if image is None and remote_url:
             image = self._fetch_remote(remote_url)
+        self.cancellation.raise_if_cancelled()
         if image is None:
             self.cache_dir.mkdir(parents=True, exist_ok=True)
             # Offline is a deferred request, not proof that a cover is absent.
@@ -146,6 +151,45 @@ class CoverService:
     def _fetch_remote(self, url: str) -> Image.Image | None:
         if os.environ.get("MANAGE_YOUR_LIBRARY_OFFLINE", "").strip().casefold() in {"1", "true", "yes", "on"}:
             return None
+        url = self._validated_remote_url(url)
+        if not url:
+            return None
+        self.cancellation.raise_if_cancelled()
+        if in_worker():
+            return self._fetch_remote_worker(url)
+        if self.urlopen_func is not None:
+            raise ValueError('Injected cover transport requires a reader worker')
+        self._wait_remote_turn()
+        try:
+            return decode_image_result(run_reader(
+                'remote_cover', {'url': url, 'size': self.size},
+                timeout=REMOTE_WORKER_TIMEOUT_SECONDS, memory_mb=512, cancellation=self.cancellation,
+            ))
+        except (OSError, TypeError, ValueError, ReaderFailure):
+            return None
+
+    def _wait_remote_turn(self):
+        """Keep the global request rate in the parent, with cancellable waits."""
+        while not self._remote_lock.acquire(timeout=.025):
+            self.cancellation.raise_if_cancelled()
+        try:
+            while True:
+                self.cancellation.raise_if_cancelled()
+                delay = self._remote_interval_seconds - (time.monotonic() - type(self)._last_remote_request)
+                if delay <= 0:
+                    break
+                time.sleep(min(delay, .025))
+            type(self)._last_remote_request = time.monotonic()
+        finally:
+            self._remote_lock.release()
+
+    def _fetch_remote_worker(self, url: str) -> Image.Image | None:
+        """Download/decode only inside the OS-limited, killable reader process."""
+        if not in_worker():
+            raise ReaderFailure('Remote cover parsing requires a reader worker')
+        url = self._validated_remote_url(url)
+        if not url or os.environ.get('MANAGE_YOUR_LIBRARY_OFFLINE', '').strip().casefold() in {'1', 'true', 'yes', 'on'}:
+            return None
         request = urllib.request.Request(
             url,
             headers={
@@ -154,12 +198,8 @@ class CoverService:
             },
         )
         try:
-            with self._remote_lock:
-                elapsed = time.monotonic() - type(self)._last_remote_request
-                if elapsed < self._remote_interval_seconds:
-                    time.sleep(self._remote_interval_seconds - elapsed)
-                type(self)._last_remote_request = time.monotonic()
-            with self.urlopen_func(request, timeout=REMOTE_TIMEOUT_SECONDS) as response:
+            open_url = self.urlopen_func or urllib.request.build_opener(SafeCoverRedirect()).open
+            with open_url(request, timeout=REMOTE_TIMEOUT_SECONDS) as response:
                 status = getattr(response, "status", 200)
                 if status != 200:
                     return None
@@ -175,12 +215,8 @@ class CoverService:
                 data = response.read(MAX_REMOTE_IMAGE_BYTES + 1)
             if not data or len(data) > MAX_REMOTE_IMAGE_BYTES:
                 return None
-            with tempfile.TemporaryDirectory(prefix='myl_cover_') as directory:
-                path = Path(directory) / 'remote-image'
-                with path.open('xb') as stream:
-                    stream.write(data)
-                return decode_image_result(run_reader('image_decode', {'path': str(path), 'size': self.size},
-                                                       timeout=15, memory_mb=512, cancellation=self.cancellation))
+            with Image.open(io.BytesIO(data)) as image:
+                return _copy_bounded_image(image)
         except (OSError, TypeError, ValueError, ReaderFailure, UnidentifiedImageError, Image.DecompressionBombError):
             return None
 

@@ -95,6 +95,8 @@ echo Checking a clean first launch with an isolated empty profile...
 if errorlevel 1 exit /b 1
 
 echo Checking frozen native accessibility and the real local voice to WAV only...
+"%PYTHON_EXE%" -B tools\verify_tkinter_threading.py --frozen-executable "%MANAGE_YOUR_LIBRARY_DIST_DIR%\ManageYourLibrary\ManageYourLibrary.exe" --output "%MANAGE_YOUR_LIBRARY_DIST_DIR%\ManageYourLibrary\tkinter-threading-self-test.json"
+if errorlevel 1 exit /b 1
 "%MANAGE_YOUR_LIBRARY_DIST_DIR%\ManageYourLibrary\ManageYourLibrary.exe" --accessibility-self-test "%MANAGE_YOUR_LIBRARY_DIST_DIR%\ManageYourLibrary\accessibility-self-test.json"
 if errorlevel 1 exit /b 1
 "%MANAGE_YOUR_LIBRARY_DIST_DIR%\ManageYourLibrary\ManageYourLibrary.exe" --windows-provider-self-test "%MANAGE_YOUR_LIBRARY_DIST_DIR%\ManageYourLibrary\windows-provider-self-test.json"
@@ -106,7 +108,7 @@ echo Checking the entire frozen payload for embedded Windows profile paths...
 "%PYTHON_EXE%" -B tools\verify_binary_privacy.py "%MANAGE_YOUR_LIBRARY_DIST_DIR%\ManageYourLibrary"
 if errorlevel 1 exit /b 1
 
-"%PYTHON_EXE%" tools\write_build_manifest.py "%MANAGE_YOUR_LIBRARY_DIST_DIR%\ManageYourLibrary\ManageYourLibrary.exe" --platform windows-x64 --validated-release-gates --validated-runtime --validated-first-use --validated-windows-accessibility
+"%PYTHON_EXE%" tools\write_build_manifest.py "%MANAGE_YOUR_LIBRARY_DIST_DIR%\ManageYourLibrary\ManageYourLibrary.exe" --platform windows-x64 --validated-release-gates --validated-runtime --validated-first-use --validated-windows-accessibility --validated-tkinter-threading
 if errorlevel 1 exit /b 1
 
 echo DONE: %MANAGE_YOUR_LIBRARY_DIST_DIR%\ManageYourLibrary\ManageYourLibrary.exe

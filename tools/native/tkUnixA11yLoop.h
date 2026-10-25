@@ -182,9 +182,16 @@ static void MylTkGlibSetup(void *data, int flags)
 static void MylTkGlibCheck(void *data, int flags)
 {
     MylTkGlibLoop *loop = (MylTkGlibLoop *)data;
+    GMainContext *context;
+    gboolean pending;
     if (!(flags & MYL_TK_GLIB_EVENT_FLAGS) || !MylTkGlibOwner(loop)
             || !loop->live || loop->refreshing) return;
-    if (g_main_context_pending(loop->context)) MylTkGlibQueue(loop);
+    /* pending() invokes source prepare/check functions. They can delete the
+     * adapter and release its last context reference while this call runs. */
+    context = g_main_context_ref(loop->context);
+    pending = g_main_context_pending(context);
+    if (pending && loop->live && loop->context == context) MylTkGlibQueue(loop);
+    g_main_context_unref(context);
 }
 
 static int MylTkGlibEventRun(Tcl_Event *event, int flags)

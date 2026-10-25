@@ -109,6 +109,16 @@ def run_checks(version: str) -> dict:
             if decoded is None:
                 raise RuntimeError('Isolated PDF cover was not decoded')
             decoded.close()
+            # Exercise this allowlisted action through the real frozen worker
+            # without making any request or reading a personal book/profile.
+            from unittest.mock import patch
+            with patch.dict(os.environ, {'MANAGE_YOUR_LIBRARY_OFFLINE': '1'}):
+                remote = run_reader('remote_cover', {
+                    'url': 'https://covers.openlibrary.org/b/isbn/0000000000-S.jpg',
+                    'size': [120, 172]}, timeout=20, memory_mb=512)
+            if remote is not None:
+                raise RuntimeError('Offline remote-cover worker returned an image')
+            report['remote_cover_offline_worker'] = 'passed'
 
     def pdf_ocr():
         import pypdfium2 as pdfium

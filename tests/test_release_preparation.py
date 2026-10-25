@@ -5,8 +5,9 @@ from pathlib import Path
 from unittest.mock import patch
 
 import main
-from tools import package_windows_release as packaging
 from tools import first_use_self_test, runtime_self_test, write_build_manifest
+from tools import package_windows_release as packaging
+from tools import verify_tkinter_threading as bridge_contract
 
 
 class ReleasePreparationTests(unittest.TestCase):
@@ -34,10 +35,27 @@ class ReleasePreparationTests(unittest.TestCase):
             'windows_wheel_notices': self.wheel_notices,
             'windows_python_notices': self.python_notices,
             "validation": {key: "passed" for key in (
-                "automated_tests", "source_smoke", "catalog_performance_gate", "frozen_smoke", "runtime_self_test", "first_use_self_test", "redistribution_review", "ocr_libraries_profile", 'windows_accessibility_self_tests')},
+                "automated_tests", "source_smoke", "catalog_performance_gate", "frozen_smoke", "runtime_self_test", "first_use_self_test", "redistribution_review", "ocr_libraries_profile", 'windows_accessibility_self_tests', 'tkinter_threading_self_test')},
         }
         runtime = {"version": "0.5.3", "passed": True, "frozen": True,
                    "checks": {key: "passed" for key in ("tk_init", "bundled_languages", "image_ocr", "pdfium_ocr", "reader_isolation")}}
+        repairs = folder / '_internal/licenses/tcltk/myl-tkinter-tcl9-repair'
+        repairs.mkdir(parents=True)
+        script = repairs / 'verify_tkinter_threading.py'
+        script.write_bytes(Path(bridge_contract.__file__).read_bytes())
+        extension = folder / '_internal/_tkinter.pyd'
+        extension.write_bytes(b'synthetic tkinter extension')
+        source_contract = {'passed': True, 'checks': dict.fromkeys(bridge_contract.REQUIRED_CHECKS, True),
+                           'python_version': '3.12.10', 'tcl_version': '9.1.0', 'tk_version': '9.1.0',
+                           'platform': 'win32', 'busywait_interval_ms': 20, 'errors': [],
+                           'reader_started': False, 'audible_output': 'not_used',
+                           'bridge_sha256': write_build_manifest.sha256(extension).lower(),
+                           'contract_sha256': write_build_manifest.sha256(script).lower()}
+        (repairs / 'threading-contract.json').write_text(json.dumps(source_contract), encoding='utf-8')
+        frozen_contract = {**source_contract, 'version': '0.5.3', 'frozen': True,
+                           'executable_sha256': manifest['sha256'].lower()}
+        (folder / 'tkinter-threading-self-test.json').write_text(json.dumps(frozen_contract), encoding='utf-8')
+        manifest['tkinter_threading_self_test'] = frozen_contract
         (folder / "build-manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
         (folder / "runtime-self-test.json").write_text(json.dumps(runtime), encoding="utf-8")
         first_use = {"version": "0.5.3", "passed": True, "frozen": True,
@@ -58,9 +76,98 @@ class ReleasePreparationTests(unittest.TestCase):
             with self.subTest(check=name), tempfile.TemporaryDirectory() as directory:
                 folder = Path(directory)
                 manifest = self.payload(folder)
-                with patch.object(packaging, name, return_value={'passed': True, 'changed': True}):
-                    with self.assertRaisesRegex(ValueError, 'receipt differs'):
-                        packaging.validate_payload(folder, version='0.5.3', fingerprint=manifest['source_tree'])
+                with patch.object(packaging, name, return_value={'passed': True, 'changed': True}), \
+                        self.assertRaisesRegex(ValueError, 'receipt differs'):
+                    packaging.validate_payload(folder, version='0.5.3', fingerprint=manifest['source_tree'])
+
+    def test_frozen_threading_contract_rejects_stale_identity_or_incomplete_checks(self):
+        for key, value in (('frozen', False), ('frozen', 1), ('version', 'old'),
+                           ('executable_sha256', 'a' * 64), ('bridge_sha256', 'a' * 64),
+                           ('contract_sha256', 'a' * 64), ('platform', 'linux'), ('checks', {}),
+                           ('busywait_interval_ms', 1), ('errors', ['failed'])):
+            with self.subTest(key=key, value=value), tempfile.TemporaryDirectory() as directory:
+                folder = Path(directory)
+                manifest = self.payload(folder)
+                path = folder / 'tkinter-threading-self-test.json'
+                report = json.loads(path.read_text())
+                report[key] = value
+                path.write_text(json.dumps(report))
+                with self.assertRaisesRegex(ValueError, 'threading contract'):
+                    packaging.validate_payload(folder, version='0.5.3', fingerprint=manifest['source_tree'])
+
+    def test_frozen_threading_report_binds_extension_and_packaged_source(self):
+        for changed in ('extension', 'source', 'builder', 'extra_extension', 'manifest', 'gate'):
+            with self.subTest(changed=changed), tempfile.TemporaryDirectory() as directory:
+                folder = Path(directory)
+                manifest = self.payload(folder)
+                repairs = folder / '_internal/licenses/tcltk/myl-tkinter-tcl9-repair'
+                if changed == 'extension':
+                    (folder / '_internal/_tkinter.pyd').write_bytes(b'tampered')
+                elif changed == 'source':
+                    (repairs / 'verify_tkinter_threading.py').write_bytes(b'tampered')
+                elif changed == 'builder':
+                    (repairs / 'threading-contract.json').write_text('{}')
+                elif changed == 'extra_extension':
+                    (folder / '_internal/_tkinter_other.pyd').write_bytes(b'ambiguous')
+                else:
+                    if changed == 'manifest':
+                        manifest['tkinter_threading_self_test'] = {'changed': True}
+                    else:
+                        del manifest['validation']['tkinter_threading_self_test']
+                    (folder / 'build-manifest.json').write_text(json.dumps(manifest))
+                with self.assertRaises(ValueError):
+                    packaging.validate_payload(folder, version='0.5.3', fingerprint=manifest['source_tree'])
+
+    def test_threading_cli_only_runs_the_disposable_contract(self):
+        with patch.object(bridge_contract, 'run_application_and_record', return_value=0) as check:
+            self.assertEqual(main.cli(['--tkinter-threading-self-test', 'isolated.json']), 0)
+            check.assert_called_once_with(Path('isolated.json'), version='0.5.3')
+        for argv in (['--tkinter-threading-self-test'],
+                     ['--tkinter-threading-self-test', 'out.json', '--profile', 'other']):
+            with self.assertRaises(ValueError):
+                main.cli(argv)
+
+    def test_frozen_contract_hash_uses_packaged_source_not_pyz_file(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            expected = root / 'licenses/tcltk/myl-tkinter-tcl9-repair/verify_tkinter_threading.py'
+            expected.parent.mkdir(parents=True)
+            expected.write_bytes(b'synthetic contract source')
+            with patch.object(bridge_contract.sys, 'frozen', True, create=True), \
+                    patch.object(bridge_contract.sys, '_MEIPASS', str(root), create=True), \
+                    patch.object(bridge_contract, '__file__', str(root / 'nonexistent-PYZ.py')):
+                self.assertEqual(bridge_contract.contract_source(), expected)
+                self.assertEqual(bridge_contract.contract_source().read_bytes(), b'synthetic contract source')
+
+    def test_application_contract_adds_frozen_executable_binding_without_running_gui(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            executable = root / 'synthetic.exe'
+            executable.write_bytes(b'not executable')
+            report = {'passed': True, 'checks': {}}
+            with patch.object(bridge_contract, 'run_checks', return_value=report), \
+                    patch.object(bridge_contract.sys, 'frozen', True, create=True), \
+                    patch.object(bridge_contract.sys, 'executable', str(executable)), patch('builtins.print'):
+                self.assertEqual(bridge_contract.run_and_record(root / 'result.json', expected_bridge_sha256='a' * 64,
+                                                               version='0.5.3'), 0)
+            written = json.loads((root / 'result.json').read_text())
+            self.assertEqual(written['executable_sha256'], write_build_manifest.sha256(executable).lower())
+            self.assertIs(written['frozen'], True)
+            self.assertEqual(written['version'], '0.5.3')
+
+    def test_frozen_bridge_launcher_has_an_external_deadline_and_no_overwrite(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / 'result.json'
+            with patch.object(bridge_contract.subprocess, 'run') as run:
+                run.return_value.returncode = 0
+                self.assertEqual(bridge_contract.run_frozen_process('inert.exe', output), 0)
+                self.assertEqual(run.call_args.args[0], ['inert.exe', '--tkinter-threading-self-test', str(output)])
+                self.assertEqual(run.call_args.kwargs['timeout'], 15)
+                output.write_text('retain')
+                run.reset_mock()
+                with self.assertRaises(FileExistsError):
+                    bridge_contract.run_frozen_process('inert.exe', output)
+                run.assert_not_called()
 
     def test_payload_rejects_unfrozen_partial_failed_or_misversioned_voice_evidence(self):
         with tempfile.TemporaryDirectory() as tmp:

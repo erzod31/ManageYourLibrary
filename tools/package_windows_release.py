@@ -11,16 +11,26 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from tools.write_build_manifest import sha256, source_tree_fingerprint
-from tools.verify_ocr_payload import validate_payload as validate_ocr_payload
 from tools.first_use_self_test import REQUIRED_CHECKS as FIRST_USE_CHECKS
 from tools.local_speech_self_test import REQUIRED_CHECKS as LOCAL_VOICE_CHECKS
 from tools.verify_accessibility import WINDOWS_CHECKS as ACCESSIBILITY_CHECKS
-from tools.verify_windows_accessibility_provider import REQUIRED_CHECKS as PROVIDER_CHECKS
 from tools.verify_binary_privacy import require_clean_tree
+from tools.verify_ocr_payload import validate_payload as validate_ocr_payload
+from tools.verify_python_license_payload import (
+    verify_windows_payload as verify_python_notices,
+)
+from tools.verify_wheel_redistribution import (
+    verify_windows_payload as verify_wheel_notices,
+)
+from tools.verify_windows_accessibility_provider import (
+    REQUIRED_CHECKS as PROVIDER_CHECKS,
+)
 from tools.windows_dependency_policy import verify_payload as verify_native_origins
-from tools.verify_wheel_redistribution import verify_windows_payload as verify_wheel_notices
-from tools.verify_python_license_payload import verify_windows_payload as verify_python_notices
+from tools.write_build_manifest import (
+    sha256,
+    source_tree_fingerprint,
+    validate_threading_evidence,
+)
 
 PRIVATE_NAMES = {"config.json", "library_index.json", "library_history.csv", "historial.csv",
                  "undo_log.jsonl", "file_transactions.jsonl", "trash_manifest.jsonl",
@@ -42,7 +52,8 @@ def validate_payload(folder: Path, *, version: str, fingerprint: dict) -> dict:
     if manifest["sha256"] != sha256(executable):
         raise ValueError("Executable no longer matches the recorded SHA-256")
     for gate in ("automated_tests", "source_smoke", "catalog_performance_gate",
-                 "frozen_smoke", "runtime_self_test", "first_use_self_test", 'windows_accessibility_self_tests'):
+                 "frozen_smoke", "runtime_self_test", "first_use_self_test", 'windows_accessibility_self_tests',
+                 'tkinter_threading_self_test'):
         if manifest["validation"].get(gate) != "passed":
             raise ValueError(f"Missing automated build gate: {gate}")
     expected_checks = {"tk_init", "bundled_languages", "image_ocr", "pdfium_ocr", "reader_isolation"}
@@ -54,6 +65,10 @@ def validate_payload(folder: Path, *, version: str, fingerprint: dict) -> dict:
             or set(first_use.get("checks", {})) != FIRST_USE_CHECKS
             or any(value != "passed" for value in first_use["checks"].values())):
         raise ValueError("Frozen first-use tests are incomplete or failed")
+    threading_contract = validate_threading_evidence(
+        executable, folder / 'tkinter-threading-self-test.json', 'windows-x64', version)
+    if manifest.get('tkinter_threading_self_test') != threading_contract:
+        raise ValueError('Frozen threading report differs from build manifest')
     for name, required in (('accessibility-self-test.json', ACCESSIBILITY_CHECKS),
                             ('windows-provider-self-test.json', PROVIDER_CHECKS),
                             ('local-voice-self-test.json', LOCAL_VOICE_CHECKS)):

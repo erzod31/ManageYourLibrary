@@ -15,7 +15,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from tools.write_build_manifest import git_value, source_tree_fingerprint
+from tools.write_build_manifest import git_value, source_tree_fingerprint, validate_threading_evidence
 from tools.verify_ocr_payload import validate_payload as validate_ocr_payload
 from tools.verify_accessibility import BASE_CHECKS, WINDOWS_CHECKS
 RUNTIME_CHECKS = {'tk_init', 'bundled_languages', 'image_ocr', 'pdfium_ocr', 'reader_isolation'}
@@ -85,23 +85,71 @@ def validate_accessibility_api_report(path, *, platform, version, frozen,
     return report
 
 
-def validate_gui_provenance(path, lock_path, *, platform, patch_receipt=None):
-    """Retain the actual GUI build record, including the Linux repair."""
+def validate_gui_provenance(path, lock_path, *, platform, patch_receipt=None,
+                            bridge_directory=None, source_bridge=None):
+    """Bind upstream inputs and both GUI repairs to their delivered records."""
     record = json.loads(path.read_text(encoding='utf-8'))
     locked = json.loads(lock_path.read_text(encoding='utf-8'))
     if not isinstance(record, dict) or any(record.get(key) != value for key, value in locked.items()):
         raise ValueError('GUI build provenance differs from the pinned upstream inputs')
+    expected_keys = set(locked) | {'tkinter_tcl9_patch', 'tkinter_threading_contract'}
     if platform == 'linux':
+        expected_keys |= {'linux_accessibility_patch', 'linux_native_loop_regression'}
         if patch_receipt is None:
             raise ValueError('Linux GUI patch receipt is missing')
         patch = json.loads(patch_receipt.read_text(encoding='utf-8'))
         from tools.tk_linux_patch import PATCH_ID
         if patch.get('patch_id') != PATCH_ID or record.get('linux_accessibility_patch') != patch:
             raise ValueError('Linux GUI build record differs from the packaged patch receipt')
-    elif platform != 'macos' or record != locked:
+        from tools.test_native_a11y_linux_loop import validate_report as validate_loop
+        loop_path = patch_receipt.parent / 'native-loop-contract.json'
+        loop = json.loads(loop_path.read_text(encoding='utf-8'))
+        if record.get('linux_native_loop_regression') != validate_loop(loop):
+            raise ValueError('Linux GUI notifier contract differs from its packaged evidence')
+        for field, filename in (('header_sha256', 'tkUnixA11yLoop.h'),
+                                ('source_sha256', 'test_tkUnixA11yLoop.c')):
+            if loop.get(field) != sha256(patch_receipt.parent / filename):
+                raise ValueError('Linux GUI notifier evidence refers to different source bytes')
+    elif platform != 'macos':
         raise ValueError('Unexpected native GUI build provenance')
+    if set(record) != expected_keys:
+        raise ValueError('Unexpected native GUI build provenance fields')
+    if bridge_directory is None or source_bridge is None:
+        raise ValueError('GUI bridge source and delivered repair directory are required')
+    bridge_directory = Path(bridge_directory)
+    def delivered(name):
+        value = bridge_directory / name
+        if not value.is_file() or not value.resolve().is_relative_to(bridge_directory.resolve()):
+            raise ValueError('Missing or unsafe delivered GUI bridge repair file: ' + name)
+        return value
+    from tools import tkinter_tcl9_patch as bridge_patch
+    from tools.verify_tkinter_threading import validate_report as validate_threading
+    patch = json.loads(delivered(bridge_patch.RECEIPT).read_text(encoding='utf-8'))
+    original = delivered('_tkinter.c').read_bytes()
+    repaired = delivered(bridge_patch.OUTPUT).read_bytes()
+    checker = delivered('verify_tkinter_threading.py')
+    if (patch != record.get('tkinter_tcl9_patch') or patch.get('patch_id') != bridge_patch.PATCH_ID
+            or patch.get('input_sha256') != bridge_patch.INPUT_SHA256
+            or sha256(delivered('_tkinter.c')) != bridge_patch.INPUT_SHA256
+            or repaired != bridge_patch.repair_source(original.decode('utf-8')).encode('utf-8')
+            or patch.get('output_sha256') != sha256(delivered(bridge_patch.OUTPUT))
+            or patch.get('patcher_sha256') != sha256(delivered('tkinter_tcl9_patch.py'))
+            or patch['patcher_sha256'] != sha256(ROOT / 'tools/tkinter_tcl9_patch.py')
+            or sha256(checker) != sha256(ROOT / 'tools/verify_tkinter_threading.py')
+            or sha256(delivered('PROJECT-LICENSE')) != sha256(ROOT / 'LICENSE')):
+        raise ValueError('GUI bridge repair differs from its pinned recipe and source')
+    license_pin = next(item['sha256'] for item in locked['sources'] if item['name'] == 'CPYTHON-LICENSE')
+    if sha256(delivered('CPYTHON-LICENSE')) != license_pin:
+        raise ValueError('GUI bridge CPython license differs from pinned source')
+    contract = json.loads(delivered('threading-contract.json').read_text(encoding='utf-8'))
+    validate_threading(contract, expected_bridge_sha256=sha256(Path(source_bridge)),
+                       expected_contract_sha256=sha256(checker),
+                       expected_platform='darwin' if platform == 'macos' else 'linux')
+    if record.get('tkinter_threading_contract') != contract or contract.get('frozen') is not False:
+        raise ValueError('GUI bridge source contract differs from its delivered evidence')
     return {'sha256': sha256(path), 'upstream_version': locked['version'],
-            'linux_accessibility_patch': record.get('linux_accessibility_patch', {}).get('patch_id')}
+            'linux_accessibility_patch': record.get('linux_accessibility_patch', {}).get('patch_id'),
+            'tkinter_tcl9_patch': patch['patch_id'], 'threading_contract_sha256': sha256(delivered('threading-contract.json'))}
 
 
 def main():
@@ -131,14 +179,25 @@ def main():
     frozen_api_report = evidence / 'accessibility-self-test.json'
     validate_accessibility_api_report(frozen_api_report, platform=name, version=version, frozen=True,
                                       executable_sha256=manifest['sha256'])
+    threading_report = evidence / 'tkinter-threading-self-test.json'
+    threading = validate_threading_evidence(executable, threading_report, name, version)
+    if (manifest['validation'].get('tkinter_threading_self_test') != 'passed'
+            or manifest.get('tkinter_threading_self_test') != threading):
+        raise ValueError('Frozen bridge threading report differs from the build manifest')
     if (manifest['validation'].get('ocr_libraries_profile') != 'passed'
             or manifest.get('ocr_source_payload') != validate_ocr_payload(ROOT / 'platforms' / name / 'tesseract')):
         raise ValueError('Native OCR source profile was not validated')
     gui_provenance = ROOT / 'dist/native-gui/build-provenance.json'
     patch_receipt = (payload / '_internal/licenses/tcltk/myl-tk-linux-repair/patch-provenance.json'
                      if name == 'linux' else None)
+    gui_bridge_files = list((ROOT / 'dist/native-gui/bridge').glob('_tkinter*.so'))
+    if len(gui_bridge_files) != 1:
+        raise ValueError('Exactly one compiled GUI bridge source is required')
+    gui_data = payload / ('_internal' if name == 'linux' else 'Contents/Resources')
     manifest['gui_build_provenance'] = validate_gui_provenance(
-        gui_provenance, ROOT / 'tools/tk_sources.json', platform=name, patch_receipt=patch_receipt)
+        gui_provenance, ROOT / 'tools/tk_sources.json', platform=name, patch_receipt=patch_receipt,
+        bridge_directory=gui_data / 'licenses/tcltk/myl-tkinter-tcl9-repair',
+        source_bridge=gui_bridge_files[0])
     for gate in ('automated_tests', 'source_smoke', 'catalog_performance_gate', 'frozen_smoke', 'runtime_self_test', 'first_use_self_test'):
         if manifest['validation'].get(gate) != 'passed':
             raise ValueError('Build gate was not recorded: ' + gate)
@@ -197,6 +256,11 @@ def main():
             raise RuntimeError('Extracted application failed accessibility diagnostics')
         validate_accessibility_api_report(extracted_api_report, platform=name, version=version, frozen=True,
                                           executable_sha256=manifest['sha256'])
+        extracted_threading_report = extracted / 'tkinter-threading.json'
+        subprocess.run([sys.executable, '-B', str(ROOT / 'tools/verify_tkinter_threading.py'),
+                        '--frozen-executable', str(launcher), '--output', str(extracted_threading_report)],
+                       check=True, timeout=20)
+        validate_threading_evidence(launcher, extracted_threading_report, name, version)
         # Diagnostic reports stay outside the extracted payload. Checks must
         # not silently modify signed resources or the original application.
         if validate_payload(restored) != files:
@@ -218,6 +282,7 @@ def main():
     shutil.copy2(ROOT / 'docs/NATIVE_FIRST_USE.md', release / (label + '-README.md'))
     shutil.copy2(api_report, release / (label + '-source-accessibility-api.json'))
     shutil.copy2(frozen_api_report, release / (label + '-frozen-accessibility-api.json'))
+    shutil.copy2(threading_report, release / (label + '-tkinter-threading-self-test.json'))
     shutil.copy2(gui_provenance, release / (label + '-gui-sources.json'))
     shutil.copy2(ROOT / 'dist/ocr-formats.json', release / (label + '-ocr-formats.json'))
     checksums = release / (label + '-SHA256SUMS.txt')

@@ -258,7 +258,8 @@ class AuditRegressionTests(unittest.TestCase):
         service = CoverService(self.data / "covers", urlopen_func=lambda *args, **kwargs: calls.append(1) or Context())
         with patch.dict(os.environ, {"MANAGE_YOUR_LIBRARY_OFFLINE": "1"}):
             self.assertIsNone(service.thumbnail_path(source, url))
-        with patch.dict(os.environ, {"MANAGE_YOUR_LIBRARY_OFFLINE": "0"}):
+        with patch.dict(os.environ, {"MANAGE_YOUR_LIBRARY_OFFLINE": "0"}), \
+                patch('core.cover_service.in_worker', return_value=True):
             result = service.thumbnail_path(source, url)
             self.assertTrue(result.exists())
             self.assertEqual(service.thumbnail_path(source, url), result)
@@ -295,7 +296,8 @@ class AuditRegressionTests(unittest.TestCase):
         cache = self.data / "covers"
         service = CoverService(cache, urlopen_func=unavailable)
         url = "https://covers.openlibrary.org/b/isbn/9780306406157-M.jpg"
-        with patch.dict(os.environ, {"MANAGE_YOUR_LIBRARY_OFFLINE": "0"}):
+        with patch.dict(os.environ, {"MANAGE_YOUR_LIBRARY_OFFLINE": "0"}), \
+                patch('core.cover_service.in_worker', return_value=True):
             service.thumbnail_path(source, url)
             service.thumbnail_path(source, url)
             self.assertEqual(len(calls), 1)

@@ -358,6 +358,85 @@ static void stale_snapshot_contract(void)
     g_main_context_unref(context);
 }
 
+typedef struct {
+    GSource source;
+    MylTkGlibLoop *loop;
+    gboolean armed, in_check;
+    gint deletions;
+    gint *finalized;
+} PendingDeleteSource;
+
+static gboolean pending_delete_prepare(GSource *source, gint *timeout)
+{
+    PendingDeleteSource *test = (PendingDeleteSource *)source;
+    *timeout = -1;
+    if (test->armed && !test->in_check) {
+        test->armed = FALSE;
+        test->deletions++;
+        assert(MylTkGlibLoopDelete(test->loop));
+    }
+    return FALSE;
+}
+
+static gboolean pending_delete_check(GSource *source)
+{
+    PendingDeleteSource *test = (PendingDeleteSource *)source;
+    if (test->armed && test->in_check) {
+        test->armed = FALSE;
+        test->deletions++;
+        assert(MylTkGlibLoopDelete(test->loop));
+    }
+    return FALSE;
+}
+
+static gboolean pending_delete_dispatch(GSource *source, GSourceFunc callback, gpointer data)
+{
+    (void)source; (void)callback; (void)data;
+    assert(0 && "pending must not dispatch a source");
+    return G_SOURCE_REMOVE;
+}
+
+static void pending_delete_finalize(GSource *source)
+{ (*((PendingDeleteSource *)source)->finalized)++; }
+
+typedef struct { Tcl_Event header; gint *done; } UnrelatedEvent;
+static int unrelated_event_run(Tcl_Event *event, int flags)
+{
+    (void)flags;
+    g_atomic_int_set(((UnrelatedEvent *)event)->done, 1);
+    return 1;
+}
+
+static void pending_delete_contract(gboolean in_check)
+{
+    static GSourceFuncs functions = {pending_delete_prepare, pending_delete_check,
+                                     pending_delete_dispatch, pending_delete_finalize, NULL, NULL};
+    GMainContext *context = g_main_context_new();
+    MylTkGlibLoop loop = {0};
+    gint finalized = 0, unrelated_done = 0;
+    PendingDeleteSource *test = (PendingDeleteSource *)g_source_new(&functions, sizeof(*test));
+    test->loop = &loop;
+    test->in_check = in_check;
+    test->finalized = &finalized;
+    g_source_attach((GSource *)test, context);
+    assert(MylTkGlibLoopInit(&loop, context));
+    g_main_context_unref(context); /* The adapter now holds the sole context ref. */
+    UnrelatedEvent *other = (UnrelatedEvent *)Tcl_Alloc(sizeof(*other));
+    other->header.proc = unrelated_event_run;
+    other->done = &unrelated_done;
+    Tcl_QueueEvent((Tcl_Event *)other, TCL_QUEUE_TAIL);
+    MylTkGlibQueue(&loop);
+    assert(loop.queued);
+    test->armed = TRUE;
+    MylTkGlibCheck(&loop, TCL_ALL_EVENTS);
+    assert(test->deletions == 1 && !test->armed);
+    assert(!loop.live && !loop.context && !loop.watches && !loop.queued);
+    assert(g_source_is_destroyed((GSource *)test) && finalized == 0);
+    g_source_unref((GSource *)test);
+    assert(finalized == 1);
+    pump(&unrelated_done); /* Deletion must retain events owned by other users. */
+}
+
 int main(int argc, char **argv)
 {
     (void)argc;
@@ -366,6 +445,7 @@ int main(int argc, char **argv)
     assert(interp != NULL);
     owner = Tcl_GetCurrentThread();
     fd_contract(); fairness_contract(); invocation_contract(); modal_contract(); stale_snapshot_contract();
+    pending_delete_contract(FALSE); pending_delete_contract(TRUE);
     GThread *exit_thread = g_thread_new("tcl-exit-contract", thread_exit_contract, NULL);
     g_thread_join(exit_thread);
     Latency old = benchmark(FALSE), current = benchmark(TRUE);
@@ -378,6 +458,8 @@ int main(int argc, char **argv)
            "\"worker_invoke_owner_thread\":true,\"idle_wait_has_no_poll_timer\":true,"
            "\"idempotent_init_and_restart\":true,\"nested_modal_glib_service\":true,"
            "\"stale_query_fd_recovers\":true,"
+           "\"pending_prepare_delete_last_context_ref\":true,"
+           "\"pending_check_delete_last_context_ref\":true,"
            "\"equal_ipc_samples_and_payload\":true},"
            "\"versions\":{\"tcl\":\"%s\",\"glib\":\"%u.%u.%u\"},"
            "\"benchmark\":{\"scope\":\"synthetic_pipe_roundtrip_glib_tcl_not_atspi\","

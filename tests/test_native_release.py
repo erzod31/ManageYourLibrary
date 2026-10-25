@@ -1,5 +1,7 @@
 import tempfile
 import json
+import copy
+import hashlib
 import plistlib
 import unittest
 import zipfile
@@ -15,34 +17,101 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class NativeReleaseTests(unittest.TestCase):
+    def gui_fixture(self, root, platform):
+        from tools import tkinter_tcl9_patch as bp
+        from tools.tk_linux_patch import PATCH_ID
+        from tools.verify_tkinter_threading import REQUIRED_CHECKS
+        from tests.test_tk_linux_loop import LoopEvidenceTests
+        def digest(data):
+            return hashlib.sha256(data).hexdigest()
+        original = ('/* inert source fixture, never compiled */\n' + bp.BEFORE + '\n').encode()
+        pin = patch.object(bp, 'INPUT_SHA256', digest(original))
+        pin.start()
+        self.addCleanup(pin.stop)
+        directory = root / 'bridge-repair'
+        directory.mkdir()
+        source_bridge = root / 'extension.so'
+        source_bridge.write_bytes(b'inert compiled-extension fixture; never loaded')
+        for filename, data in (('_tkinter.c', original), (bp.OUTPUT, bp.repair_source(original.decode()).encode()),
+                               ('CPYTHON-LICENSE', b'inert CPython license fixture')):
+            (directory / filename).write_bytes(data)
+        for filename in ('tkinter_tcl9_patch.py', 'verify_tkinter_threading.py'):
+            (directory / filename).write_bytes((ROOT / 'tools' / filename).read_bytes())
+        (directory / 'PROJECT-LICENSE').write_bytes((ROOT / 'LICENSE').read_bytes())
+        bridge_patch = {'patch_id': bp.PATCH_ID, 'input_sha256': bp.INPUT_SHA256,
+                        'output_sha256': digest((directory / bp.OUTPUT).read_bytes()),
+                        'patcher_sha256': digest((directory / 'tkinter_tcl9_patch.py').read_bytes())}
+        contract = {'passed': True, 'checks': dict.fromkeys(REQUIRED_CHECKS, True), 'errors': [],
+                    'python_version': '3.12.10', 'tcl_version': '9.1.0', 'tk_version': '9.1.0',
+                    'busywait_interval_ms': 20, 'platform': 'darwin' if platform == 'macos' else 'linux',
+                    'reader_started': False, 'audible_output': 'not_used', 'frozen': False,
+                    'bridge_sha256': digest(source_bridge.read_bytes()),
+                    'contract_sha256': digest((directory / 'verify_tkinter_threading.py').read_bytes())}
+        lock = {'version': '9.1.0', 'sources': [{'name': 'CPYTHON-LICENSE',
+                                              'sha256': digest((directory / 'CPYTHON-LICENSE').read_bytes())}]}
+        record = {**copy.deepcopy(lock), 'tkinter_tcl9_patch': bridge_patch, 'tkinter_threading_contract': contract}
+        (directory / bp.RECEIPT).write_text(json.dumps(bridge_patch))
+        (directory / 'threading-contract.json').write_text(json.dumps(contract))
+        kwargs = {'platform': platform, 'bridge_directory': directory, 'source_bridge': source_bridge}
+        if platform == 'linux':
+            linux = root / 'linux-repair'
+            linux.mkdir()
+            patch_data = {'patch_id': PATCH_ID, 'output_hashes': {'provider.c': '2' * 64}}
+            loop = LoopEvidenceTests().report()
+            for field, filename in (('header_sha256', 'tkUnixA11yLoop.h'), ('source_sha256', 'test_tkUnixA11yLoop.c')):
+                (linux / filename).write_bytes(b'inert notifier source fixture')
+                loop[field] = digest((linux / filename).read_bytes())
+            record.update(linux_accessibility_patch=patch_data, linux_native_loop_regression=loop)
+            (linux / 'patch.json').write_text(json.dumps(patch_data))
+            (linux / 'native-loop-contract.json').write_text(json.dumps(loop))
+            kwargs['patch_receipt'] = linux / 'patch.json'
+        (root / 'lock').write_text(json.dumps(lock))
+        (root / 'build').write_text(json.dumps(record))
+        return kwargs, record
+
     def test_actual_gui_record_retains_linux_patch_and_must_match_packaged_receipt(self):
         from tools.tk_linux_patch import PATCH_ID
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            lock = {'version': '9.1.0', 'sources': [{'sha256': '1' * 64}]}
-            patch = {'patch_id': PATCH_ID, 'output_hashes': {'provider.c': '2' * 64}}
-            for name, value in (('lock', lock), ('patch', patch), ('build', {**lock, 'linux_accessibility_patch': patch})):
-                (root / name).write_text(json.dumps(value), encoding='utf-8')
-            result = validate_gui_provenance(root / 'build', root / 'lock', platform='linux', patch_receipt=root / 'patch')
+            kwargs, _ = self.gui_fixture(root, 'linux')
+            result = validate_gui_provenance(root / 'build', root / 'lock', **kwargs)
             self.assertEqual(result['linux_accessibility_patch'], PATCH_ID)
             self.assertRegex(result['sha256'], r'^[0-9a-f]{64}$')
-            (root / 'patch').write_text(json.dumps({**patch, 'output_hashes': {}}))
+            kwargs['patch_receipt'].write_text(json.dumps({'patch_id': PATCH_ID, 'output_hashes': {}}))
             with self.assertRaisesRegex(ValueError, 'packaged patch receipt'):
-                validate_gui_provenance(root / 'build', root / 'lock', platform='linux', patch_receipt=root / 'patch')
+                validate_gui_provenance(root / 'build', root / 'lock', **kwargs)
+            kwargs.pop('patch_receipt')
             with self.assertRaisesRegex(ValueError, 'receipt is missing'):
-                validate_gui_provenance(root / 'build', root / 'lock', platform='linux')
+                validate_gui_provenance(root / 'build', root / 'lock', **kwargs)
 
     def test_native_gui_record_rejects_changed_upstream_inputs_and_unexpected_macos_patch(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            lock = {'version': '9.1.0', 'sources': [{'sha256': '1' * 64}]}
-            (root / 'lock').write_text(json.dumps(lock))
-            (root / 'build').write_text(json.dumps(lock))
-            self.assertIsNone(validate_gui_provenance(root / 'build', root / 'lock', platform='macos')['linux_accessibility_patch'])
-            for changed in ({**lock, 'sources': []}, {**lock, 'linux_accessibility_patch': {}}):
+            kwargs, record = self.gui_fixture(root, 'macos')
+            self.assertIsNone(validate_gui_provenance(root / 'build', root / 'lock', **kwargs)['linux_accessibility_patch'])
+            for changed in ({**record, 'sources': []}, {**record, 'linux_accessibility_patch': {}}):
                 (root / 'build').write_text(json.dumps(changed))
                 with self.assertRaises(ValueError):
-                    validate_gui_provenance(root / 'build', root / 'lock', platform='macos')
+                    validate_gui_provenance(root / 'build', root / 'lock', **kwargs)
+
+    def test_gui_bridge_patched_source_license_and_threading_evidence_are_bound(self):
+        for mutation in ('source', 'license', 'contract', 'extension'):
+            with self.subTest(mutation=mutation), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                kwargs, _ = self.gui_fixture(root, 'macos')
+                if mutation == 'source':
+                    (kwargs['bridge_directory'] / 'myl_tkinter.c').write_bytes(b'altered source')
+                elif mutation == 'license':
+                    (kwargs['bridge_directory'] / 'CPYTHON-LICENSE').unlink()
+                elif mutation == 'extension':
+                    kwargs['source_bridge'].write_bytes(b'other compiled extension')
+                else:
+                    path = kwargs['bridge_directory'] / 'threading-contract.json'
+                    report = json.loads(path.read_text())
+                    report['checks']['worker_call_on_owner'] = 1
+                    path.write_text(json.dumps(report))
+                with self.assertRaises(ValueError):
+                    validate_gui_provenance(root / 'build', root / 'lock', **kwargs)
 
     def test_wheel_lock_records_metadata_and_bytes(self):
         with tempfile.TemporaryDirectory() as temp:

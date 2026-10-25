@@ -36,7 +36,7 @@ Expected result:
 
 ## 3. Prepare and verify the controlled OCR payload
 
-From a clean checkout with Python 3.12 and Visual Studio 2022 C++ Build Tools
+From a clean checkout with Python 3.12.10 and Visual Studio 2022 C++ Build Tools
 (including CMake/Ninja), build the pinned OCR sources:
 
 ```bat

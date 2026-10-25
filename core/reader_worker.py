@@ -1,7 +1,9 @@
-"""Disposable, local-only document readers with OS-enforced resource limits.
+"""Disposable document readers with OS-enforced resource limits.
 
 This is fault isolation, not a security sandbox: readers still run as the user.
 No parser objects, pickle payloads, or document text are written to the profile.
+Document/OCR readers stay offline. A separate remote-cover action accepts only
+an allowlisted HTTPS URL and thumbnail size, without document input.
 """
 from __future__ import annotations
 
@@ -9,13 +11,13 @@ import base64
 import functools
 import json
 import os
-from pathlib import Path
 import signal
 import subprocess
 import sys
 import tempfile
 import threading
 import time
+from pathlib import Path
 
 MAX_RESULT_BYTES = 16 * 1024 * 1024
 _IN_WORKER = False
@@ -72,7 +74,7 @@ def _windows_job(process, memory_bytes):
 
 
 def run_reader(kind, payload, *, timeout=45, memory_mb=1024, cancellation=None):
-    slots = _COVER_SLOTS if kind in {'cover', 'image_decode'} else _DOCUMENT_SLOTS
+    slots = _COVER_SLOTS if kind in {'cover', 'image_decode', 'remote_cover'} else _DOCUMENT_SLOTS
     while not slots.acquire(timeout=.025):
         if cancellation:
             cancellation.raise_if_cancelled()
@@ -111,6 +113,13 @@ def _mac_memory_reader(process):
     return resident_bytes
 
 
+def _reader_environment(kind):
+    environment = {**os.environ, 'PYTHONDONTWRITEBYTECODE': '1'}
+    if kind != 'remote_cover':
+        environment['MANAGE_YOUR_LIBRARY_OFFLINE'] = '1'
+    return environment
+
+
 def _run_reader(kind, payload, *, timeout=45, memory_mb=1024, cancellation=None):
     """Run a single allowlisted operation; time includes interpreter startup.
 
@@ -143,7 +152,7 @@ def _run_reader(kind, payload, *, timeout=45, memory_mb=1024, cancellation=None)
             command, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
             creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0,
             start_new_session=os.name != 'nt',
-            env={**os.environ, 'MANAGE_YOUR_LIBRARY_OFFLINE': '1', 'PYTHONDONTWRITEBYTECODE': '1'},
+            env=_reader_environment(kind),
         )
         close_job = None
         try:
@@ -248,12 +257,16 @@ def _dispatch(kind, payload):
     if kind == 'ocr_file':
         from ocr_engine import extraer_texto_documento_ocr
         return extraer_texto_documento_ocr(path, **kwargs)
-    if kind in {'cover', 'image_decode'}:
+    if kind in {'cover', 'image_decode', 'remote_cover'}:
         from .cover_service import CoverService
         size = payload['size']
         if len(size) != 2 or not all(isinstance(n, int) and 0 < n <= 2048 for n in size):
             raise ValueError('Invalid thumbnail size')
-        if kind == 'cover':
+        if kind == 'remote_cover':
+            if set(payload) != {'url', 'size'} or not CoverService._validated_remote_url(payload['url']):
+                raise ValueError('Remote cover accepts only an allowlisted URL and thumbnail size')
+            image = CoverService(Path('.'), size=size)._fetch_remote(payload['url'])
+        elif kind == 'cover':
             image = CoverService(path.parent, size=size)._extract(path)
         else:
             from PIL import Image

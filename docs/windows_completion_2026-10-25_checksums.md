@@ -418,3 +418,42 @@ diagnósticos; registro de producción intacto. Se preparó un perfil sintético
 con catálogo y planes SQLite válidos, configuración y marcadores recuperables
 para la comprobación posterior de actualización/retirada. No es una validación
 manual de UI ni una prueba con la biblioteca personal.
+
+El ensayo Linux de `da231f5` ejecutó el contrato notifier con ASan/UBSan: 16
+controles correctos. IPC sintético de 40 muestras: mediana 10.077 µs con
+polling frente a 18 µs con FD; p95 10.082 frente a 23 µs. Son medidas del
+driver C, **no** una mejora declarada de toda la app. Orca aún observaba unos
+20 ms por consulta y no llegó a Search en ocho segundos.
+
+Se encontró entonces otra incompatibilidad: el bridge CPython 3.12.10 detecta
+hilos mediante `tcl_platform(threaded)`, eliminada en Tcl 9. La consulta real
+mostró Tcl 9.1, `tcl::pkgconfig get threaded = 1`, flag legacy ausente y
+`busywaitinterval = 20`; el detector viejo elegía la rama no-threaded con
+Sleep(20). La copia nueva incorpora la
+[corrección oficial de CPython](https://github.com/python/cpython/blob/4a5a7b9f6d528c9be272d876ed7ca620f0e40038/Modules/_tkinter.c).
+El original pinned permanece intacto. La corrección activa la afinidad real;
+no cambia Python, el intervalo ni las exigencias del lector.
+
+El runtime Windows nuevo se construyó en otro entorno neutro: contrato real
+de 11 controles correcto, 20 callbacks enviados por worker ejecutados por el
+dueño, eval ajeno rechazado y COM 16/16. Sus muestras worker-call (no AT-SPI)
+dan p50 0,0027 ms y p95 0,0491 ms. Con ese runtime, la suite conjunta pasó
+**788 pruebas en 14,654 s**, cinco omitidas; Ruff correcto. Faltan la
+construcción congelada y la repetición remota de esta revisión nueva.
+
+También se corrigió una cancelación independiente: HTTPS y decodificación de
+portadas comparten ahora un reader worker cancelable. El padre conserva el
+limitador y envía solo URL/tamaño; OCR/documentos siguen forzados a offline.
+Una prueba con proceso real bloqueado en transporte falso confirmó cancelación
+y retirada del hijo con perfil/original sintéticos intactos, sin red real.
+El runtime self-test añade la acción remote_cover en modo offline para ejercer
+su dispatch congelado sin petición web.
+
+La entrega de fuentes ya tuvo ensayo real independiente: tar de 185 miembros,
+35 familias, todos sus hashes y metadatos comprobados al releerlo, sin extraer
+ni ejecutar las fuentes. SHA del tar:
+`03dfff1f263c840ee880c368e9f290912e723bdc1f45cb81511de515ca1b4123`.
+39 bibliotecas dpkg conservaban bytes originales; los 81 orígenes no-dpkg
+quedaron separados. El artefacto es QA; no abre la puerta global ni regulariza
+releases históricas. La retirada/reinstalación Windows aislada sigue pendiente
+de cerrar con el último payload.

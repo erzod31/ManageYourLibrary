@@ -6,11 +6,11 @@ import hashlib
 import json
 import math
 import os
-from pathlib import Path
 import shlex
 import shutil
 import subprocess
 import sys
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 REQUIRED_CHECKS = {
@@ -21,6 +21,7 @@ REQUIRED_CHECKS = {
     'thread_exit_queued_event_cleanup',
     'worker_invoke_owner_thread', 'idle_wait_has_no_poll_timer',
     'idempotent_init_and_restart', 'nested_modal_glib_service', 'stale_query_fd_recovers',
+    'pending_prepare_delete_last_context_ref', 'pending_check_delete_last_context_ref',
 }
 
 
@@ -66,12 +67,12 @@ def run(output):
     probe_source, probe = output / 'sanitizer-probe.c', output / 'sanitizer-probe'
     probe_source.write_text('int main(void) { return 0; }\n', encoding='ascii')
     enabled = subprocess.run([compiler, *sanitizer_flags, str(probe_source), '-o', str(probe)],
-                             capture_output=True, text=True, timeout=30).returncode == 0
+                             capture_output=True, text=True, timeout=30, check=False).returncode == 0
     env = dict(os.environ, ASAN_OPTIONS='detect_leaks=0:halt_on_error=1',
                UBSAN_OPTIONS='halt_on_error=1:print_stacktrace=1')
     if enabled:
         enabled = subprocess.run([str(probe)], env=env, capture_output=True,
-                                 text=True, timeout=10).returncode == 0
+                                 text=True, timeout=10, check=False).returncode == 0
     subprocess.run([compiler, '-std=c11', '-Wall', '-Wextra', '-Werror',
                     *(sanitizer_flags if enabled else []), str(source),
                     '-o', str(executable), *shlex.split(flags.stdout)], check=True, timeout=30)

@@ -13,8 +13,8 @@ def _version():
 def smoke_test():
     import library_core
     import ocr_engine
-    from core.operation_plans import OperationPlanStore
     from core.catalog_store import CatalogStore
+    from core.operation_plans import OperationPlanStore
 
     checks = {
         "version": _version(),
@@ -33,6 +33,11 @@ def cli(argv=None):
     if len(argv) == 2 and argv[0] == '--reader-worker':
         from core.reader_worker import worker_main
         return worker_main(argv[1])
+    if '--tkinter-threading-self-test' in argv:
+        if len(argv) != 2 or argv[0] != '--tkinter-threading-self-test':
+            raise ValueError('--tkinter-threading-self-test requires only a new output JSON path')
+        from tools.verify_tkinter_threading import run_application_and_record
+        return run_application_and_record(Path(argv[1]), version=_version())
     if '--external-accessibility-fixture' in argv:
         if len(argv) != 2 or argv[0] != '--external-accessibility-fixture':
             raise ValueError('--external-accessibility-fixture requires only a fresh control directory')
@@ -57,7 +62,9 @@ def cli(argv=None):
             if position + 1 >= len(argv):
                 raise ValueError(flag + ' requires an output JSON path')
             if native_windows:
-                from tools.verify_windows_accessibility_provider import run_fixture as check
+                from tools.verify_windows_accessibility_provider import (
+                    run_fixture as check,
+                )
             else:
                 from tools.verify_accessibility import run as check
             report = check()

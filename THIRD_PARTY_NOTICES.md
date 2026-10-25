@@ -118,5 +118,8 @@ review is not a license clearance of all GUI/Python/PDFium package components.
 files and legacy DLL/JAR additions; Windows PE imports are rechecked. A verified
 `ocr_libraries_profile` is separate from the overall `redistribution_review` gate,
 which remains `not_complete` until the entire application release is reviewed.
+The native publication job also refuses a public release until all three native
+manifests record the complete redistribution review as passed. Internal tests
+and an OCR-only review cannot approve a public native release.
 **Older releases and historical Git objects are not retroactively cleared.**
 See [resolution and validation scope](docs/RESOLUCION_GPL_LGPL_OCR_2026-10-25.md).

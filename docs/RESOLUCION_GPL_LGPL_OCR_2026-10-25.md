@@ -125,9 +125,26 @@ Los paquetes nuevos no copian el OCR de la distribución ni de Homebrew.
 La revisión Windows posterior solo añadió su aviso MIT de pefile; no cambió el
 OCR ni el código nativo común. La fuente de `52c986b` también pasó los dos jobs
 de [source validation](https://github.com/erzod31/ManageYourLibrary/actions/runs/40171422172).
-Su repetición de builds nativos se lanzó en
-[run 40171422171](https://github.com/erzod31/ManageYourLibrary/actions/runs/40171422171);
-no se da por terminada hasta comprobar su resultado.
+Su repetición de builds nativos también terminó correctamente en los tres
+destinos: [run 40171422171](https://github.com/erzod31/ManageYourLibrary/actions/runs/40171422171).
+Jobs: Linux `121102859403`, macOS Intel `121102859597`, macOS ARM64
+`121102859599`. `publish` volvió a quedar **skipped**.
+
+Se añadió además una puerta de publicación nativa: exige los tres manifiestos
+con revisión global de redistribución aprobada y el perfil OCR controlado.
+`not_complete` bloquea `gh release` aunque `publish=true`; pasar pruebas o
+revisar solo el OCR no abre esa puerta. Cuatro pruebas adicionales cubren
+ausencia de un destino, revisión general pendiente, OCR antiguo y el caso
+sintético válido. La suite posterior completa pasa **507 pruebas** (dos
+omitidas en Windows); las compilaciones anteriores registran correctamente
+503, no se les atribuyen esas cuatro pruebas nuevas de publicación.
+
+Comprobación adicional del wheel Windows de Pillow 13.0.0: `libimagequant`,
+`fribidi` y `raqm` devuelven `False` en su API de funciones. Los dos binarios
+relevantes (`_imaging`, `_imagingft`) coinciden por SHA-256 entre el wheel
+instalado y el paquete congelado. La mera presencia de licencias opcionales
+en un SBOM no prueba que esas bibliotecas estén enlazadas. Esta comprobación
+no se presenta como una revisión completa de las dependencias nativas GUI.
 
 No se construyó ni instaló un instalador nuevo en esta revisión. No se validó
 manualmente UI, voz/lector externo, firma comercial o notarización. El checkout

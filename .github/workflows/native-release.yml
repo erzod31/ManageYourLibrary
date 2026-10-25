@@ -127,6 +127,7 @@ jobs:
           NATIVE_REVISION: ${{ inputs.native_revision }}
         run: |
           set -euo pipefail
+          python3 tools/check_native_publication_licenses.py native-artifacts
           cd native-artifacts
           for checksums in *-SHA256SUMS.txt; do sha256sum -c "$checksums"; done
           test "$(find . -name '*.tar.gz' | wc -l)" -eq 1

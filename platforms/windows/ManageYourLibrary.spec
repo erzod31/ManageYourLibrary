@@ -36,7 +36,7 @@ if os.environ.get('TK_LIBRARY'):
     if gui_licenses.is_dir():
         datas += [(str(gui_licenses), 'licenses/tcltk')]
 hiddenimports = ["pypdf", "pypdfium2", "PIL", "ftfy"]
-for package in ("Pillow", "pypdf", "wcwidth", "pyinstaller"):
+for package in ("Pillow", "pypdf", "wcwidth", "pyinstaller", "pefile"):
     datas += copy_metadata(package)
 for package in ("pypdfium2", "ftfy"):
     package_datas, package_binaries, package_hidden = collect_all(package)

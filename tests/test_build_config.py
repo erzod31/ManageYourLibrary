@@ -20,6 +20,7 @@ class WindowsBuildConfigTests(unittest.TestCase):
         self.assertNotIn('(str(ROOT / "tesseract"), "tesseract")', spec)
         self.assertIn('ROOT / "data"', spec)
         self.assertIn('collect_all(package)', spec)
+        self.assertIn('"pefile"', spec)  # Diagnostic PE parser: retain its MIT notice.
         self.assertIn('"pypdfium2"', spec)
         self.assertIn('ROOT / "app_icon.ico"', spec)
         self.assertIn("--require-hashes", script)

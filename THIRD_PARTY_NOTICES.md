@@ -28,6 +28,7 @@ application. Its distribution would require a separate Qt license review.
 - Pillow: image preparation for OCR.
 - Python standard-library `SequenceMatcher`: deterministic title and author comparison; RapidFuzz is not bundled.
 - ftfy: Unicode/mojibake repair.
+- pefile (Windows diagnostics): MIT; its installed metadata/license accompanies the frozen app.
 - PyInstaller and its Windows helper packages: application packaging.
 
 ## Packaging tools

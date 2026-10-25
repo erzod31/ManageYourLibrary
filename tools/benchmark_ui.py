@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import gc
 import json
+import re
 import statistics
 import sys
 import tempfile
@@ -35,9 +36,14 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--size", type=int, default=4158)
     parser.add_argument("--preview", action="store_true")
+    parser.add_argument('--theme', choices=('system', 'light', 'dark', 'contrast'),
+                        help='Initial theme in the disposable QA profile only.')
+    parser.add_argument('--geometry', help='Initial QA window size, for example 760x560.')
     parser.add_argument('--repetitions', type=int, default=5)
     parser.add_argument('--output', type=Path)
     args = parser.parse_args()
+    if args.geometry and not re.fullmatch(r'[1-9][0-9]{2,3}x[1-9][0-9]{2,3}', args.geometry):
+        parser.error('--geometry must be WIDTHxHEIGHT')
     with tempfile.TemporaryDirectory(prefix="myl_ui_qa_") as directory:
         base = Path(directory)
         from core import config_store
@@ -50,6 +56,8 @@ def main():
         from library_app import App
         from tools.benchmark_catalog import synthetic_catalog
 
+        if args.theme is not None:
+            core.guardar_configuracion_operacion({'theme': args.theme})
         rows = synthetic_catalog(args.size)
         titles = ("El jardín invisible", "Mapas del silencio", "La ciudad de otro sol", "El eco de la marea")
         colors = ("#557859", "#577f96", "#bc9357", "#597f7a")
@@ -69,6 +77,8 @@ def main():
         cold_start = time.perf_counter()
         root = tk.Tk()
         app = App(root)
+        if args.geometry:
+            root.geometry(args.geometry)
         construct_ms = (time.perf_counter() - cold_start) * 1000
         root.title("ManageYourLibrary — QA aislada")
         workspace = app.workspace
@@ -89,7 +99,15 @@ def main():
         root.after(16, heartbeat)
         if args.preview:
             root.mainloop()
-            return 0
+            # Keep manual QA callback failures observable without serializing
+            # the disposable catalog or screen contents in the report.
+            if args.output:
+                args.output.write_text(json.dumps({
+                    'mode': 'manual_preview', 'size': args.size,
+                    'initial_theme': args.theme, 'errors': errors,
+                    'initial_geometry': args.geometry,
+                }, indent=2) + '\n', encoding='utf-8')
+            return int(bool(errors))
 
         tasks = []
         for _ in range(args.repetitions):

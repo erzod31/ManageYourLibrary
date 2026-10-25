@@ -11,6 +11,15 @@ Published Windows release: [`0.5.3`](docs/release_notes_windows_0.5.3.md).
 Development branch: catalog transactions, non-moving import previews, profile
 backup/restore, reading states and saved filters are being validated for the next
 release. They are **not included in the published 0.5.3 downloads** below.
+The development workspace also has a Windows-only, opt-in local app voice with
+visible Activate/Deactivate controls on every page. It always starts off, pauses
+outside the app and never starts NVDA or changes system startup settings. It
+reads control labels and selected titles/authors, not book contents or typed
+values. Other platforms retain native accessibility but not this SAPI voice.
+The real Windows voice has an automated WAV-only diagnostic; an initial NVDA
+session also checked names, roles, states, selected rows and metadata fields.
+This is not complete accessibility or real-DPI certification;
+see the [accessibility record](docs/VALIDACION_NATIVA_Y_ACCESIBILIDAD_2026-10-25.md).
 See the [implementation and validation record](docs/IMPLEMENTACION_Y_VALIDACION_2026-10-24.md)
 for measured results, migration precautions, and work that remains open.
 
@@ -276,6 +285,13 @@ longer checked into the source tree. `python main.py` discovers `dist/ocr/payloa
 
 Run `BUILD_EXE.bat`, then `platforms\windows\BUILD_INSTALLER.bat` (Inno Setup 6)
 and `python tools/package_windows_release.py`. Outputs are in `dist/release/`.
+Development Windows builds now require the isolated, project-patched Tk 9.1
+runtime and `MANAGE_YOUR_LIBRARY_PYTHON` pointing to its disposable venv. Follow
+the [GUI build instructions](docs/VALIDACION_NATIVA_Y_ACCESIBILIDAD_2026-10-25.md)
+first; do not replace the system Python/Tk. The build gates include frozen
+native accessibility, compact layout, first use and real SAPI output to a
+temporary WAV without playing it. The app-scoped shortcut Ctrl+Shift+M stops
+its own voice, including while an editor is open; it never controls NVDA.
 Linux/macOS scripts require native OCR runtimes. Source CI does not certify
 native Unix release packages. The native workflow also runs on the audit branch
 to build and exercise test artifacts; publishing remains a separate explicit

@@ -13,6 +13,15 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+BASE_CHECKS = {'navigation_' + key for key in ('library', 'authors', 'series', 'tags', 'favorites', 'import', 'reviews', 'settings')} | {
+    'search_name', 'icon_button_names', 'registered_navigation_action', 'selected_row_value',
+    'full_path_value', 'disabled_action_guard', 'metadata_fields_named', 'metadata_initial_focus',
+    'native_provider_errors', 'no_callback_errors',
+    'compact_toolbar_actions_visible', 'compact_status_cancel_visible',
+    'voice_controls_visible_all_pages',
+}
+WINDOWS_CHECKS = BASE_CHECKS | {'platform_provider_label_slot'}
+
 
 def run():
     from core import config_store
@@ -38,6 +47,34 @@ def run():
             workspace.cover_service.thumbnail_path = lambda *args, **kwargs: None
             workspace.refresh_library()
             deadline = time.monotonic() + .35
+            while time.monotonic() < deadline:
+                root.update()
+            def inside(control, parent):
+                if not control.winfo_ismapped():
+                    return False
+                x = control.winfo_rootx() - parent.winfo_rootx()
+                y = control.winfo_rooty() - parent.winfo_rooty()
+                return (x >= 0 and y >= 0 and x + control.winfo_width() <= parent.winfo_width()
+                        and y + control.winfo_height() <= parent.winfo_height())
+            original_geometry = root.geometry()
+            root.geometry('760x560')
+            deadline = time.monotonic() + .15
+            while time.monotonic() < deadline:
+                root.update()
+            checks['compact_toolbar_actions_visible'] = all(inside(widget, workspace.filter_bar) for widget in (
+                workspace.format_combo, workspace.sort_combo, workspace.cover_button,
+                workspace.table_button, workspace.details_button, app.btn_agregar))
+            checks['compact_status_cancel_visible'] = inside(app.btn_cancelar_operacion, app.btn_cancelar_operacion.master)
+            voice = workspace.speech_controls
+            visible = True
+            for page in ('library', 'authors', 'series', 'tags', 'favorites', 'import', 'reviews', 'activity', 'settings'):
+                workspace.show_page(page)
+                root.update()
+                visible = visible and inside(voice.activate_button, voice.frame) and inside(voice.deactivate_button, voice.frame)
+            checks['voice_controls_visible_all_pages'] = visible and voice.session.state == 'off' and voice.session._thread is None
+            workspace.show_page('library')
+            root.geometry(original_geometry)
+            deadline = time.monotonic() + .15
             while time.monotonic() < deadline:
                 root.update()
             def prop(widget, name):
@@ -88,7 +125,8 @@ def run():
             dialog.destroy()
             checks['native_provider_errors'] = not root._myl_a11y_errors
             checks['no_callback_errors'] = not errors
-            return {'passed': all(checks.values()), 'backend': 'tk_native',
+            expected = WINDOWS_CHECKS if root.tk.call('tk', 'windowingsystem') in {'win32', 'aqua'} else BASE_CHECKS
+            return {'passed': set(checks) == expected and all(checks.values()), 'backend': 'tk_native',
                     'tk': root.tk.call('package', 'present', 'Tk'), 'checks': checks,
                     'errors': errors + root._myl_a11y_errors,
                     'external_assistive_client': 'not_run',

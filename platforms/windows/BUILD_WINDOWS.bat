@@ -41,6 +41,11 @@ if errorlevel 1 (
 )
 
 echo Running source smoke test and catalog performance gate...
+"%PYTHON_EXE%" -B -c "import tkinter as t; r=t.Tk(); assert r.tk.call('info', 'commands', '::tk::accessible::myl_patch_version'), 'Build the isolated patched Tk runtime first'; assert r.tk.call('::tk::accessible::myl_patch_version') == 'myl-tk91-win-msaa-1'; r.destroy()"
+if errorlevel 1 (
+  echo ERROR: A patched isolated Tk runtime is required. See docs\VALIDACION_NATIVA_Y_ACCESIBILIDAD_2026-10-25.md.
+  exit /b 1
+)
 "%PYTHON_EXE%" main.py --smoke-test
 if errorlevel 1 exit /b 1
 "%PYTHON_EXE%" tools\benchmark_catalog.py --check
@@ -75,7 +80,15 @@ echo Checking a clean first launch with an isolated empty profile...
 "%MANAGE_YOUR_LIBRARY_DIST_DIR%\ManageYourLibrary\ManageYourLibrary.exe" --first-use-self-test "%MANAGE_YOUR_LIBRARY_DIST_DIR%\ManageYourLibrary\first-use-self-test.json"
 if errorlevel 1 exit /b 1
 
-"%PYTHON_EXE%" tools\write_build_manifest.py "%MANAGE_YOUR_LIBRARY_DIST_DIR%\ManageYourLibrary\ManageYourLibrary.exe" --platform windows-x64 --validated-release-gates --validated-runtime --validated-first-use
+echo Checking frozen native accessibility and the real local voice to WAV only...
+"%MANAGE_YOUR_LIBRARY_DIST_DIR%\ManageYourLibrary\ManageYourLibrary.exe" --accessibility-self-test "%MANAGE_YOUR_LIBRARY_DIST_DIR%\ManageYourLibrary\accessibility-self-test.json"
+if errorlevel 1 exit /b 1
+"%MANAGE_YOUR_LIBRARY_DIST_DIR%\ManageYourLibrary\ManageYourLibrary.exe" --windows-provider-self-test "%MANAGE_YOUR_LIBRARY_DIST_DIR%\ManageYourLibrary\windows-provider-self-test.json"
+if errorlevel 1 exit /b 1
+"%MANAGE_YOUR_LIBRARY_DIST_DIR%\ManageYourLibrary\ManageYourLibrary.exe" --local-voice-self-test "%MANAGE_YOUR_LIBRARY_DIST_DIR%\ManageYourLibrary\local-voice-self-test.json"
+if errorlevel 1 exit /b 1
+
+"%PYTHON_EXE%" tools\write_build_manifest.py "%MANAGE_YOUR_LIBRARY_DIST_DIR%\ManageYourLibrary\ManageYourLibrary.exe" --platform windows-x64 --validated-release-gates --validated-runtime --validated-first-use --validated-windows-accessibility
 if errorlevel 1 exit /b 1
 
 echo DONE: %MANAGE_YOUR_LIBRARY_DIST_DIR%\ManageYourLibrary\ManageYourLibrary.exe

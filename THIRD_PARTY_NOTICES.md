@@ -3,9 +3,10 @@
 Manage Your Library uses and/or bundles third-party components for local ebook analysis and packaging.
 
 The project's own source is MIT licensed; see `LICENSE`. This does not relicense
-the components below. The optional Qt experiment in `tools/benchmark_qt_prototype.py`
-requires a separately installed PySide6 environment and is not bundled with the
-application. Its distribution would require a separate Qt license review.
+the components below. An isolated Qt/PySide6 experiment was evaluated during the
+technology audit; its [historical measurements](docs/validation_data_2026-10-24/qt-prototype.json)
+are preserved. The experiment is not part of the maintained application or its
+dependencies. A future Qt distribution would require a separate license review.
 
 ## Tesseract OCR
 
@@ -37,6 +38,12 @@ application. Its distribution would require a separate Qt license review.
 - Inno Setup: installer generation; it is a build-time dependency and is not bundled as a runtime component.
 
 OCR runs locally. The app does not send documents to external OCR services.
+
+## Optional Windows app voice (development)
+
+The opt-in app voice calls the installed Windows SAPI API through Python ctypes.
+No speech engine, NVDA copy, or external reader is bundled or redistributed by
+this feature. It starts off each session and does not change OS startup settings.
 
 ## Development-package audit, 2026-10-24
 

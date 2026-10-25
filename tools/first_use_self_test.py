@@ -83,6 +83,13 @@ def run_checks(version: str) -> dict:
                         require(app.workspace._empty_library_action.winfo_manager() == "pack", "Choose-folder action missing")
                         checks["empty_workspace"] = "passed"
                         require(not app.trabajando, "Automatic book operation started")
+                        voice = app.workspace.speech_controls
+                        require(voice.session.state == 'off' and voice.session._thread is None,
+                                "Local voice started without explicit activation")
+                        require(voice._poll_after is None, "Local voice polling started while off")
+                        require(voice.activate_button.winfo_manager() == 'grid'
+                                and voice.deactivate_button.winfo_manager() == 'grid',
+                                "Explicit voice controls missing")
                         require(not core.operation_plan_store().list_resumable(), "Pending plans found")
                         require(core.obtener_ultima_accion_undo() == (None, []), "Undo history found")
                         checks["no_background_operations"] = "passed"

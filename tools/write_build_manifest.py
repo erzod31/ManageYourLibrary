@@ -36,7 +36,7 @@ def source_tree_fingerprint():
     allowed_suffixes = {
         ".bat", ".ico", ".iss", ".json", ".lock", ".md", ".ps1",
         ".py", ".sh", ".spec", ".txt", ".yaml", ".yml",
-        ".dll", ".exe", ".traineddata", ".svg", ".png", ".webp",
+        ".dll", ".exe", ".traineddata", ".svg", ".png", ".webp", ".c", ".h",
     }
     digest = hashlib.sha256()
     count = 0
@@ -72,6 +72,7 @@ def main(argv=None):
     parser.add_argument("--validated-release-gates", action="store_true")
     parser.add_argument("--validated-runtime", action="store_true")
     parser.add_argument("--validated-first-use", action="store_true")
+    parser.add_argument('--validated-windows-accessibility', action='store_true')
     args = parser.parse_args(sys.argv[1:] if argv is None else argv)
     artifact = args.artifact.resolve()
     if not artifact.exists():
@@ -110,6 +111,7 @@ def main(argv=None):
             "frozen_smoke": "passed" if args.validated_release_gates else "not_recorded",
             "runtime_self_test": "passed" if args.validated_runtime else "not_recorded",
             "first_use_self_test": "passed" if args.validated_first_use else "not_recorded",
+            'windows_accessibility_self_tests': 'passed' if args.validated_windows_accessibility else 'not_recorded',
             "manual_installed_ui": "not_run",
             "code_signing": "not_performed",
             "redistribution_review": "not_complete",

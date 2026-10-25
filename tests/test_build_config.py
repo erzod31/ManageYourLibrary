@@ -6,6 +6,14 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class WindowsBuildConfigTests(unittest.TestCase):
+    def test_windows_ci_uses_a_neutral_isolated_patched_runtime(self):
+        workflow = (ROOT / '.github/workflows/windows.yml').read_text(encoding='utf-8')
+        self.assertIn('codex/audit-optimizations', workflow)
+        self.assertIn('python -m venv C:/myl-native-build/venv', workflow)
+        self.assertIn('MANAGE_YOUR_LIBRARY_PYTHON=C:/myl-native-build/venv/Scripts/python.exe', workflow)
+        self.assertIn('build_accessible_tk.py --output C:/myl-native-build/gui', workflow)
+        self.assertLess(workflow.index('build_accessible_tk.py'), workflow.index('BUILD_WINDOWS.bat'))
+
     def test_root_build_shortcut_delegates_to_windows_script(self):
         shortcut = (ROOT / "BUILD_EXE.bat").read_text(encoding="utf-8")
 
@@ -40,6 +48,12 @@ class WindowsBuildConfigTests(unittest.TestCase):
         requirements = (ROOT / "requirements.txt").read_text(encoding="utf-8").lower()
 
         self.assertNotIn("rapidfuzz", requirements)
+
+    def test_source_ocr_keeps_fallback_configs_without_training_residue(self):
+        data = ROOT / 'tesseract/tessdata'
+        self.assertEqual({path.name for path in (data / 'configs').iterdir()}, {'txt', 'tsv'})
+        self.assertFalse((data / 'pdf.ttf').exists())
+        self.assertFalse(any((data / 'tessconfigs').glob('*')))
 
     def test_gitignore_excludes_local_generated_state(self):
         gitignore = (ROOT / ".gitignore").read_text(encoding="utf-8")

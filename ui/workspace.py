@@ -342,6 +342,41 @@ TEXT['zh'].update({'reading_state': '阅读状态', 'unread': '待读', 'reading
                    'backup': '备份配置', 'restore': '恢复到新文件夹', 'export_catalog': '导出目录 JSON'})
 TEXT['en']['theme_contrast'] = 'High contrast'
 
+# The voice is explicitly session-only. Passive native accessibility remains
+# available regardless of these controls; no external screen reader is started.
+TEXT['es'].update({
+    'speech_title': 'Voz de la app', 'speech_activate': 'Activar', 'speech_deactivate': 'Desactivar',
+    'speech_off': 'Voz de la app: desactivada', 'speech_starting': 'Voz: iniciando…',
+    'speech_on': 'Voz de la app: activada', 'speech_paused': 'Voz: en pausa',
+    'speech_stopping': 'Voz: deteniendo…', 'speech_error': 'Voz: no disponible',
+    'speech_unavailable': 'Voz: disponible en Windows',
+    'speech_help': 'Solo lee controles y títulos de esta app. Se pausa fuera de la ventana y siempre inicia desactivada. Ctrl+Mayús+M la detiene incluso en diálogos. No inicia NVDA.',
+})
+TEXT['en'].update({
+    'speech_title': 'App voice', 'speech_activate': 'Activate', 'speech_deactivate': 'Deactivate',
+    'speech_off': 'App voice: off', 'speech_starting': 'Voice: starting…',
+    'speech_on': 'App voice: on', 'speech_paused': 'Voice: paused',
+    'speech_stopping': 'Voice: stopping…', 'speech_error': 'Voice: unavailable',
+    'speech_unavailable': 'Voice: available on Windows',
+    'speech_help': 'Reads only this app’s controls and titles. Pauses outside the window and always starts off. Ctrl+Shift+M stops it even in dialogs. Does not start NVDA.',
+})
+TEXT['fr'].update({
+    'speech_title': 'Voix de l’appli', 'speech_activate': 'Activer', 'speech_deactivate': 'Désactiver',
+    'speech_off': 'Voix : désactivée', 'speech_starting': 'Voix : démarrage…',
+    'speech_on': 'Voix : activée', 'speech_paused': 'Voix : en pause',
+    'speech_stopping': 'Voix : arrêt…', 'speech_error': 'Voix : indisponible',
+    'speech_unavailable': 'Voix : Windows uniquement',
+    'speech_help': 'Lit uniquement les contrôles et titres de cette appli. Se met en pause hors de la fenêtre et démarre toujours désactivée. Ctrl+Maj+M l’arrête aussi dans les dialogues. Ne lance pas NVDA.',
+})
+TEXT['zh'].update({
+    'speech_title': '应用语音', 'speech_activate': '启用', 'speech_deactivate': '停用',
+    'speech_off': '应用语音：已停用', 'speech_starting': '语音：正在启动…',
+    'speech_on': '应用语音：已启用', 'speech_paused': '语音：已暂停',
+    'speech_stopping': '语音：正在停止…', 'speech_error': '语音：不可用',
+    'speech_unavailable': '语音：仅限 Windows',
+    'speech_help': '仅读取本应用的控件和书名。离开窗口时暂停，每次启动均停用。Ctrl+Shift+M 在对话框中也可停止。不会启动 NVDA。',
+})
+
 
 def _text(key: str, **params) -> str:
     language = core.IDIOMA_ACTUAL if core.IDIOMA_ACTUAL in TEXT else "en"
@@ -446,6 +481,9 @@ class Workspace:
         self._details_width = 340
         self._detail_wrap = None
         self._sidebar_resize_after = None
+        self._toolbar_after = None
+        self._toolbar_compact = None
+        self._status_strip_compact = None
         self.page_scroll_canvases = {}
         self._icon_cache = {}
         self._icon_bindings = []
@@ -509,6 +547,7 @@ class Workspace:
         self._name_accessible_controls()
         self.root.bind('<F6>', self._cycle_pane_focus, add='+')
         self.root.bind('<Shift-F6>', self._cycle_pane_focus, add='+')
+        self.root.bind('<FocusIn>', self._on_page_focus_in, add='+')
 
     def _name_accessible_controls(self):
         fields = {'search_entry': 'search', 'format_combo': 'format', 'sort_combo': 'sort_by',
@@ -520,17 +559,93 @@ class Workspace:
                 name_control(control, _text(key) if key != 'reading_status' else _text('unread') + ' / ' + _text('reading') + ' / ' + _text('read'))
 
     def _cycle_pane_focus(self, _event=None):
-        center = self.entity_tree if self.entity_view.winfo_ismapped() else self.tree if self.view_mode == 'table' else self.search_entry
-        controls = [self.nav_buttons['library'], center, self.detail_path_entry]
+        def usable(control):
+            if control is None:
+                return False
+            try:
+                if not control.winfo_exists() or not control.winfo_ismapped():
+                    return False
+                if getattr(control, 'state', None) == 'disabled':
+                    return False  # RoundedButton keeps its state outside Tcl.
+                instate = getattr(control, 'instate', None)
+                if callable(instate):
+                    return not instate(('disabled',))
+                try:
+                    return str(control.cget('state')) != 'disabled'
+                except tk.TclError:
+                    # Not all widgets expose a -state option. An unsupported
+                    # option is not evidence that the still-live target is bad.
+                    return bool(control.winfo_exists() and control.winfo_ismapped())
+            except tk.TclError:
+                return False  # A page or dialog may have just been destroyed.
+
+        page = getattr(self, 'current_page', 'library')
+        if page in self.LIBRARY_SCOPES:
+            center = self.entity_tree if self.entity_view.winfo_ismapped() else self.tree if self.view_mode == 'table' else self.search_entry
+            centers = (center, self.search_entry)
+        else:
+            attributes = {
+                'import': ((self.app, 'entry_biblioteca'), (self.app, 'btn_elegir_biblioteca')),
+                'reviews': ((self, 'scan_button'), (self, 'resume_reviews_button'), (self.app, 'btn_metadatos')),
+                'activity': ((self.app, 'texto'), (self.app, 'btn_undo')),
+                'settings': ((self, 'ocr_spinbox'), (self, 'offline_check'), (self, 'theme_combo')),
+            }.get(page, ())
+            centers = tuple(getattr(owner, name, None) for owner, name in attributes)
+        center = next((control for control in centers if usable(control)), None)
+        controls = [control for control in (self.nav_buttons['library'], center) if usable(control)]
+        if (page in self.LIBRARY_SCOPES and self.selected_item and usable(self.detail_path_entry)
+                and self.detail_path_entry.get().strip()):
+            controls.append(self.detail_path_entry)
+        if not controls:
+            return 'break'
         current = self.root.focus_get()
-        index = controls.index(current) if current in controls else -1
         step = -1 if _event is not None and getattr(_event, 'state', 0) & 1 else 1
-        for offset in range(1, len(controls) + 1):
-            candidate = controls[(index + step * offset) % len(controls)]
-            if candidate.winfo_ismapped():
-                candidate.focus_set()
-                break
+        # From outside the pane anchors, forward starts at the first anchor and
+        # backward at the last. Hidden/disabled anchors never consume a step.
+        index = controls.index(current) if current in controls else (-1 if step == 1 else 0)
+        target = controls[(index + step) % len(controls)]
+        self._reveal_pane_focus_target(target)
+        target.focus_set()
         return 'break'
+
+    def _on_page_focus_in(self, event):
+        target = event.widget
+        def reveal():
+            if self.root.focus_get() is target:
+                self._reveal_pane_focus_target(target)
+        # Let embedded-window geometry settle after any preceding F6 scroll.
+        self.root.after_idle(reveal)
+
+    def _reveal_pane_focus_target(self, target):
+        canvas = getattr(self, 'page_scroll_canvases', {}).get(self.current_page)
+        if canvas is None:
+            return
+        ancestor = getattr(target, 'master', None)
+        while ancestor is not None and ancestor is not canvas:
+            ancestor = getattr(ancestor, 'master', None)
+        if ancestor is None:
+            return  # Navigation and details must not move the page viewport.
+        try:
+            if not canvas.winfo_ismapped():
+                return
+            bounds = canvas.bbox('all')
+            height = canvas.winfo_height()
+            if not bounds or height <= 1 or bounds[3] - bounds[1] <= height:
+                return
+            viewport_top = canvas.canvasy(0)
+            target_top = canvas.canvasy(target.winfo_rooty() - canvas.winfo_rooty())
+            target_bottom = target_top + target.winfo_height()
+            margin = min(8, height / 4)
+            if target_top < viewport_top or target_bottom - target_top > height:
+                new_top = target_top - margin
+            elif target_bottom > viewport_top + height:
+                new_top = target_bottom - height + margin
+            else:
+                return  # Already visible: retain the user's scroll position.
+            new_top = max(bounds[1], min(new_top, bounds[3] - height))
+            canvas.yview_moveto((new_top - bounds[1]) / (bounds[3] - bounds[1]))
+        except tk.TclError:
+            return  # The page can disappear while its focus event is pending.
 
     def _icon_photo(self, name, color=None, size=24):
         colors = getattr(self.app, "tema_actual", {})
@@ -835,26 +950,34 @@ class Workspace:
         self._show_search_placeholder()
 
         filter_bar = tk.Frame(toolbar, bd=0)
+        self.filter_bar = filter_bar
         filter_bar.grid(row=1, column=0, columnspan=2, sticky="ew")
-        self.frames.append(filter_bar)
+        filter_bar.columnconfigure(1, weight=1)
+        self.format_group = tk.Frame(filter_bar, bd=0)
+        self.sort_group = tk.Frame(filter_bar, bd=0)
+        self.action_group = tk.Frame(filter_bar, bd=0)
+        self.format_group.grid(row=0, column=0, sticky='w')
+        self.sort_group.grid(row=0, column=1, sticky='e')
+        self.action_group.grid(row=0, column=2, sticky='e')
+        self.frames.extend((filter_bar, self.format_group, self.sort_group, self.action_group))
         self.format_var = tk.StringVar(value=_text("all_formats"))
         self.format_combo = ttk.Combobox(
-            filter_bar,
+            self.format_group,
             textvariable=self.format_var,
             state="readonly",
-            width=18,
+            width=12,
             style="Library.TCombobox",
         )
-        self.format_combo.bind("<<ComboboxSelected>>", lambda _event: self.refresh_library(reset_page=True))
+        self.format_combo.bind('<<ComboboxSelected>>', self._on_format_combo_selected)
         self.filter_buttons = {}
         for key, value in (("all", "all"), ("EPUB", "EPUB"), ("PDF", "PDF"), ("other_formats", "other")):
-            button = self._button(filter_bar, _text(key) if key in {"all", "other_formats"} else key, lambda selected=value: self.set_format_filter(selected))
+            button = self._button(self.format_group, _text(key) if key in {"all", "other_formats"} else key, lambda selected=value: self.set_format_filter(selected))
             button.pack(side="left", padx=(0, 7), ipadx=5)
             self.filter_buttons[value] = button
-        self.app.btn_agregar = self._button(filter_bar, core.tr("add_books"), self.start_import, primary=True, icon="import")
+        self.app.btn_agregar = self._button(self.action_group, core.tr("add_books"), self.start_import, primary=True, icon="import")
         self.app.btn_agregar.pack(side="right", padx=(8, 0), ipadx=4)
         self.cover_button = self._button(
-            filter_bar,
+            self.action_group,
             "",
             lambda: self.set_view("covers"),
             icon="grid",
@@ -863,7 +986,7 @@ class Workspace:
         self.cover_button.pack(side="right", padx=(6, 0), ipadx=2)
         self._bind_nav_tooltip(self.cover_button, "covers_tip")
         self.table_button = self._button(
-            filter_bar,
+            self.action_group,
             "",
             lambda: self.set_view("table"),
             icon="list",
@@ -872,7 +995,7 @@ class Workspace:
         self.table_button.pack(side="right", padx=(6, 0), ipadx=2)
         self._bind_nav_tooltip(self.table_button, "table_tip")
         self.details_button = self._button(
-            filter_bar,
+            self.action_group,
             "",
             self.toggle_details,
             icon="details",
@@ -882,7 +1005,7 @@ class Workspace:
         self._bind_nav_tooltip(self.details_button, "details_tip")
         self.sort_var = tk.StringVar(value=_text("sort_recent"))
         self.sort_combo = ttk.Combobox(
-            filter_bar,
+            self.sort_group,
             textvariable=self.sort_var,
             values=(_text("sort_recent"), _text("sort_title")),
             state="readonly",
@@ -891,9 +1014,10 @@ class Workspace:
         )
         self.sort_combo.pack(side="right", padx=(6, 0), ipady=4)
         self.sort_combo.bind("<<ComboboxSelected>>", lambda _event: self.refresh_library(reset_page=True))
-        self.sort_label = tk.Label(filter_bar, text=_text("sort_by"), font=("Segoe UI", 9), bd=0)
+        self.sort_label = tk.Label(self.sort_group, text=_text("sort_by"), font=("Segoe UI", 9), bd=0)
         self.sort_label.pack(side="right", padx=(0, 2))
         self.labels.append(self.sort_label)
+        filter_bar.bind('<Configure>', self._schedule_toolbar_fit, add='+')
         self.stats_frame = tk.Frame(page, bd=0)
         self.frames.append(self.stats_frame)
         self.stat_values = {}
@@ -1449,29 +1573,78 @@ class Workspace:
 
     def _build_activity_strip(self):
         self.page_host.pack_forget()
-        strip = tk.Frame(self.main, height=50, bd=1, highlightthickness=1)
-        strip.pack(side="bottom", fill="x", padx=24, pady=(0, 14))
+        footer = tk.Frame(self.main)
+        footer.pack(side='bottom', fill='x', padx=24, pady=(0, 14))
+        self.frames.append(footer)
+        from ui.app_speech import SpeechControls
+        self.speech_controls = SpeechControls(self, footer)
+        self.speech_controls.frame.pack(side='top', fill='x', pady=(0, 6))
+        strip = tk.Frame(footer, height=50, bd=1, highlightthickness=1)
+        strip.pack(side='top', fill='x')
         strip.pack_propagate(False)
+        strip.grid_propagate(False)
+        strip.columnconfigure(1, weight=1)
         self.cards.append(strip)
         self.app.label_estado_titulo = tk.Label(strip, text=core.tr("status_title"), font=("Segoe UI", 9, "bold"), bd=0)
-        self.app.label_estado_titulo.pack(side="left", padx=(12, 6))
+        self.app.label_estado_titulo.grid(row=0, column=0, padx=(12, 6), pady=7)
         self.labels.append(self.app.label_estado_titulo)
-        self.app.label_estado = tk.Label(strip, text=core.tr("initializing"), font=("Segoe UI", 9), anchor="w", bd=0)
-        self.app.label_estado.pack(side="left", fill="x", expand=True)
+        self.app.label_estado = tk.Label(strip, text=core.tr("initializing"), font=("Segoe UI", 9), anchor="w", bd=0, width=1)
+        self.app.label_estado.grid(row=0, column=1, sticky='ew', padx=(8, 0))
         self.muted_labels.append(self.app.label_estado)
         for widget in (strip, self.app.label_estado_titulo, self.app.label_estado):
             widget.configure(cursor="hand2")
             widget.bind("<Button-1>", lambda _event: self.show_page("activity"), add="+")
         self.app.progreso_var = tk.DoubleVar(value=0)
         self.app.barra_progreso = ttk.Progressbar(strip, variable=self.app.progreso_var, maximum=100, mode="determinate", style="Visual.Horizontal.TProgressbar", length=180)
-        self.app.barra_progreso.pack(side="left", padx=8)
+        self.app.barra_progreso.grid(row=0, column=2, padx=8)
         self.app.label_estado_tiempo = tk.Label(strip, text="", font=("Segoe UI", 9, "bold"), bd=0)
-        self.app.label_estado_tiempo.pack(side="left", padx=(0, 8))
+        self.app.label_estado_tiempo.grid(row=0, column=3, padx=(0, 8))
         self.labels.append(self.app.label_estado_tiempo)
         self.app.btn_cancelar_operacion = self._button(strip, core.tr("cancel"), self.app.cancelar_operacion)
-        self.app.btn_cancelar_operacion.pack(side="right", padx=8, pady=7)
+        self.app.btn_cancelar_operacion.grid(row=0, column=4, padx=8, pady=5)
         self.app.btn_cancelar_operacion.configure(state="disabled")
+        strip.bind('<Configure>', self._fit_activity_strip, add='+')
         self.page_host.pack(side="top", fill="both", expand=True, padx=24, pady=(0, 10))
+
+    def _schedule_toolbar_fit(self, _event=None):
+        if self._toolbar_after is None:
+            self._toolbar_after = self.root.after_idle(self._fit_library_toolbar)
+
+    def _fit_library_toolbar(self):
+        self._toolbar_after = None
+        full_width = (sum(button.winfo_reqwidth() + 17 for button in self.filter_buttons.values())
+                      + self.sort_group.winfo_reqwidth() + self.action_group.winfo_reqwidth() + 16)
+        compact = self.filter_bar.winfo_width() < full_width
+        if compact == self._toolbar_compact:
+            return
+        self._toolbar_compact = compact
+        if compact:
+            for button in self.filter_buttons.values():
+                button.pack_forget()
+            self.format_combo.pack(side='left', padx=(0, 7), ipady=4)
+            self.sort_group.grid(row=0, column=1, columnspan=1, sticky='e')
+            self.action_group.grid(row=1, column=0, columnspan=2, sticky='e', pady=(8, 0))
+        else:
+            self.format_combo.pack_forget()
+            for button in self.filter_buttons.values():
+                button.pack(side='left', padx=(0, 7), ipadx=5)
+            self.sort_group.grid(row=0, column=1, columnspan=1, sticky='e')
+            self.action_group.grid(row=0, column=2, columnspan=1, sticky='e', pady=0)
+
+    def _on_format_combo_selected(self, _event=None):
+        value = self.format_var.get()
+        selected = {_text('all_formats'): 'all', _text('other_formats'): 'other'}.get(value, value)
+        self.set_format_filter(selected)
+
+    def _fit_activity_strip(self, event):
+        compact = event.width < 600
+        if compact != self._status_strip_compact:
+            self._status_strip_compact = compact
+            self.app.barra_progreso.configure(length=100 if compact else 180)
+            if compact:
+                self.app.label_estado_titulo.grid_remove()
+            else:
+                self.app.label_estado_titulo.grid()
 
     def _button(
         self,
@@ -1699,6 +1872,10 @@ class Workspace:
         )
         self._update_review_count(refresh=False)
         self._name_accessible_controls()
+        if hasattr(self, 'speech_controls'):
+            self.speech_controls.translate()
+        if hasattr(self, 'filter_bar'):
+            self._schedule_toolbar_fit()
 
     def _set_details_visible(self, visible):
         panes = {str(value) for value in self.library_panes.panes()}
@@ -1965,7 +2142,7 @@ class Workspace:
 
     def _update_view_state(self):
         colors = getattr(self.app, "tema_actual", {})
-        for mode, button in (("covers", self.cover_button), ("table", self.table_button)):
+        for mode, button, icon_name in (("covers", self.cover_button, 'grid'), ("table", self.table_button, 'list')):
             active = mode == self.view_mode
             background = colors.get("primary_bg" if active else "quiet_bg", "#a9573e" if active else "#f0ece7")
             foreground = colors.get("primary_text" if active else "text", "#ffffff" if active else "#2d2a27")
@@ -1978,6 +2155,9 @@ class Workspace:
                 colors.get("button_disabled", "#f1ede8"),
                 colors.get("disabled_text", "#aaa19a"),
             )
+            # These buttons change from secondary to primary when selected.
+            # Their raster icon must follow the actual foreground as well.
+            button.configure(image=self._icon_photo(icon_name, foreground))
 
     def set_format_filter(self, value):
         self.active_format = value
@@ -2036,10 +2216,10 @@ class Workspace:
             label.configure(text=_text(key))
         self.library_summary.configure(text=f"{stats['books']} {_text('books').lower()}\n{stats['authors']} {_text('authors').lower()}")
 
-        values = [_text("all_formats"), *self._view_index.formats]
+        values = [_text('all_formats'), _text('other_formats'), *self._view_index.formats]
         self.format_combo.configure(values=values)
-        if self.format_var.get() not in values:
-            self.format_var.set(values[0])
+        selected_label = {'all': _text('all_formats'), 'other': _text('other_formats')}.get(self.active_format, self.active_format)
+        self.format_var.set(selected_label if selected_label in values else values[0])
         selected_format = self.active_format if self.active_format not in {"other"} else "all"
         query = "" if self.search_placeholder_active else self.search_var.get()
         self.filtered_items = self._view_index.filter(query, selected_format, recent=self.sort_var.get() == _text('sort_recent'))
@@ -2523,6 +2703,11 @@ class Workspace:
         else:
             self.detail_tags.pack_forget()
         self._apply_detail_metadata_theme(getattr(self.app, "tema_actual", {}))
+        # Refresh native names/states now, not only after the control receives
+        # focus. Favorite, author, tags and reading state change in place.
+        for control in (*self.detail_metadata_buttons, self.read_status_combo,
+                        self.details_heading, *self.detail_group_headings.values()):
+            annotate(control)
         self._schedule_details_fit()
 
     def toggle_selected_favorite(self):
@@ -2636,11 +2821,17 @@ class Workspace:
         self.detail_group_values["provenance"].configure(
             text="\n".join(provenance) if provenance else _text("no_provenance")
         )
+        for control in self.detail_group_values.values():
+            annotate(control)
         self.details_cover.configure(image="", text=item["formato"], width=16, height=2)
         self.details_cover._item_path = item["ruta"]
         self._request_cover(self.details_cover, item["ruta"], item.get("cover_url", ""))
+        if hasattr(self, 'speech_controls'):
+            self.speech_controls.announce_selection(item)
 
     def shutdown(self):
+        if hasattr(self, 'speech_controls'):
+            self.speech_controls.close()
         if getattr(self, '_view_token', None):
             self._view_token.cancel()
         if getattr(self.app, 'catalog_gc', None) is not None:
@@ -2648,7 +2839,8 @@ class Workspace:
         self.cover_service.cancellation.cancel()
         self._hide_tooltip()
         self._table_generation += 1
-        for name in ("_table_after", "_refresh_after", "_cover_resize_after", "_cover_scroll_after", '_details_fit_after'):
+        for name in ("_table_after", "_refresh_after", "_cover_resize_after", "_cover_scroll_after", '_details_fit_after',
+                     '_toolbar_after', '_responsive_after', '_sidebar_resize_after'):
             pending = getattr(self, name, None)
             if pending is not None:
                 self.root.after_cancel(pending)

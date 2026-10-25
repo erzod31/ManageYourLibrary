@@ -14,6 +14,10 @@ sys.path.insert(0, str(ROOT))
 from tools.write_build_manifest import sha256, source_tree_fingerprint
 from tools.verify_ocr_payload import validate_payload as validate_ocr_payload
 from tools.first_use_self_test import REQUIRED_CHECKS as FIRST_USE_CHECKS
+from tools.local_speech_self_test import REQUIRED_CHECKS as LOCAL_VOICE_CHECKS
+from tools.verify_accessibility import WINDOWS_CHECKS as ACCESSIBILITY_CHECKS
+from tools.verify_windows_accessibility_provider import REQUIRED_CHECKS as PROVIDER_CHECKS
+from tools.verify_binary_privacy import require_clean_tree
 
 PRIVATE_NAMES = {"config.json", "library_index.json", "library_history.csv", "historial.csv",
                  "undo_log.jsonl", "file_transactions.jsonl", "trash_manifest.jsonl",
@@ -35,7 +39,7 @@ def validate_payload(folder: Path, *, version: str, fingerprint: dict) -> dict:
     if manifest["sha256"] != sha256(executable):
         raise ValueError("Executable no longer matches the recorded SHA-256")
     for gate in ("automated_tests", "source_smoke", "catalog_performance_gate",
-                 "frozen_smoke", "runtime_self_test", "first_use_self_test"):
+                 "frozen_smoke", "runtime_self_test", "first_use_self_test", 'windows_accessibility_self_tests'):
         if manifest["validation"].get(gate) != "passed":
             raise ValueError(f"Missing automated build gate: {gate}")
     expected_checks = {"tk_init", "bundled_languages", "image_ocr", "pdfium_ocr", "reader_isolation"}
@@ -47,6 +51,14 @@ def validate_payload(folder: Path, *, version: str, fingerprint: dict) -> dict:
             or set(first_use.get("checks", {})) != FIRST_USE_CHECKS
             or any(value != "passed" for value in first_use["checks"].values())):
         raise ValueError("Frozen first-use tests are incomplete or failed")
+    for name, required in (('accessibility-self-test.json', ACCESSIBILITY_CHECKS),
+                            ('windows-provider-self-test.json', PROVIDER_CHECKS),
+                            ('local-voice-self-test.json', LOCAL_VOICE_CHECKS)):
+        report = json.loads((folder / name).read_text(encoding='utf-8'))
+        if (report.get('passed') is not True or report.get('frozen') is not True
+                or report.get('version') != version or set(report.get('checks', {})) != required
+                or any(value is not True for value in report['checks'].values()) or report.get('errors')):
+            raise ValueError('Frozen accessibility/voice evidence is incomplete or failed: ' + name)
     for path in folder.rglob("*"):
         name = path.name.lower()
         if path.is_symlink():
@@ -55,6 +67,7 @@ def validate_payload(folder: Path, *, version: str, fingerprint: dict) -> dict:
                 or name.startswith(("metadata_cache", "ocr_cache", "analysis_cache"))
                 or name in {".trash_manageyourlibrary", "ui_thumbnails", "__pycache__", "test_reports", "backups"}):
             raise ValueError(f"Personal state or cache in release payload: {path.name}")
+    require_clean_tree(folder)
     ocr = validate_ocr_payload(folder / '_internal/tesseract')
     if manifest.get('ocr_source_payload') != ocr or manifest['validation'].get('ocr_libraries_profile') != 'passed':
         raise ValueError('OCR profile receipt differs from the packaged bytes')

@@ -64,6 +64,10 @@ BUILD_EXE.bat
 ```
 
 `BUILD_EXE.bat` utiliza el builder Windows existente, que prepara el OCR si falta.
+El build actual requiere además el runtime GUI aislado reparado: preparar
+el entorno neutro y `MANAGE_YOUR_LIBRARY_PYTHON` siguiendo el
+[checklist Windows](windows_release_checklist.md#4-prepare-the-isolated-accessible-gui-runtime-and-build-the-exe)
+antes de invocar ese atajo. No reemplaza el Python del sistema.
 Para una salida externa ya verificada, definir `MANAGE_YOUR_LIBRARY_OCR_DIR`.
 No se sobrescribe una salida existente; `--resume` permite continuar una
 compilación interrumpida solo si sus fuentes extraídas siguen siendo idénticas.

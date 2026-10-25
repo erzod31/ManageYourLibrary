@@ -91,7 +91,9 @@ def annotate(widget):
         index = previous.index(widget)
         if index and isinstance(previous[index - 1], (tk.Label,)):
             name = previous[index - 1].cget('text')
-    action = option('command') if role in {'Button', 'Checkbutton'} else None
+    # Invoke the widget, not its raw callback: Tcl rechecks its current disabled
+    # state even if an assistive client holds properties cached before a change.
+    action = (str(widget) + ' invoke') if role in {'Button', 'Checkbutton'} and option('command') else None
     value = None
     if role in {'Entry', 'Combobox', 'Spinbox'}:
         value = widget.get()

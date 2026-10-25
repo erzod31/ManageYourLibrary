@@ -18,6 +18,7 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
 
 
 def run(command, *, cwd, env):
@@ -34,6 +35,12 @@ def build(destination, resume=False):
     if tuple(sys.version_info[:2]) != (3, 12):
         raise RuntimeError('This bridge is pinned to CPython 3.12')
     destination = destination.resolve()
+    if os.name == 'nt':
+        from tools.verify_binary_privacy import require_neutral_location
+        # Tcl embeds source/build fallback directories, not just PDB metadata.
+        # Do not rewrite those bytes after linking or replace the system Tk.
+        require_neutral_location(destination)
+        require_neutral_location(Path(sys.prefix))
     destination.mkdir(parents=True, exist_ok=resume)
     sources = destination / 'sources'
     sources.mkdir(exist_ok=resume)
@@ -70,10 +77,39 @@ def build(destination, resume=False):
             if not resume:
                 target.write_bytes(raw)
     prefix = destination / 'runtime'
+    if os.name == 'nt':
+        from tools.tk_windows_patch import apply_windows_patch
+        lock['windows_accessibility_patch'] = apply_windows_patch(roots['tk'])
+        # Include exact local modifications alongside the original source lock.
+        repairs = prefix / 'licenses' / 'myl-tk-windows-repair'
+        repairs.mkdir(parents=True, exist_ok=True)
+        for name in ('tkWinA11yDispatch.h', 'tkWinA11yActions.h', 'tkWinA11yEnum.h', 'tkWinA11yProbe.h'):
+            shutil.copy2(ROOT / 'tools/native' / name, repairs / name)
+        shutil.copy2(ROOT / 'tools/tk_windows_patch.py', repairs / 'tk_windows_patch.py')
+        shutil.copy2(ROOT / 'LICENSE', repairs / 'LICENSE')
+        shutil.copy2(roots['tk'] / 'myl-accessibility-patch.json', repairs / 'patch-provenance.json')
     env = {key.upper(): value for key, value in os.environ.items()} if os.name == 'nt' else dict(os.environ)
     if os.name == 'nt':
         from setuptools._distutils._msvccompiler import _get_vc_env
         env.update({key.upper(): value for key, value in _get_vc_env('x86_amd64').items()})
+        tests = destination / 'native-dispatch-tests'
+        if not (tests / 'result.json').is_file():
+            run([sys.executable, '-B', ROOT / 'tools/test_native_a11y_dispatch.py',
+                 '--output', tests], cwd=ROOT, env=env)
+        native_result = json.loads((tests / 'result.json').read_text(encoding='utf-8'))
+        for field, filename in (('dispatcher_sha256', 'tkWinA11yDispatch.h'),
+                                ('source_sha256', 'test_tkWinA11yDispatch.c')):
+            if native_result.get(field) != hashlib.sha256((ROOT / 'tools/native' / filename).read_bytes()).hexdigest():
+                raise RuntimeError('Stale native dispatcher test evidence')
+        for field, filename in (('header_sha256', 'tkWinA11yEnum.h'),
+                                ('source_sha256', 'test_tkWinA11yEnum.c')):
+            if native_result.get('enumerator', {}).get(field) != hashlib.sha256((ROOT / 'tools/native' / filename).read_bytes()).hexdigest():
+                raise RuntimeError('Stale native enumerator test evidence')
+        if (native_result.get('passed') is not True or native_result.get('address_sanitizer') is not True
+                or native_result.get('enumerator', {}).get('passed') is not True):
+            raise RuntimeError('Native accessibility regression failed')
+        lock['windows_native_regression'] = native_result
+        shutil.copy2(tests / 'result.json', repairs / 'native-regression.json')
         for name in ('tcl', 'tk'):
             args = ['nmake', '/nologo', '-f', 'makefile.vc', 'INSTALLDIR=' + str(prefix)]
             if name == 'tk':
@@ -169,12 +205,32 @@ def build(destination, resume=False):
     if activation.exists() and (not resume or activation.read_text().splitlines()[0] != str(bridge)):
         raise FileExistsError('Virtual environment already contains a custom Tk activation')
     activation.write_text(str(bridge) + '\nimport myl_tk_runtime_bootstrap\n', encoding='utf-8')
-    (destination / 'build-provenance.json').write_text(json.dumps(lock, indent=2))
     if sys.platform.startswith('linux'):
         run(['ldd', next(bridge.glob('_tkinter*.so'))], cwd=ROOT, env=env)
     run([sys.executable, '-B', '-c',
          ('import tkinter as t; r=t.Tk(); print(r.tk.call("package", "present", "Tk")); '
-          'assert r.tk.call("info", "commands", "::tk::accessible::set_acc_role"); r.destroy()')], cwd=ROOT, env=env)
+          'assert r.tk.call("info", "commands", "::tk::accessible::set_acc_role"); '
+          + ('assert r.tk.call("::tk::accessible::myl_patch_version") == "myl-tk91-win-msaa-1"; ' if os.name == 'nt' else '')
+          + 'r.destroy()')], cwd=ROOT, env=env)
+    if os.name == 'nt':
+        # A marker or a successful compile alone is not a COM contract test.
+        from tools.verify_binary_privacy import require_clean_tree
+        lock['windows_runtime_path_privacy'] = {
+            'runtime': require_clean_tree(prefix), 'bridge': require_clean_tree(bridge),
+        }
+        contract = destination / 'windows-provider-contract.json'
+        run([sys.executable, '-B', ROOT / 'tools/verify_windows_accessibility_provider.py',
+             '--output', contract], cwd=ROOT, env=env)
+        result = json.loads(contract.read_text(encoding='utf-8'))
+        from tools.verify_windows_accessibility_provider import REQUIRED_CHECKS
+        if (result.get('passed') is not True or set(result.get('checks', {})) != REQUIRED_CHECKS
+                or any(value is not True for value in result['checks'].values())):
+            raise RuntimeError('Windows accessibility provider contract failed')
+        lock['windows_provider_contract'] = result
+        shutil.copy2(contract, repairs / 'provider-contract.json')
+        for name in ('test_tkWinA11yDispatch.c', 'test_tkWinA11yEnum.c'):
+            shutil.copy2(ROOT / 'tools/native' / name, repairs / name)
+    (destination / 'build-provenance.json').write_text(json.dumps(lock, indent=2))
     print('Accessible Tk runtime installed in the selected venv.', flush=True)
 
 

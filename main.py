@@ -40,6 +40,28 @@ def cli(argv=None):
             raise ValueError('--profile requires a directory')
         os.environ['MANAGE_YOUR_LIBRARY_PROFILE'] = str(Path(argv[position + 1]).expanduser().resolve())
         del argv[position:position + 2]
+    if '--local-voice-self-test' in argv:
+        from tools.local_speech_self_test import run_and_record
+        position = argv.index('--local-voice-self-test')
+        if position + 1 >= len(argv):
+            raise ValueError('--local-voice-self-test requires an output JSON path')
+        return run_and_record(Path(argv[position + 1]), version=_version())
+    for flag, native_windows in (('--accessibility-self-test', False), ('--windows-provider-self-test', True)):
+        if flag in argv:
+            position = argv.index(flag)
+            if position + 1 >= len(argv):
+                raise ValueError(flag + ' requires an output JSON path')
+            if native_windows:
+                from tools.verify_windows_accessibility_provider import run_fixture as check
+            else:
+                from tools.verify_accessibility import run as check
+            report = check()
+            report['version'] = _version()
+            report['frozen'] = bool(getattr(sys, 'frozen', False))
+            output = Path(argv[position + 1])
+            output.parent.mkdir(parents=True, exist_ok=True)
+            output.write_text(json.dumps(report, indent=2) + '\n', encoding='utf-8')
+            return 0 if report['passed'] else 1
     if "--first-use-self-test" in argv:
         from tools.first_use_self_test import run_and_record
 

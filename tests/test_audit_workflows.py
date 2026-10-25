@@ -1,10 +1,8 @@
-import io
 import json
 import sqlite3
 import sys
 import tempfile
 import threading
-import time
 import unittest
 import zipfile
 from contextlib import closing

@@ -18,7 +18,7 @@ class ReleasePreparationTests(unittest.TestCase):
             "sha256": write_build_manifest.sha256(folder / "ManageYourLibrary.exe"),
             "ocr_source_payload": {"sha256": "TEST-OCR"},
             "validation": {key: "passed" for key in (
-                "automated_tests", "source_smoke", "catalog_performance_gate", "frozen_smoke", "runtime_self_test", "first_use_self_test", "redistribution_review", "ocr_libraries_profile")},
+                "automated_tests", "source_smoke", "catalog_performance_gate", "frozen_smoke", "runtime_self_test", "first_use_self_test", "redistribution_review", "ocr_libraries_profile", 'windows_accessibility_self_tests')},
         }
         runtime = {"version": "0.5.3", "passed": True, "frozen": True,
                    "checks": {key: "passed" for key in ("tk_init", "bundled_languages", "image_ocr", "pdfium_ocr", "reader_isolation")}}
@@ -27,7 +27,26 @@ class ReleasePreparationTests(unittest.TestCase):
         first_use = {"version": "0.5.3", "passed": True, "frozen": True,
                      "checks": {key: "passed" for key in first_use_self_test.REQUIRED_CHECKS}}
         (folder / "first-use-self-test.json").write_text(json.dumps(first_use), encoding="utf-8")
+        for name, required in (('accessibility-self-test.json', packaging.ACCESSIBILITY_CHECKS),
+                                ('windows-provider-self-test.json', packaging.PROVIDER_CHECKS),
+                                ('local-voice-self-test.json', packaging.LOCAL_VOICE_CHECKS)):
+            report = {'version': '0.5.3', 'passed': True, 'frozen': True,
+                      'checks': {key: True for key in required}}
+            (folder / name).write_text(json.dumps(report), encoding='utf-8')
         return manifest
+
+    def test_payload_rejects_unfrozen_partial_failed_or_misversioned_voice_evidence(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp)
+            manifest = self.payload(folder)
+            report_path = folder / 'local-voice-self-test.json'
+            original = json.loads(report_path.read_text())
+            mutations = [dict(original, frozen=False), dict(original, version='old'),
+                         dict(original, checks={}), dict(original, checks={key: 'passed' for key in original['checks']})]
+            for report in mutations:
+                report_path.write_text(json.dumps(report), encoding='utf-8')
+                with self.assertRaisesRegex(ValueError, 'evidence is incomplete'):
+                    packaging.validate_payload(folder, version='0.5.3', fingerprint=manifest['source_tree'])
 
     def test_fingerprint_includes_version_assets_but_not_derived_checksums(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -51,6 +70,22 @@ class ReleasePreparationTests(unittest.TestCase):
         with patch("tools.runtime_self_test.run_and_record", return_value=0) as check:
             self.assertEqual(main.cli(["--runtime-self-test", "isolated-report.json"]), 0)
             check.assert_called_once_with(Path("isolated-report.json"), version="0.5.3")
+
+    def test_fingerprint_includes_native_provider_sources_and_headers(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source, header = root / 'provider.c', root / 'dispatcher.h'
+            source.write_text('original native source', encoding='utf-8')
+            header.write_text('original native header', encoding='utf-8')
+            with patch.object(write_build_manifest, 'ROOT', root), patch.object(
+                    write_build_manifest, 'git_value', return_value='provider.c\ndispatcher.h'):
+                original = write_build_manifest.source_tree_fingerprint()
+                self.assertEqual(original['files'], 2)
+                source.write_text('changed source', encoding='utf-8')
+                changed = write_build_manifest.source_tree_fingerprint()
+                self.assertNotEqual(changed, original)
+                header.write_text('changed header', encoding='utf-8')
+                self.assertNotEqual(changed, write_build_manifest.source_tree_fingerprint())
 
     def test_runtime_cli_requires_explicit_output(self):
         with self.assertRaises(ValueError):
@@ -122,6 +157,17 @@ class ReleasePreparationTests(unittest.TestCase):
                     packaging.validate_payload(folder, version="0.5.3", fingerprint=manifest["source_tree"])
                 self.assertTrue(state.exists())
                 state.rmdir()
+
+    def test_payload_rejects_embedded_profile_paths_without_mutating_the_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp)
+            manifest = self.payload(folder)
+            native = folder / 'example.dll'
+            data = 'C:\\Users\\SyntheticUser\\build\\native.c'.encode('utf-16-le')
+            native.write_bytes(data)
+            with self.assertRaisesRegex(ValueError, 'Private profile path.*example.dll'):
+                packaging.validate_payload(folder, version='0.5.3', fingerprint=manifest['source_tree'])
+            self.assertEqual(native.read_bytes(), data)
 
     def test_payload_requires_actual_first_use_checks(self):
         with tempfile.TemporaryDirectory() as tmp:

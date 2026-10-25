@@ -81,13 +81,17 @@ class AccessibilityAdapterTests(unittest.TestCase):
     def test_f6_and_shift_f6_cycle_only_visible_panes(self):
         current = [None]
         def control(visible=True):
-            target = SimpleNamespace(winfo_ismapped=lambda: visible)
+            target = SimpleNamespace(winfo_exists=lambda: True, winfo_ismapped=lambda: visible,
+                                     cget=lambda _key: 'normal',
+                                     get=lambda: 'synthetic.epub')
             target.focus_set = lambda: current.__setitem__(0, target)
             return target
         nav, center, details = control(), control(), control()
-        workspace = SimpleNamespace(entity_view=control(False), tree=center, view_mode='table',
+        workspace = SimpleNamespace(entity_view=control(False), tree=center, search_entry=center, view_mode='table',
+            LIBRARY_SCOPES=Workspace.LIBRARY_SCOPES, selected_item={'ruta': 'synthetic.epub'},
             nav_buttons={'library': nav}, detail_path_entry=details,
             root=SimpleNamespace(focus_get=lambda: current[0]))
+        workspace._reveal_pane_focus_target = lambda _target: None
         self.assertEqual(Workspace._cycle_pane_focus(workspace), 'break')
         self.assertIs(current[0], nav)
         Workspace._cycle_pane_focus(workspace)

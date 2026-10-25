@@ -26,7 +26,6 @@ from library_core import (
     es_libro,
     escribir_historial,
     guardar_config_biblioteca,
-    guardar_indice,
     ignorar_por_carpeta,
     item_indice_desde_ruta,
     mark_action_undone,
@@ -77,6 +76,7 @@ class App:
         self.theme_preference = operation_config.get("theme", "system")
         self.modo_oscuro = self._tema_sistema_oscuro() if self.theme_preference == "system" else self.theme_preference in {"dark", "contrast"}
         self.theme_widgets = []
+        self.root.bind_all('<Map>', self._sync_mapped_window_appearance, add='+')
         from ui.accessibility import install
         install(root)
         self.crear_interfaz()
@@ -316,6 +316,36 @@ class App:
         self.modo_oscuro = self._tema_sistema_oscuro() if preference == "system" else preference in {"dark", "contrast"}
         self.aplicar_tema()
 
+    def _sync_mapped_window_appearance(self, event):
+        window = event.widget
+        if isinstance(window, (tk.Tk, tk.Toplevel)):
+            # Windows requires a mapped native wrapper for -appearance. New
+            # dialogs do not inherit the main window's per-window override.
+            window.after_idle(lambda: self._sync_window_appearance(window))
+
+    def _sync_window_appearance(self, window=None):
+        window = self.root if window is None else window
+        try:
+            if window.tk.call('tk', 'windowingsystem') != 'win32':
+                return
+        except tk.TclError:
+            return
+        appearance = ('auto' if self.theme_preference == 'system'
+                      else 'dark' if self.modo_oscuro else 'light')
+        pending = [window]
+        while pending:
+            current = pending.pop()
+            try:
+                if not current.winfo_exists():
+                    continue
+                pending.extend(child for child in current.winfo_children() if isinstance(child, tk.Toplevel))
+                if current.winfo_ismapped() and not current.overrideredirect():
+                    current.wm_attributes('-appearance', appearance)
+            except tk.TclError:
+                # Tk 8.6 and older Windows retain their native decoration.
+                # This changes only owned windows, never Windows preferences.
+                continue
+
     def aplicar_tema(self):
         claro = {
             "bg": "#faf8f4",
@@ -454,6 +484,7 @@ class App:
         workspace = getattr(self, "workspace", None)
         if workspace is not None:
             workspace.apply_theme(c)
+        self._sync_window_appearance()
 
     def crear_interfaz(self):
         return build_workspace(self)

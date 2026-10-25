@@ -13,7 +13,7 @@ import json
 import re
 from pathlib import Path
 
-PATCH_ID = 'myl-tk91-linux-atk-5'
+PATCH_ID = 'myl-tk91-linux-atk-6'
 INPUT_HASHES = {'tkUnixAccessibility.c': 'de0a9d9e6b3e9ea1d08dbb97927e49817fa4ef84adb34ee8bea6fb10e49d9f6a'}
 NATIVE = Path(__file__).parent / 'native'
 HELPER = 'tkUnixA11yWindow.h'
@@ -48,6 +48,8 @@ def remove_function(source, name):
 
 
 def repair_provider(source):
+    source = replace_once(source, '    acc->path = g_utf8_make_valid(path, -1);',
+                          '    acc->path = MylTkAtkCopyPath(path);')
     source = replace_once(source, '    bool is_focused;',
                           '    bool is_focused;\n    bool is_active;\n    bool is_defunct;\n'
                           '    bool visibility_known;\n    bool is_visible;\n    bool is_showing;')

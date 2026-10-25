@@ -136,6 +136,36 @@ class LinuxNativePatchTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr[-8000:])
             self.assertIn('ATK window contract: passed', result.stdout)
 
+    @unittest.skipUnless(sys.platform.startswith('linux'), 'Real anonymous Tk/ATK windows require Linux')
+    def test_two_real_panedwindow_anonymous_proxies_register_without_glib_warnings(self):
+        import tkinter as tk
+        if tk.TkVersion != 9.1:
+            self.skipTest('Pinned Tk 9.1 runtime is exercised by the native-build job')
+        # Each classic PanedWindow allocates an unnamed proxy in Tk's native
+        # childList, which recursive ATK registration visits even when hidden.
+        script = '''import tkinter as tk
+root = tk.Tk()
+try:
+    first = tk.PanedWindow(root, name="pane_\u00e9\u4e66")
+    second = tk.PanedWindow(root, name="pane_second")
+    first.pack()
+    second.pack()
+    root.update()
+    root.tk.call("::tk::accessible::add_acc_object", ".")
+    root.update()
+    assert first.winfo_exists() and second.winfo_exists()
+    assert root.tk.call("package", "present", "Tk") == "9.1.0"
+    print("anonymous PanedWindow ATK registration: passed")
+finally:
+    root.destroy()
+'''
+        result = subprocess.run([sys.executable, '-B', '-c', script], capture_output=True,
+                                text=True, timeout=15, check=False,
+                                env={**os.environ, 'G_DEBUG': 'fatal-warnings'})
+        self.assertEqual(result.returncode, 0, result.stderr[-8000:])
+        self.assertNotIn('GLib-CRITICAL', result.stderr)
+        self.assertIn('anonymous PanedWindow ATK registration: passed', result.stdout)
+
 
 if __name__ == '__main__':
     unittest.main()

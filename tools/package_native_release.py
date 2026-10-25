@@ -57,6 +57,14 @@ def validate_report(path, checks, version):
     return report
 
 
+def accessibility_api_environment(platform):
+    if platform == 'linux':
+        return {**os.environ, 'G_DEBUG': 'fatal-warnings'}
+    if platform == 'macos':
+        return None  # Preserve the ordinary inherited macOS environment.
+    raise ValueError('Unsupported native accessibility platform')
+
+
 def validate_accessibility_api_report(path, *, platform, version, frozen,
                                       source_commit=None, source_tree=None, executable_sha256=None):
     report = json.loads(path.read_text(encoding='utf-8'))
@@ -250,7 +258,8 @@ def main():
                 raise RuntimeError('Extracted application failed ' + flag + ' diagnostics')
             validate_report(report, check_set, version)
         extracted_api_report = extracted / 'accessibility.json'
-        result = subprocess.run([str(launcher), '--accessibility-self-test', str(extracted_api_report)], timeout=90)
+        result = subprocess.run([str(launcher), '--accessibility-self-test', str(extracted_api_report)],
+                                timeout=90, env=accessibility_api_environment(name))
         if result.returncode:
             if extracted_api_report.is_file():
                 shutil.copy2(extracted_api_report, evidence / 'extracted-accessibility-self-test.json')

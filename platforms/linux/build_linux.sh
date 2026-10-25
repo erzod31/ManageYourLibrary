@@ -118,7 +118,7 @@ cp "$BUILD_TEMP/build/ManageYourLibrary/COLLECT-00.toc" "$ROOT/dist/linux-binary
 "$ROOT/dist/linux/ManageYourLibrary/ManageYourLibrary" --runtime-self-test "$ROOT/dist/linux/ManageYourLibrary/runtime-self-test.json"
 "$ROOT/dist/linux/ManageYourLibrary/ManageYourLibrary" --first-use-self-test "$ROOT/dist/linux/ManageYourLibrary/first-use-self-test.json"
 python3 -B tools/verify_tkinter_threading.py --frozen-executable "$ROOT/dist/linux/ManageYourLibrary/ManageYourLibrary" --output "$ROOT/dist/linux/ManageYourLibrary/tkinter-threading-self-test.json"
-"$ROOT/dist/linux/ManageYourLibrary/ManageYourLibrary" --accessibility-self-test "$ROOT/dist/linux/ManageYourLibrary/accessibility-self-test.json"
+G_DEBUG=fatal-warnings "$ROOT/dist/linux/ManageYourLibrary/ManageYourLibrary" --accessibility-self-test "$ROOT/dist/linux/ManageYourLibrary/accessibility-self-test.json"
 python3 tools/write_build_manifest.py "$ROOT/dist/linux/ManageYourLibrary/ManageYourLibrary" --platform linux --validated-release-gates --validated-runtime --validated-first-use --validated-tkinter-threading
 
 echo

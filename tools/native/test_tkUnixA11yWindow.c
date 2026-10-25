@@ -184,6 +184,15 @@ int main(void)
     Tcl_Interp entry_interp = {.show="", .index="3", .result=g_strdup("unchanged Entry result")};
     Tcl_Interp text_interp = {.index="2.1", .result=g_strdup("unchanged Text result")};
     const char *unicode = "A" "\xC3\xA9" "\xE4\xB9\xA6" "\xF0\x9F\x93\x9A" "Z";
+    assert(MylTkAtkCopyPath(NULL) == NULL);
+    gchar *copied_path = MylTkAtkCopyPath("");
+    assert(copied_path && !copied_path[0]); g_free(copied_path);
+    copied_path = MylTkAtkCopyPath(unicode);
+    assert(copied_path && copied_path != unicode && !strcmp(copied_path, unicode));
+    g_free(copied_path);
+    copied_path = MylTkAtkCopyPath(".a\xFF" "b");
+    assert(copied_path && !strcmp(copied_path, ".a\xEF\xBF\xBD" "b"));
+    g_free(copied_path);
     TkWindow main = {.top=1, .mapped=1, .app=1};
     TkWindow dialog = {.top=1, .mapped=1, .app=1, .parent=&main};
     TkWindow first = {.mapped=1, .app=1, .parent=&main, .nextPtr=&dialog,

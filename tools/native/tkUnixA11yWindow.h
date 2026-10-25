@@ -4,6 +4,13 @@
 #ifndef MYL_TK_UNIX_A11Y_WINDOW_H
 #define MYL_TK_UNIX_A11Y_WINDOW_H
 
+/* PanedWindow's anonymous proxy has no Tcl pathname. Keep that legitimate
+ * NULL bookkeeping value; GLib's UTF-8 conversion requires non-NULL input. */
+static gchar *MylTkAtkCopyPath(const gchar *path)
+{
+    return path ? g_utf8_make_valid(path, -1) : NULL;
+}
+
 typedef struct { TkAtkAccessible parent_instance; } MylTkAtkWindow;
 typedef struct { TkAtkAccessibleClass parent_class; } MylTkAtkWindowClass;
 

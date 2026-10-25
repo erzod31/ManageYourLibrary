@@ -1,5 +1,134 @@
 # Cierre de comprobaciones Windows — 2026-10-25
 
+## Candidato integrado `e3e2eaa` y revisión ATK-6
+
+Esta sección resume el candidato integrado antes de ATK-6. Las secciones posteriores conservan
+la cronología y los límites de sus propias revisiones; sus cifras no se suman
+ni se atribuyen a este ejecutable. La lectura final de los logs identificó dos
+avisos GLib por los proxies anónimos de los PanedWindow: su pathname nulo se
+pasaba a `g_utf8_make_valid`. El campo solo se conserva/libera como bookkeeping;
+el guard de ATK-6 preserva su valor nulo sin cambiar árbol ni índices. Esta
+corrección añade la regresión real con dos PanedWindow y exige avisos fatales
+en las tres etapas API de Linux; su validación posterior se registra aparte.
+
+Fuente exacta: `e3e2eaa6876490bfdb9492418026012d2dc5a12b`, rama
+`codex/audit-optimizations`, árbol limpio al construir. Huella local Windows de 281 archivos:
+`91CE797857E071808C1A34320A6CF29DEF6212821C617835961FC841D1D0A9D1`.
+Python 3.12.10, Tcl/Tk 9.1.0 reparado y dependencias fijadas. Este informe
+derivado está excluido de esa huella; completarlo no modifica los insumos del
+ejecutable.
+
+### Windows local: construcción, portátil y ciclo de instalador
+
+El entry point canónico ejecutó **789 pruebas en 14,411 s**, con cinco
+omisiones: privilegios de symlink y contratos POSIX/Linux. Pasaron el smoke
+test, el gate del catálogo y la verificación de OCR/avisos/orígenes nativos.
+El ejecutable, el ZIP extraído y la copia instalada repitieron estos controles:
+
+| Diagnóstico real | Resultado en cada copia |
+| --- | --- |
+| Runtime Tk/OCR/PDFium/readers | 5/5 |
+| Primer uso vacío | 5/5 |
+| API de accesibilidad | 22/22 |
+| Proveedor Windows COM/MSAA | 16/16 |
+| Voz SAPI redirigida a WAV temporal | 14/14 |
+| Afinidad y callbacks del bridge Tcl 9 | 11/11 |
+
+El runtime confirmó además el dispatch congelado de `remote_cover` en modo
+offline. Durante esos diagnósticos no hubo solicitudes web ni reproducción de audio. La prueba de
+cancelación con proceso real utiliza un transporte falso bloqueado, no un
+servidor ni documentos del usuario.
+
+El ZIP pasó CRC, rutas y colisiones; sus **1.179 archivos** coinciden por
+SHA-256 con el payload original. Los diagnósticos no cambiaron sus bytes.
+La auditoría independiente verificó 39 PE AMD64 y 534 módulos PYZ, sin módulos
+de build ni las copias UCRT/API-set de procedencia ajena que se excluyeron.
+La comprobación de rutas de perfil revisó 254 archivos después del manifiesto,
+sin hallazgos, y también se inspeccionaron los contenedores PYZ/stdlib.
+Esto documenta el alcance comprobado, no una auditoría universal de datos.
+
+Se completó el ciclo autorizado de la copia QA con AppId propio
+`ManageYourLibrary-QA-Licenses-20261025`: instalación inicial de `b4a80306`,
+actualización a `e3e2eaa`, seis diagnósticos y desinstalación. Los 1.179 archivos
+instalados coincidían con el candidato. Los nueve archivos del perfil
+sintético —incluidos catálogo/planes SQLite, configuración, copias,
+cuarentena e historial— y el original sintético conservaron sus hashes.
+El directorio y registro QA quedaron retirados; el registro de producción
+permaneció intacto. Es una prueba de preservación de bytes con estado sintético,
+no una migración de toda biblioteca posible ni una aprobación manual de UI.
+La variante QA se compiló desde el mismo `.iss`, con AppId distinto y sin
+accesos directos; no se ejecutó el instalador de producción.
+
+Artefactos **locales de desarrollo**, sin firma Authenticode y sin publicación:
+
+| Archivo | Bytes | SHA-256 |
+| --- | ---: | --- |
+| `ManageYourLibrary-0.5.3-development-Windows-x64-portable.zip` | 62.796.703 | `2C801D183F4CE7A1F14158AAA0421732A13774E74205FEC120D77A318AB4C480` |
+| `ManageYourLibrary-0.5.3-development-Setup-x64.exe` | 52.929.245 | `D68675857645A4D079120DC8BB19122439090708A1C590D6EDD1D505CB281700` |
+| `build-manifest-0.5.3-development.json` | 9.551 | `388DB03DE7A36F383ECF184F696987724C362A50AD6D08A50CD30A42A1461553` |
+
+El EXE del payload mide 5.376.485 bytes y tiene SHA-256
+`1EBC68C50CA3C57376A073A89CF0D867650858554E5497E7CCD7E84DDE779E81`.
+El setup QA distinto tiene SHA-256
+`426A18EAC2D359EB7BCD4490A4DC89500C649EA9BDDB8951F32953B05A8D8778`.
+Los tres archivos de la tabla coinciden con `SHA256SUMS`; el manifiesto copiado
+coincide con el original. La revisión independiente del payload tiene SHA-256
+`24f477f7caa1c48557ea77025d034a935a6a6f25421f81bb8c7dff64e39b8bd2`
+y la del paquete/ciclo QA,
+`197100961d149f948122600f3ae52d38d159e631b28d90a1733d1670019a62af`.
+Los informes detallados y sus insumos se conservan fuera de Git en la carpeta
+QA; no se publican perfiles, originales ni claves de registro.
+
+### Validaciones remotas de la misma fuente
+
+- [Suite fuente Ubuntu/macOS](https://github.com/erzod31/ManageYourLibrary/actions/runs/40218789262): correcta en ambos hosts. El contrato C ATK real pasó con `G_DEBUG=fatal-warnings`.
+- [Windows CI](https://github.com/erzod31/ManageYourLibrary/actions/runs/40218789292): correcto, incluido el build y sus gates congelados.
+- [Paquetes nativos](https://github.com/erzod31/ManageYourLibrary/actions/runs/40218789247): Linux x64, macOS ARM64 y macOS Intel correctos, incluidas las repeticiones tras extraer los paquetes. Publicación omitida.
+
+Orca 42.0 real, dentro de D-Bus/Xvfb privados de CI, pasó **14/14 controles**.
+Consumió los focos y presentó rol, etiqueta y valor en las cinco fases:
+Search, Authors, Title, Author y cierre del editor. Se verificaron los valores
+sintéticos de ambos campos, sin guardar cambios. Las guardas de voz apagada,
+sin red, ausencia de excepciones y cierre de los procesos propios pasaron.
+No se reprodujo audio ni se activó braille. El ZIP de evidencia de Orca tiene
+SHA-256 `73d3588c31c0a43ec200f4b88ff755d003cabb15d4a0be8a45b3351009819a4f`.
+No equivale a una evaluación auditiva humana ni a certificación completa.
+
+La corrección final del contrato C distingue el rechazo de ATK a un offset
+público menor que -1 de la limpieza defensiva del helper propio: el wrapper
+sale antes del vfunc y no promete los outparams de esa entrada inválida.
+La prueba mantiene los rangos válidos/Unicode, contraseña, defunct y el fallo
+de rangos fuera del texto. No se alteró el proveedor para satisfacer el test.
+
+Linux también completó la relectura del tar de fuentes exactas y el ensayo de
+carga de GLib modificada en una copia desechable, conservando el payload
+original. El notifier pasó 18 contratos con ASan/UBSan. Su benchmark C de
+40 mensajes de un byte midió p50/p95 de 10.080/10.104 µs con polling y
+20/27 µs con FD. Es IPC sintético del driver, no latencia global de la UI.
+El contrato congelado del bridge midió por separado 0,0101/0,0300 ms y,
+tras extraer, 0,0101/0,0393 ms en worker-call; tampoco mide AT-SPI completo.
+
+### Límites que permanecen
+
+La respuesta del usuario sobre disponer de una licencia válida de Visual
+Studio fue «No lo sé». Por ello `license_eligibility` sigue
+`not_determined` y `redistribution_review`, `not_complete`. Los binarios
+Microsoft proceden de REDIST firmado, con versión compatible; firma,
+instalación y procedencia no se registran como prueba de derechos del
+distribuidor. El empaquetado público conserva su bloqueo. No se publicaron
+releases, tags ni cambios en `main`, y el checkout privado se preservó.
+Los binarios históricos con la pila OCR antigua siguen fuera de esta aprobación.
+
+La validación humana con VoiceOver, más dispositivos/DPI y otros entornos
+Linux sigue pendiente. macOS usa firma ad-hoc, sin Developer ID ni
+notarización. La sesión NVDA anterior conserva su alcance y revisión; no se
+volvió a ejecutar ni se instaló NVDA durante este cierre. Al terminar el ciclo
+Windows se comprobó que no había procesos NVDA ni de la app de prueba activos.
+La voz local de la app sigue requiriendo activación explícita y sus controles
+visibles; no se inicia un lector externo automáticamente.
+
+---
+
 Evidencia de desarrollo, no una versión pública nueva ni certificación de
 accesibilidad completa. Las publicaciones existentes y el repositorio privado
 se conservan. El usuario autorizó una prueba breve de voz local y NVDA portátil;

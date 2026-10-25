@@ -86,7 +86,7 @@ jobs:
       - name: Verify native accessibility properties and actions
         run: |
           if [ "$RUNNER_OS" = Linux ]; then
-            dbus-run-session -- xvfb-run -a python3 tools/verify_accessibility.py --output dist/accessibility-self-test.json
+            G_DEBUG=fatal-warnings dbus-run-session -- xvfb-run -a python3 tools/verify_accessibility.py --output dist/accessibility-self-test.json
           else
             python3 tools/verify_accessibility.py --output dist/accessibility-self-test.json
           fi

@@ -75,7 +75,7 @@ class VisualFoundationTests(unittest.TestCase):
         names = (
             "library", "author", "series", "tag", "favorite", "import", "reviews",
             "search", "grid", "list", "details", "settings", "sun", "moon", "open",
-            "edit", "more", "folder", "sort", "undo", "activity",
+            "edit", "more", "folder", "sort", "undo", "activity", "close", "copy",
         )
 
         for name in names:

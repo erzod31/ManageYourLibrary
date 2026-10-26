@@ -28,7 +28,23 @@ def visible_rectangle(widget):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path)
+    parser.add_argument('--captures', type=Path, help='Synthetic previews in the private Linux CI Xvfb session only')
     args = parser.parse_args()
+    if args.captures:
+        if not (sys.platform == 'linux' and os.environ.get('GITHUB_ACTIONS') == 'true'
+                and os.environ.get('MYL_ISOLATED_VISUAL_CI') == '1' and os.environ.get('DISPLAY')):
+            parser.error('--captures requires the explicitly isolated Linux CI display')
+        args.captures.mkdir(parents=True, exist_ok=False)
+    captured = []
+
+    def capture(root, name):
+        from PIL import ImageGrab
+        left, top = root.winfo_rootx(), root.winfo_rooty()
+        bounds = (left, top, left + root.winfo_width(), top + root.winfo_height())
+        if left < 0 or top < 0 or bounds[2] > root.winfo_screenwidth() or bounds[3] > root.winfo_screenheight():
+            raise RuntimeError('Synthetic preview does not fit the private CI display')
+        ImageGrab.grab(bbox=bounds, xdisplay=os.environ['DISPLAY']).save(args.captures / (name + '.png'))
+        captured.append(name + '.png')
     results, errors, interactions = [], [], {}
     with tempfile.TemporaryDirectory(prefix='myl_geometry_') as directory:
         os.environ['MANAGE_YOUR_LIBRARY_PROFILE'] = str(Path(directory) / 'profile')
@@ -101,25 +117,79 @@ def main():
                 comparison = next(child for child in descendants(preview) if isinstance(child, ttk.Treeview) and child is not table)
                 interactions['field_comparison_eight_fields'] = len(comparison.get_children()) == 8
                 preview.destroy()
-            for width, height in ((1024, 768), (1366, 768), (1920, 1080)):
+                workspace.search_placeholder_active = False
+                workspace.search_var.set('No-matching-synthetic-book-xyz')
+                root.after(160, root.quit)
+                root.mainloop()
+                interactions['filtered_empty_state'] = (not workspace.filtered_items
+                    and workspace._empty_library_action.winfo_ismapped()
+                    and workspace.selected_item is None and workspace.open_button.state == 'disabled')
+                interactions['clear_search_visible'] = workspace.search_clear_button.winfo_ismapped()
+                workspace._empty_library_action.invoke()
+                root.update()
+                interactions['clear_filters_restores_catalog'] = len(workspace.filtered_items) == len(rows)
+                workspace._set_details_visible(True)
+                workspace.toggle_details()
+                for geometry in ('760x560', '1366x768'):
+                    root.geometry(geometry)
+                    root.after(160, root.quit)
+                    root.mainloop()
+                interactions['hidden_details_survive_resize'] = not workspace.details_visible
+                workspace.toggle_details()
+                root.update()
+                from PIL import Image
+                cover = Path(directory) / 'synthetic-cover.png'
+                Image.new('RGB', (144, 206), '#587964').save(cover)
+                workspace.cover_service.thumbnail_path = lambda *args, **kwargs: None
+                bad_cover = Path(directory) / 'invalid-cover.png'
+                bad_cover.write_bytes(b'not an image')
+                first = workspace._cover_card_pool[0][1]
+                first._cover_loaded = False
+                workspace._apply_cover(first, first._item_path, bad_cover, workspace.cover_generation)
+                interactions['invalid_cover_keeps_placeholder_retryable'] = not first._cover_loaded
+                for item in workspace.filtered_items:
+                    workspace.select_item(item)
+                    workspace._apply_cover(workspace.details_cover, item['ruta'], cover, workspace.cover_generation)
+                interactions['one_selected_cover_retained'] = (
+                    sum(key[0] == 'details' for key in workspace.cover_images) == 1
+                    and not any(key[0] == str(workspace.details_cover) for key in workspace.cover_images))
+                interactions['full_path_selectable'] = workspace.detail_path_var.get() == str(Path(workspace.selected_item['ruta']).resolve())
+                for mode in ('light', 'dark', 'contrast'):
+                    app.establecer_preferencia_tema(mode)
+                    root.update()
+                    interactions['disabled_combo_' + mode] = app.style.lookup(
+                        'Library.TCombobox', 'foreground', ('readonly', 'disabled')) == app.tema_actual['disabled_text']
+                app.establecer_preferencia_tema('light')
+            for width, height in ((760, 560), (1024, 768), (1366, 768), (1920, 1080)):
                 root.geometry(f'{width}x{height}+0+0')
                 root.update()
                 workspace._apply_responsive_layout()
-                workspace._set_details_visible(True)
+                if width >= 1024:
+                    workspace._set_details_visible(True)
                 root.update()
                 root.after(250, root.quit)
                 root.mainloop()
                 widgets = {key: getattr(workspace, key) for key in (
-                    'search_entry', 'detail_path_entry', 'copy_path_button', 'show_folder_button',
+                    'search_entry', 'page_next', 'filters_button', 'details_button')}
+                widgets.update({'nav_' + key: button for key, button in workspace.nav_buttons.items()})
+                widgets['theme_button'] = app.btn_tema
+                if workspace.details_visible:
+                    widgets.update({key: getattr(workspace, key) for key in (
+                    'detail_path_entry', 'copy_path_button', 'show_folder_button',
                     'open_button', 'metadata_button', 'lookup_metadata_button', 'detail_author',
-                    'read_status_combo', 'page_next', 'filters_button', 'details_button', 'detail_favorite',
-                    'details_heading')}
-                relations = ('compact_series', 'compact_tags') if workspace.detail_compact_relations.winfo_manager() else ('detail_series', 'detail_tags')
-                widgets.update({key: getattr(workspace, key) for key in relations})
-                # Collapsed metadata groups remain accessible through Details….
-                widgets.update({key: widget for key, widget in workspace.detail_group_headings.items()
-                                if widget.winfo_manager()})
+                    'read_status_combo', 'detail_favorite', 'details_heading')})
+                    relations = ('compact_series', 'compact_tags') if workspace.detail_compact_relations.winfo_manager() else ('detail_series', 'detail_tags')
+                    widgets.update({key: getattr(workspace, key) for key in relations})
+                    # Collapsed metadata groups remain accessible through Details….
+                    widgets.update({key: widget for key, widget in workspace.detail_group_headings.items()
+                                    if widget.winfo_manager()})
                 checks = {name: visible_rectangle(widget) for name, widget in widgets.items()}
+                if workspace.cover_view.winfo_ismapped() and workspace._cover_card_pool:
+                    first_cover = workspace._cover_card_pool[0][1]
+                    left = first_cover.winfo_rootx() - workspace.cover_canvas.winfo_rootx()
+                    checks['cover_pixel_size'] = (first_cover.winfo_width() <= 156
+                        and first_cover.winfo_height() <= 220 and left >= 0
+                        and left + first_cover.winfo_width() <= workspace.cover_canvas.winfo_width())
                 results.append({'requested': [width, height], 'actual': [root.winfo_width(), root.winfo_height()],
                                 'tk_scale_percent': int(scale * 100), 'checks': checks,
                                 'failed_geometry': {name: {'actual': [widget.winfo_x(), widget.winfo_y(),
@@ -127,12 +197,59 @@ def main():
                                     'requested': [widget.winfo_reqwidth(), widget.winfo_reqheight()],
                                     'parent': [widget.master.winfo_width(), widget.master.winfo_height()]}
                                     for name, widget in widgets.items() if not checks[name]}})
+                if args.captures and ((scale == 1 and width == 1366) or (scale == 2 and width == 760)):
+                    workspace.cover_service.thumbnail_path = lambda *args, **kwargs: cover
+                    workspace.refresh_library()
+                    workspace.select_item(workspace.filtered_items[0])
+                    root.after(250, root.quit)
+                    root.mainloop()
+                    capture(root, 'library-light' if scale == 1 else 'library-compact-200')
+                    if scale == 1:
+                        app.establecer_preferencia_tema('dark')
+                        root.after(180, root.quit)
+                        root.mainloop()
+                        capture(root, 'library-dark')
+                        app.establecer_preferencia_tema('light')
+            root.geometry('760x560+0+0')
+            workspace.show_page('settings')
+            root.update()
+            for name, widget in (('settings_theme', workspace.theme_combo), ('settings_ocr', workspace.ocr_spinbox)):
+                workspace._reveal_pane_focus_target(widget)
+                root.update()
+                results.append({'page': 'settings', 'tk_scale_percent': int(scale * 100),
+                                'checks': {name: visible_rectangle(widget)}})
+            for page in ('import', 'reviews', 'activity', 'settings'):
+                workspace.show_page(page)
+                root.update()
+                root.after(100, root.quit)
+                root.mainloop()
+                results.append({'page': page, 'tk_scale_percent': int(scale * 100),
+                                'checks': {'heading': visible_rectangle(app.label_titulo),
+                                           'language': visible_rectangle(app.btn_idioma),
+                                           'theme': visible_rectangle(app.btn_tema)}})
+                if args.captures and scale == 1:
+                    capture(root, page + '-compact')
+                controls = {
+                    'import': (app.entry_biblioteca, app.btn_elegir_biblioteca, app.btn_agregar_import, app.btn_biblioteca),
+                    'reviews': (workspace.scan_button, workspace.resume_reviews_button, app.btn_dobles_carpeta, app.btn_metadatos),
+                    'activity': (app.btn_undo,),
+                }.get(page, ())
+                for position, widget in enumerate(controls):
+                    workspace._reveal_pane_focus_target(widget)
+                    root.after(80, root.quit)
+                    root.mainloop()
+                    results.append({'page': page, 'tk_scale_percent': int(scale * 100),
+                                    'checks': {'action_' + str(position): visible_rectangle(widget)}})
             workspace.shutdown()
             for identifier in root.tk.call('after', 'info'):
-                root.after_cancel(identifier)
+                # Child-owned Map annotations own their Python Tcl commands.
+                # Cancel schedules only; widget.destroy deletes each command
+                # once through the widget which registered it.
+                root.tk.call('after', 'cancel', identifier)
             root.destroy()
         report = {'method': 'Tk scaling + geometry, not Windows display settings or a screen reader',
-                  'results': results, 'interactions': interactions, 'errors': errors}
+                  'results': results, 'interactions': interactions, 'errors': errors,
+                  'synthetic_linux_ci_captures': captured}
         encoded = json.dumps(report, indent=2)
         print(encoded)
         if args.output:

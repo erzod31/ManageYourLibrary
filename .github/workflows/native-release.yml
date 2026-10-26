@@ -90,6 +90,24 @@ jobs:
           else
             python3 tools/verify_accessibility.py --output dist/accessibility-self-test.json
           fi
+      - name: Verify adaptive workspace geometry and usability
+        timeout-minutes: 3
+        run: |
+          if [ "$RUNNER_OS" = Linux ]; then
+            G_DEBUG=fatal-warnings MYL_ISOLATED_VISUAL_CI=1 dbus-run-session -- xvfb-run -a -s '-screen 0 1920x1200x24' python3 -B tools/verify_workspace_layout.py --output dist/workspace-layout.json --captures dist/workspace-preview
+          else
+            python3 -B tools/verify_workspace_layout.py --output dist/workspace-layout.json
+          fi
+      - name: Retain workspace layout diagnostics
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: workspace-layout-${{ matrix.platform }}-${{ matrix.arch }}
+          path: |
+            dist/workspace-layout.json
+            dist/workspace-preview/*.png
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Build and test Linux frozen application
         id: linux_build
         if: runner.os == 'Linux'

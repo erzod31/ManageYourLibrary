@@ -378,6 +378,23 @@ TEXT['zh'].update({
 })
 
 
+for _language, _copy in {
+    'es': {'clear_search': 'Limpiar búsqueda', 'clear_filters': 'Ver todos los libros',
+           'no_results': 'No hay libros que coincidan', 'no_results_hint': 'Prueba con otras palabras o elimina los filtros.',
+           'edit_short': 'Editar', 'favorite_remove': 'Quitar de favoritos'},
+    'en': {'clear_search': 'Clear search', 'clear_filters': 'Show all books',
+           'no_results': 'No matching books', 'no_results_hint': 'Try different words or clear the filters.',
+           'edit_short': 'Edit', 'favorite_remove': 'Remove from favorites'},
+    'fr': {'clear_search': 'Effacer la recherche', 'clear_filters': 'Afficher tous les livres',
+           'no_results': 'Aucun livre correspondant', 'no_results_hint': 'Essayez d’autres mots ou effacez les filtres.',
+           'edit_short': 'Modifier', 'favorite_remove': 'Retirer des favoris'},
+    'zh': {'clear_search': '清除搜索', 'clear_filters': '显示所有图书',
+           'no_results': '没有匹配的图书', 'no_results_hint': '请尝试其他关键词或清除筛选。',
+           'edit_short': '编辑', 'favorite_remove': '取消收藏'},
+}.items():
+    TEXT[_language].update(_copy)
+
+
 def _text(key: str, **params) -> str:
     language = core.IDIOMA_ACTUAL if core.IDIOMA_ACTUAL in TEXT else "en"
     value = TEXT[language].get(key, TEXT["en"].get(key, key))
@@ -430,6 +447,10 @@ class Workspace:
     def __init__(self, app):
         self.app = app
         self.root = app.root
+        families = set(self.root.tk.call('font', 'families'))
+        self._serif_family = next((family for family in (
+            'Georgia', 'DejaVu Serif', 'Liberation Serif', 'Times New Roman', 'Times'
+        ) if family in families), 'serif')
         self.pages = {}
         self.nav_buttons = {}
         self.nav_icon_names = {}
@@ -443,6 +464,9 @@ class Workspace:
         self.item_by_iid = {}
         self.selected_item = None
         self.cover_images = {}
+        # A transparent image keeps Tk button dimensions in pixels even when
+        # a cover is missing; character units balloon at large text scales.
+        self._cover_placeholder = tk.PhotoImage(master=self.root, width=1, height=1)
         self.cover_pending = set()
         self.cover_pending_lock = threading.Lock()
         self.cover_generation = 0
@@ -466,6 +490,7 @@ class Workspace:
         self.primary_buttons = []
         self.entries = []
         self._refresh_after = None
+        self._last_search_query = None
         self.search_placeholder_active = False
         self.active_format = "all"
         self.read_filter = 'all'
@@ -475,9 +500,11 @@ class Workspace:
         self._pending_cover_columns = None
         self.rounded_cards = []
         self._sidebar_compact = False
+        self._sidebar_short = False
         self._responsive_after = None
         self._responsive_band = None
         self.details_visible = True
+        self._details_user_hidden = False
         self._details_width = 340
         self._detail_wrap = None
         self._sidebar_resize_after = None
@@ -681,10 +708,10 @@ class Workspace:
         self.brand_copy = tk.Frame(brand, bd=0)
         self.brand_copy.pack(side="left", fill="x", expand=True)
         self.cards.append(self.brand_copy)
-        self.brand_label = tk.Label(self.brand_copy, text=_text("brand"), font=("Georgia", 15), anchor="w", bd=0)
+        self.brand_label = tk.Label(self.brand_copy, text=_text("brand"), font=(self._serif_family, 15), anchor="w", bd=0)
         self.brand_label.pack(fill="x")
         self.labels.append(self.brand_label)
-        self.brand_tagline = tk.Label(self.brand_copy, text=_text("brand_tagline"), font=("Georgia", 8), anchor="w", bd=0)
+        self.brand_tagline = tk.Label(self.brand_copy, text=_text("brand_tagline"), font=(self._serif_family, 8), anchor="w", bd=0)
         self.brand_tagline.pack(fill="x", pady=(2, 0))
         self.muted_labels.append(self.brand_tagline)
 
@@ -803,7 +830,7 @@ class Workspace:
                 pass
             label = tk.Label(
                 tip,
-                text=_text(text_key),
+                text=text_key() if callable(text_key) else _text(text_key),
                 justify="left",
                 wraplength=250,
                 padx=10,
@@ -845,17 +872,19 @@ class Workspace:
     def _build_main(self):
         self.main = tk.Frame(self.shell, bd=0, highlightthickness=0)
         self.shell.add(self.main, minsize=520, stretch="always")
+        self.main.bind('<Configure>', self._schedule_responsive_layout, add='+')
         self.frames.append(self.main)
 
         self.topbar = tk.Frame(self.main, height=64, bd=0)
         self.topbar.pack(fill="x", padx=20, pady=(12, 6))
-        self.topbar.pack_propagate(False)
         self.frames.append(self.topbar)
 
         heading = tk.Frame(self.topbar, bd=0)
         heading.pack(side="left", fill="both", expand=True)
+        self.heading = heading
+        heading.bind('<Configure>', self._fit_page_heading, add='+')
         self.frames.append(heading)
-        self.app.label_titulo = tk.Label(heading, text="", font=("Georgia", 18), anchor="w", bd=0)
+        self.app.label_titulo = tk.Label(heading, text="", font=(self._serif_family, 18), anchor="w", bd=0)
         self.app.label_titulo.pack(anchor="w")
         self.labels.append(self.app.label_titulo)
         self.app.label_subtitulo = tk.Label(heading, text="", font=("Segoe UI", 9), anchor="w", bd=0)
@@ -875,6 +904,18 @@ class Workspace:
         self.page_host = tk.Frame(self.main, bd=0, highlightthickness=0)
         self.page_host.pack(fill="both", expand=True, padx=18, pady=(0, 8))
         self.frames.append(self.page_host)
+
+    def _fit_page_heading(self, _event=None):
+        width = self.heading.winfo_width()
+        if width <= 1:
+            return
+        for label in (self.app.label_titulo, self.app.label_subtitulo):
+            if abs(int(label.cget('wraplength')) - width) >= 4:
+                label.configure(wraplength=width, justify='left')
+        if width < 420:
+            self.app.label_subtitulo.pack_forget()
+        elif not self.app.label_subtitulo.winfo_manager():
+            self.app.label_subtitulo.pack(anchor='w', pady=(3, 0))
 
     def _build_pages(self):
         self._build_library_page()
@@ -944,9 +985,14 @@ class Workspace:
         self.search_shortcut = tk.Label(search_box, text="Ctrl+K", font=("Segoe UI", 8), bd=0, padx=8, pady=4)
         self.search_shortcut.pack(side="right", padx=(0, 12))
         self.muted_labels.append(self.search_shortcut)
-        self.search_var.trace_add("write", lambda *_: self._schedule_refresh())
+        self.search_clear_button = self._button(search_box, '', self.clear_search, icon='close',
+                                                accessible_name=_text('clear_search'))
+        self.search_clear_button.configure(width=34, height=34)
+        self._bind_nav_tooltip(self.search_clear_button, 'clear_search')
+        self.search_var.trace_add("write", self._on_search_changed)
         self.search_entry.bind("<FocusIn>", self._clear_search_placeholder)
         self.search_entry.bind("<FocusOut>", self._restore_search_placeholder)
+        self.search_entry.bind('<Escape>', self.clear_search)
         self._show_search_placeholder()
 
         filter_bar = tk.Frame(toolbar, bd=0)
@@ -1017,6 +1063,8 @@ class Workspace:
         self.sort_label = tk.Label(self.sort_group, text=_text("sort_by"), font=("Segoe UI", 9), bd=0)
         self.sort_label.pack(side="right", padx=(0, 2))
         self.labels.append(self.sort_label)
+        self._toolbar_actions = (self.details_button, self.table_button, self.cover_button, self.app.btn_agregar)
+        self._flow_row(self.action_group, self._toolbar_actions, width_source=filter_bar)
         filter_bar.bind('<Configure>', self._schedule_toolbar_fit, add='+')
         self.stats_frame = tk.Frame(page, bd=0)
         self.frames.append(self.stats_frame)
@@ -1058,7 +1106,7 @@ class Workspace:
         self.rounded_cards.append((self.details_shell, "card"))
         self.details_shell.configure(width=self._details_width)
         self.details_panel = self.details_shell.inner
-        self.details_panel.configure(bd=0, padx=22, pady=16)
+        self.details_panel.configure(bd=0, padx=22, pady=12)
         self.details_panel.bind("<Configure>", self._on_details_resize, add="+")
         self.library_panes.add(self.library_content, minsize=320, stretch="always")
         self.library_panes.add(self.details_shell, minsize=250, stretch="never")
@@ -1074,23 +1122,7 @@ class Workspace:
         try:
             self.search_icon.configure(bg=background)
             self.search_icon.delete("all")
-            self.search_icon.create_oval(
-                4,
-                4,
-                17,
-                17,
-                outline=foreground,
-                width=2,
-            )
-            self.search_icon.create_line(
-                15,
-                15,
-                23,
-                23,
-                fill=foreground,
-                width=2,
-                capstyle="round",
-            )
+            self.search_icon.create_image(14, 14, image=self._icon_photo('search', foreground))
         except tk.TclError:
             pass
 
@@ -1174,7 +1206,7 @@ class Workspace:
         self.details_cover = tk.Label(
             self.details_panel,
             text="▣",
-            font=("Georgia", 18),
+            font=(self._serif_family, 18),
             width=16,
             height=1,
             bd=0,
@@ -1183,7 +1215,7 @@ class Workspace:
         self.details_cover.pack(pady=(6, 6))
         self.details_cover._item_path = ""
         self.labels.append(self.details_cover)
-        self.detail_title = tk.Label(self.details_panel, text=_text("no_selection"), font=("Georgia", 16),
+        self.detail_title = tk.Label(self.details_panel, text=_text("no_selection"), font=(self._serif_family, 16),
                                      height=2, wraplength=280, justify="left", anchor="w", bd=0)
         self.detail_title.pack(fill="x")
         self.labels.append(self.detail_title)
@@ -1197,10 +1229,13 @@ class Workspace:
             primary_metadata, "author", lambda: self._filter_selected_metadata("authors", "autor_mostrar"),
         )
         self.detail_author.grid(row=0, column=0, sticky="ew", padx=(0, 5))
+        self._bind_nav_tooltip(self.detail_author, lambda: str((self.selected_item or {}).get('autor_mostrar') or _text('author')))
         self.detail_favorite = self._detail_metadata_button(
             primary_metadata, "favorite", self.toggle_selected_favorite,
         )
         self.detail_favorite.grid(row=0, column=1, sticky="e")
+        self._bind_nav_tooltip(self.detail_favorite, lambda: _text(
+            'favorite_remove' if item_is_favorite(self.selected_item or {}) else 'favorite_add'))
         self.read_status_var = tk.StringVar(value=_text('unread'))
         self.read_status_combo = ttk.Combobox(primary_metadata, textvariable=self.read_status_var,
                                               values=tuple(_text(key) for key in ('unread', 'reading', 'read')),
@@ -1234,6 +1269,10 @@ class Workspace:
         self.compact_series.grid(row=0, column=0, sticky='ew', padx=(0, 4))
         self.compact_tags = self._detail_metadata_button(self.detail_compact_relations, 'tag', self._show_selected_tags)
         self.compact_tags.grid(row=0, column=1, sticky='ew')
+        self.compact_series.configure(anchor='center')
+        self.compact_tags.configure(anchor='center')
+        self._bind_nav_tooltip(self.compact_series, lambda: str((self.selected_item or {}).get('serie_mostrar') or _text('series')))
+        self._bind_nav_tooltip(self.compact_tags, lambda: ', '.join((self.selected_item or {}).get('tags_mostrar') or []) or _text('tags'))
 
         self.detail_group_headings = {}
         self.detail_group_values = {}
@@ -1256,27 +1295,41 @@ class Workspace:
             self.detail_group_values[key] = value
 
         self.detail_path_var = tk.StringVar()
-        self.detail_path_entry = ttk.Entry(self.detail_actions, textvariable=self.detail_path_var, state="readonly", style="Library.TEntry")
-        self.detail_path_entry.pack(fill="x", pady=4)
-        self.detail_path_entry.bind("<Control-a>", lambda event: (event.widget.selection_range(0, "end"), "break")[-1])
         path_actions = tk.Frame(self.detail_actions, bd=0)
-        path_actions.pack(fill="x", pady=(7, 12))
+        path_actions.pack(fill="x", pady=(0, 8))
+        path_actions.grid_columnconfigure(0, weight=1)
         self.cards.append(path_actions)
-        self.copy_path_button = self._button(path_actions, _text("copy_path"), self.copy_selected_path, icon="more")
-        self.copy_path_button.pack(side="left", padx=(0, 6))
-        self.show_folder_button = self._button(path_actions, _text("show_folder"), self.show_selected_folder, icon="folder")
-        self.show_folder_button.pack(side="left")
+        self.detail_path_entry = ttk.Entry(path_actions, textvariable=self.detail_path_var, state="readonly", style="Library.TEntry", width=1)
+        self.detail_path_entry.grid(row=0, column=0, sticky='ew', padx=(0, 5), ipady=3)
+        self.detail_path_entry.bind("<Control-a>", lambda event: (event.widget.selection_range(0, "end"), "break")[-1])
+        self.copy_path_button = self._button(path_actions, '', self.copy_selected_path, icon="copy", accessible_name=_text('copy_path'))
+        self.copy_path_button.configure(width=38)
+        self.copy_path_button.grid(row=0, column=1, padx=(0, 3))
+        self._bind_nav_tooltip(self.copy_path_button, 'copy_path')
+        self.show_folder_button = self._button(path_actions, '', self.show_selected_folder, icon="folder", accessible_name=_text('show_folder'))
+        self.show_folder_button.configure(width=38)
+        self.show_folder_button.grid(row=0, column=2)
+        self._bind_nav_tooltip(self.show_folder_button, 'show_folder')
         self.open_button = self._button(self.detail_actions, _text("open"), self.open_selected, primary=True, icon="open")
         self.open_button.pack(fill="x", pady=(0, 6))
-        self.metadata_button = self._button(self.detail_actions, _text("edit_metadata"), self.edit_selected_metadata, icon="edit")
-        self.metadata_button.pack(fill="x", pady=(0, 6))
-        self.lookup_metadata_button = self._button(self.detail_actions, _text("lookup_metadata"), self.review_selected_metadata, icon="search")
-        self.lookup_metadata_button.pack(fill="x")
+        secondary_actions = tk.Frame(self.detail_actions, bd=0)
+        secondary_actions.pack(fill='x')
+        secondary_actions.grid_columnconfigure(0, weight=1)
+        self.cards.append(secondary_actions)
+        self.metadata_button = self._button(secondary_actions, _text('edit_short'), self.edit_selected_metadata, icon="edit", accessible_name=_text('edit_metadata'))
+        self.metadata_button.grid(row=0, column=0, sticky='ew', padx=(0, 6))
+        self._bind_nav_tooltip(self.metadata_button, 'edit_metadata')
+        self.lookup_metadata_button = self._button(secondary_actions, '', self.review_selected_metadata, icon="search", accessible_name=_text('lookup_metadata'))
+        self.lookup_metadata_button.configure(width=42)
+        self.lookup_metadata_button.grid(row=0, column=1)
+        self._bind_nav_tooltip(self.lookup_metadata_button, 'lookup_metadata')
         self.open_button.configure(state="disabled")
         self.metadata_button.configure(state="disabled")
         self.lookup_metadata_button.configure(state="disabled")
         self.copy_path_button.configure(state="disabled")
         self.show_folder_button.configure(state="disabled")
+        for frame in (self.detail_actions, self.detail_primary_metadata, self.detail_compact_relations):
+            frame.bind('<Configure>', lambda _event: self._schedule_details_fit(), add='+')
 
     def _show_detail_group(self, group):
         if not self.selected_item:
@@ -1337,25 +1390,26 @@ class Workspace:
             self.labels.append(title)
             self.muted_labels.append(help_label)
             self.import_steps.append((card, title, help_label, title_key, help_key))
+        self._flow_row(step_frame, [step[0] for step in self.import_steps])
 
         route_card = self._card(page)
         route_card.pack(fill="x", pady=(0, 10))
         self.app.label_biblioteca_activa = self._label(route_card, core.tr("library_active"), bold=True)
         self.app.label_biblioteca_activa.pack(anchor="w")
-        self.app.label_biblioteca_help = self._muted(route_card, core.tr("library_help"))
+        self.app.label_biblioteca_help = self._muted(route_card, core.tr("library_help"), wrap=760)
         self.app.label_biblioteca_help.pack(anchor="w", pady=(3, 10))
         route_row = tk.Frame(route_card, bd=0)
         route_row.pack(fill="x")
         self.cards.append(route_row)
+        self.import_route_row = route_row
         self.app.label_ruta = self._label(route_row, core.tr("route"), bold=True)
-        self.app.label_ruta.pack(side="left", padx=(0, 8))
         self.app.biblioteca_var = tk.StringVar(value=str(core.FINAL) if core.biblioteca_configurada() else "")
-        self.app.entry_biblioteca = tk.Entry(route_row, textvariable=self.app.biblioteca_var, font=("Segoe UI", 10), relief="flat", bd=1)
-        self.app.entry_biblioteca.pack(side="left", fill="x", expand=True, ipady=8)
+        self.app.entry_biblioteca = tk.Entry(route_row, textvariable=self.app.biblioteca_var, width=1, font=("Segoe UI", 10), relief="flat", bd=1)
         self.app.entry_biblioteca.bind("<Return>", self.app.aplicar_ruta_desde_cuadro)
         self.entries.append(self.app.entry_biblioteca)
         self.app.btn_elegir_biblioteca = self._button(route_row, _text("choose_library"), self.app.elegir_biblioteca)
-        self.app.btn_elegir_biblioteca.pack(side="left", padx=(8, 0))
+        self._import_route_stacked = None
+        route_row.bind('<Configure>', self._fit_import_route, add='+')
         self.app.label_indice = self._muted(route_card, "")
         self.app.label_indice.pack(anchor="w", pady=(10, 0))
 
@@ -1363,7 +1417,7 @@ class Workspace:
         action_card.pack(fill="x", pady=(0, 10))
         self.app.label_acciones = self._label(action_card, core.tr("actions"), bold=True)
         self.app.label_acciones.pack(anchor="w", pady=(0, 8))
-        self.safe_import_label = self._muted(action_card, _text("safe_import"))
+        self.safe_import_label = self._muted(action_card, _text("safe_import"), wrap=760)
         self.safe_import_label.pack(anchor="w", pady=(0, 12))
         actions = tk.Frame(action_card, bd=0)
         actions.pack(fill="x")
@@ -1372,7 +1426,25 @@ class Workspace:
         self.app.btn_agregar_import.pack(side="left", padx=(0, 8))
         self.app.btn_biblioteca = self._button(actions, core.tr("open_library"), self.app.abrir_biblioteca, icon="folder")
         self.app.btn_biblioteca.pack(side="left")
+        self._flow_row(actions, (self.app.btn_agregar_import, self.app.btn_biblioteca))
         self.set_import_step(0)
+
+    def _fit_import_route(self, _event=None):
+        row = self.import_route_row
+        width = row.winfo_width()
+        stacked = width < self.app.label_ruta.winfo_reqwidth() + self.app.btn_elegir_biblioteca.winfo_reqwidth() + 160
+        if stacked == self._import_route_stacked:
+            return
+        self._import_route_stacked = stacked
+        row.grid_columnconfigure(0, weight=1 if stacked else 0)
+        row.grid_columnconfigure(1, weight=0 if stacked else 1)
+        self.app.label_ruta.grid(row=0, column=0, columnspan=3 if stacked else 1,
+                                sticky='w', padx=(0, 8), pady=(0, 6) if stacked else 0)
+        self.app.entry_biblioteca.grid(row=1 if stacked else 0, column=0 if stacked else 1,
+                                      columnspan=3 if stacked else 1, sticky='ew', ipady=8)
+        self.app.btn_elegir_biblioteca.grid(row=2 if stacked else 0, column=0 if stacked else 2,
+                                          columnspan=3 if stacked else 1, sticky='ew',
+                                          padx=0 if stacked else (8, 0), pady=(6, 0) if stacked else 0)
 
     def _build_reviews_page(self):
         page = self._new_scrollable_page("reviews")
@@ -1389,9 +1461,10 @@ class Workspace:
         self.resume_reviews_button.pack(side="left", padx=(0, 8))
         self.app.btn_dobles_carpeta = self._button(row, _text("compare_folders"), self.app.comprobar_dobles_en_carpeta, icon="folder")
         self.app.btn_dobles_carpeta.pack(side="left")
+        self._flow_row(row, (self.scan_button, self.resume_reviews_button, self.app.btn_dobles_carpeta))
         self._button(duplicate_card, _text('pending_review'), lambda: self._set_read_filter('review')).pack(anchor='w', pady=(10, 0))
-        self.review_result_label = self._muted(row, "")
-        self.review_result_label.pack(side="right")
+        self.review_result_label = self._muted(duplicate_card, "", wrap=760)
+        self.review_result_label.pack(anchor='w')
 
         metadata_card = self._card(page)
         metadata_card.pack(fill="x", pady=(0, 10))
@@ -1405,12 +1478,16 @@ class Workspace:
         controls = tk.Frame(page, bd=0)
         controls.pack(fill="x", pady=(0, 8))
         self.frames.append(controls)
-        self.app.btn_undo = self._button(controls, core.tr("undo_last_action"), self.app.deshacer_ultima_accion, icon="undo")
+        action_row = tk.Frame(controls, bd=0)
+        action_row.pack(fill='x')
+        self.frames.append(action_row)
+        self.app.btn_undo = self._button(action_row, core.tr("undo_last_action"), self.app.deshacer_ultima_accion, icon="undo")
         self.app.btn_undo.pack(side="left", padx=(0, 8))
-        clear_button = self._button(controls, _text("clear_log"), self.app.limpiar)
+        clear_button = self._button(action_row, _text("clear_log"), self.app.limpiar)
         clear_button.pack(side="left")
+        self._flow_row(action_row, (self.app.btn_undo, clear_button))
         self.app.label_registro = self._label(controls, _text("technical_log"), bold=True)
-        self.app.label_registro.pack(side="right")
+        self.app.label_registro.pack(side='top', anchor='w', pady=(0, 8), before=action_row)
         log_card = self._card(page, padding=10)
         log_card.pack(fill="both", expand=True)
         self.app.texto = ScrolledText(log_card, font=("Consolas", 9), wrap="word", relief="flat", bd=0)
@@ -1420,6 +1497,7 @@ class Workspace:
         page = self._new_scrollable_page("settings")
         config = core.cargar_configuracion_operacion()
         settings_card = self._card(page)
+        self.settings_card = settings_card
         settings_card.pack(fill="x", pady=(0, 10))
         self._label(settings_card, _text("operation_settings"), bold=True).grid(row=0, column=0, columnspan=2, sticky="w", pady=(0, 12))
         ocr_label = self._label(settings_card, core.tr("ocr_pages"), bold=False)
@@ -1445,6 +1523,9 @@ class Workspace:
             style="Library.TCombobox",
         )
         self.theme_combo.grid(row=3, column=1, sticky="w", pady=7)
+        self._settings_fields = ((ocr_label, self.ocr_spinbox, 1), (self.theme_label, self.theme_combo, 3))
+        self._settings_stacked = None
+        settings_card.bind('<Configure>', self._fit_settings_fields, add='+')
         self.provider_heading = self._label(settings_card, _text("provider_health"), bold=True)
         self.provider_heading.grid(row=4, column=0, columnspan=2, sticky="w", pady=(12, 4))
         self.provider_label = self._muted(settings_card, "", wrap=760)
@@ -1465,6 +1546,26 @@ class Workspace:
         self._muted(backup_card, _text('backup_help'), wrap=760).pack(anchor='w', pady=8)
         for mode, key in [('backup', 'backup'), ('restore', 'restore'), ('export', 'export_catalog')]:
             self._button(backup_card, _text(key), lambda selected=mode: self._profile_action(selected)).pack(anchor='w', pady=3)
+
+    def _fit_settings_fields(self, _event=None):
+        width = self.settings_card.winfo_width()
+        required = max(label.winfo_reqwidth() + control.winfo_reqwidth() + 30
+                       for label, control, _row in self._settings_fields)
+        stacked = width < required
+        if stacked != self._settings_stacked:
+            self._settings_stacked = stacked
+            self.settings_card.grid_columnconfigure(0, weight=1 if stacked else 0)
+            self.settings_card.grid_columnconfigure(1, weight=0 if stacked else 1)
+            for label, control, row in self._settings_fields:
+                label.grid_configure(row=row, column=0, columnspan=2 if stacked else 1,
+                                     sticky='nw' if stacked else 'w', pady=(7, 2) if stacked else 7)
+                control.grid_configure(row=row, column=0 if stacked else 1,
+                                       columnspan=2 if stacked else 1,
+                                       sticky='ew' if stacked else 'w',
+                                       pady=(label.winfo_reqheight() + 12, 7) if stacked else 7)
+        wrap = max(100, width - 12)
+        if abs(int(self.offline_check.cget('wraplength')) - wrap) >= 4:
+            self.offline_check.configure(wraplength=wrap)
 
     def _profile_action(self, mode):
         if self.app.trabajando:
@@ -1612,8 +1713,10 @@ class Workspace:
 
     def _fit_library_toolbar(self):
         self._toolbar_after = None
+        actions_width = (sum(button.winfo_reqwidth() + 8 for button in self._toolbar_actions)
+                         if hasattr(self, '_toolbar_actions') else self.action_group.winfo_reqwidth())
         full_width = (sum(button.winfo_reqwidth() + 17 for button in self.filter_buttons.values())
-                      + self.sort_group.winfo_reqwidth() + self.action_group.winfo_reqwidth() + 16)
+                      + self.sort_group.winfo_reqwidth() + actions_width + 16)
         compact = self.filter_bar.winfo_width() < full_width
         if compact == self._toolbar_compact:
             return
@@ -1658,22 +1761,54 @@ class Workspace:
     ):
         if icon is not None:
             image = self._icon_photo(icon, size=24)
-        width = max(54, min(220, 30 + len(str(text)) * 8 + (28 if image else 0)))
+        font = ("Segoe UI", 9, "bold" if primary else "normal")
+        width = max(54, 30 + int(self.root.tk.call('font', 'measure', font, str(text))) + (28 if image else 0))
+        height = max(38, int(self.root.tk.call('font', 'metrics', font, '-linespace')) + 12) if text else 38
         button = RoundedButton(
             parent,
             text=text,
             command=command,
             image=image or "",
             width=width,
-            height=38,
+            height=height,
             radius=8,
-            font=("Segoe UI", 9, "bold" if primary else "normal"),
+            font=font,
             accessible_name=accessible_name or text,
         )
         (self.primary_buttons if primary else self.secondary_buttons).append(button)
         if icon is not None:
             self._bind_button_icon(button, icon, "primary" if primary else "secondary")
         return button
+
+    @staticmethod
+    def _flow_row(parent, widgets, width_source=None):
+        """Wrap a small group by requested width, preserving the same controls."""
+        widgets = tuple(widgets)
+        for widget in widgets:
+            widget.pack_forget()
+        source = width_source if width_source is not None else parent
+        def fit(_event=None):
+            width = source.winfo_width()
+            if width <= 1:
+                return
+            columns = len(widgets)
+            for count in range(len(widgets), 0, -1):
+                required = sum(max(widget.winfo_reqwidth() for widget in widgets[col::count])
+                               for col in range(count)) + 8 * (count - 1)
+                if required <= width or count == 1:
+                    columns = count
+                    break
+            if getattr(parent, '_flow_columns', None) == columns:
+                return
+            parent._flow_columns = columns
+            for index, widget in enumerate(widgets):
+                row, column = divmod(index, columns)
+                widget.grid(row=row, column=column, sticky='ew',
+                            padx=(0, 8 if column < columns - 1 else 0), pady=(0, 4))
+            for column in range(len(widgets)):
+                parent.grid_columnconfigure(column, weight=1 if column < columns else 0)
+        source.bind('<Configure>', fit, add='+')
+        fit()
 
     def _detail_metadata_button(self, parent, icon_name, command):
         button = tk.Button(
@@ -1751,7 +1886,18 @@ class Workspace:
     def _muted(self, parent, text, wrap=None):
         label = tk.Label(parent, text=text, font=("Segoe UI", 9), bd=0, anchor="w", justify="left", wraplength=wrap or 0)
         self.muted_labels.append(label)
+        if wrap:
+            parent.bind('<Configure>', lambda _event: self._fit_wrapped_label(label, wrap), add='+')
         return label
+
+    @staticmethod
+    def _fit_wrapped_label(label, maximum):
+        if label.master.winfo_width() <= 1:
+            return
+        available = label.master.winfo_width() - label.winfo_x() - int(label.master.cget('padx') or 0)
+        width = max(80, min(maximum, available))
+        if abs(int(label.cget('wraplength')) - width) >= 4:
+            label.configure(wraplength=width)
 
     def show_page(self, name):
         target_page = "library" if name in self.LIBRARY_SCOPES else name
@@ -1805,7 +1951,7 @@ class Workspace:
             self.resume_reviews_button.configure(state="normal" if count else "disabled")
 
     def _schedule_responsive_layout(self, event=None):
-        if event is not None and event.widget is not self.root:
+        if event is not None and event.widget not in (self.root, self.main):
             return
         if self._responsive_after is not None:
             try:
@@ -1829,24 +1975,32 @@ class Workspace:
         except tk.TclError:
             return
         compact = width < 154
-        if compact == self._sidebar_compact:
+        short = self.sidebar.winfo_height() < 640
+        if compact == self._sidebar_compact and short == self._sidebar_short:
             return
         self._sidebar_compact = compact
+        self._sidebar_short = short
         if compact:
             self.brand_copy.pack_forget()
-            self.library_summary.pack_forget()
         else:
             self.brand_copy.pack(side="left", fill="x", expand=True)
+        if compact or short:
+            self.library_summary.pack_forget()
+        else:
             self.library_summary.pack(fill="x", padx=20, pady=(0, 12), before=self.app.btn_configuracion)
+        if short:
+            self.brand_tagline.pack_forget()
+        elif not self.brand_tagline.winfo_manager():
+            self.brand_tagline.pack(fill='x', pady=(2, 0))
         self._refresh_navigation_labels()
 
     def _apply_responsive_layout(self):
         self._responsive_after = None
-        width = max(1, self.root.winfo_width())
-        band = "narrow" if width < 900 else "wide"
+        width = max(1, self.main.winfo_width())
+        band = "narrow" if width < 620 else "wide"
         if band != self._responsive_band:
             self._responsive_band = band
-            self._set_details_visible(band == "wide")
+            self._set_details_visible(band == "wide" and not self._details_user_hidden)
 
     def _refresh_navigation_labels(self):
         labels = {
@@ -1890,6 +2044,8 @@ class Workspace:
                 pass
             self.library_panes.forget(self.details_shell)
         self.details_visible = bool(visible)
+        if hasattr(self, 'details_button'):
+            self._update_view_state()
 
     def _restore_details_width(self):
         try:
@@ -1932,11 +2088,13 @@ class Workspace:
             return sum(map(int, padding)) if isinstance(padding, (tuple, list)) else 2 * int(padding)
         groups = tuple(self.detail_group_headings.values())
         relations = (self.detail_series, self.detail_tags, self.detail_compact_relations)
-        self.detail_title.configure(height=2)
+        title_lines = int(self.detail_title.cget('height'))
+        line_height = int(self.root.tk.call('font', 'metrics', self.detail_title.cget('font'), '-linespace'))
         required = 2 * int(self.details_panel.cget('pady'))
         for child in self.details_panel.pack_slaves():
             if child is not self.details_cover and child not in groups and child not in relations:
                 required += child.winfo_reqheight() + vertical_padding(child)
+        required += (2 - title_lines) * line_height
         item = self.selected_item or {}
         series, tags = item.get('serie_mostrar'), item.get('tags_mostrar')
         full_relations_height = ((self.detail_series.winfo_reqheight() + 5 if series else 0)
@@ -1946,9 +2104,11 @@ class Workspace:
             self.detail_series.pack_forget()
             self.detail_tags.pack_forget()
             interactive = not self.app.trabajando
-            self.compact_series.configure(text=_text('series'), state='normal' if series and interactive else 'disabled')
-            self.compact_tags.configure(text=f"{_text('tags')} ({len(tags or [])})",
+            self.compact_series.configure(text='', state='normal' if series and interactive else 'disabled')
+            self.compact_tags.configure(text='',
                                         state='normal' if tags and interactive else 'disabled')
+            name_control(self.compact_series, _text('series') + ': ' + str(series or '—'))
+            name_control(self.compact_tags, _text('tags') + ': ' + ', '.join(tags or []))
             if not self.detail_compact_relations.winfo_manager():
                 self.detail_compact_relations.pack(fill='x', pady=(0, 3), before=self.detail_separator)
             required += self.detail_compact_relations.winfo_reqheight() + 3
@@ -1959,10 +2119,11 @@ class Workspace:
             if tags and not self.detail_tags.winfo_manager():
                 self.detail_tags.pack(fill='x', pady=(0, 1), before=self.detail_separator)
             required += full_relations_height
-        if required > self.details_panel.winfo_height():
-            title_height = self.detail_title.winfo_reqheight()
-            self.detail_title.configure(height=1)
-            required -= title_height - self.detail_title.winfo_reqheight()
+        desired_lines = 1 if required > self.details_panel.winfo_height() else 2
+        if desired_lines == 1:
+            required -= line_height
+        if desired_lines != title_lines:
+            self.detail_title.configure(height=desired_lines)
         groups_height = sum(child.winfo_reqheight() + 12 for child in groups)
         collapse_groups = required + groups_height > self.details_panel.winfo_height()
         for child in groups:
@@ -2039,6 +2200,7 @@ class Workspace:
         return self._scroll_under_pointer(event, units)
 
     def toggle_details(self):
+        self._details_user_hidden = self.details_visible
         self._set_details_visible(not self.details_visible)
 
     def _update_heading(self):
@@ -2142,8 +2304,11 @@ class Workspace:
 
     def _update_view_state(self):
         colors = getattr(self.app, "tema_actual", {})
-        for mode, button, icon_name in (("covers", self.cover_button, 'grid'), ("table", self.table_button, 'list')):
-            active = mode == self.view_mode
+        controls = [(self.view_mode == 'covers', self.cover_button, 'grid'),
+                    (self.view_mode == 'table', self.table_button, 'list')]
+        if hasattr(self, 'details_button'):
+            controls.append((self.details_visible, self.details_button, 'details'))
+        for active, button, icon_name in controls:
             background = colors.get("primary_bg" if active else "quiet_bg", "#a9573e" if active else "#f0ece7")
             foreground = colors.get("primary_text" if active else "text", "#ffffff" if active else "#2d2a27")
             self._set_button_theme(
@@ -2189,6 +2354,42 @@ class Workspace:
                 pass
         self._refresh_after = self.root.after(100, self._refresh_from_search)
 
+    def _on_search_changed(self, *_args):
+        has_query = bool(self.search_var.get()) and not self.search_placeholder_active
+        if has_query:
+            self.search_shortcut.pack_forget()
+            if not self.search_clear_button.winfo_manager():
+                self.search_clear_button.pack(side='right', padx=(0, 12))
+        else:
+            self.search_clear_button.pack_forget()
+            if not self.search_shortcut.winfo_manager():
+                self.search_shortcut.pack(side='right', padx=(0, 12))
+        query = self.search_var.get().strip() if has_query else ''
+        if query != self._last_search_query:
+            self._last_search_query = query
+            self._schedule_refresh()
+
+    def clear_search(self, _event=None):
+        self.search_placeholder_active = False
+        self.search_var.set('')
+        self.search_entry.configure(fg=self.app.tema_actual['text'])
+        self.search_entry.focus_set()
+        return 'break'
+
+    def _clear_library_filters(self):
+        self.active_format = 'all'
+        self.read_filter = 'all'
+        self.entity_key = ''
+        self.library_scope = 'library'
+        self.clear_search()
+        if self._refresh_after is not None:
+            self.root.after_cancel(self._refresh_after)
+            self._refresh_after = None
+        if self.current_page == 'library':
+            self.refresh_library(reset_page=True)
+        else:
+            self.show_page('library')
+
     def _refresh_from_search(self):
         self._refresh_after = None
         self.refresh_library(reset_page=True)
@@ -2231,6 +2432,8 @@ class Workspace:
         elif read_filter != 'all':
             self.filtered_items = [item for item in self.filtered_items if item.get('read_status', 'unread') == read_filter]
         self.filtered_items = self._apply_library_scope(self.filtered_items)
+        if not self.filtered_items and self.selected_item:
+            self.clear_selection()
         max_page = max(0, (len(self.filtered_items) - 1) // self.PAGE_SIZE)
         self.grid_page = min(self.grid_page, max_page)
         self._update_filter_state()
@@ -2370,10 +2573,15 @@ class Workspace:
                 )
             empty = self._empty_library_frame
             title, hint = self._empty_library_labels
-            first_use = not core.biblioteca_configurada()
-            hint.configure(text=_text("first_library_hint" if first_use else "empty_hint"))
-            self._empty_library_action.configure(text=_text("choose_library"))
-            if first_use:
+            has_catalog = bool(self._view_index.stats['books'])
+            filtered = has_catalog
+            first_use = not core.biblioteca_configurada() and not has_catalog
+            title.configure(text=_text('no_results' if has_catalog else 'empty_library'),
+                            wraplength=max(120, min(360, self.cover_canvas.winfo_width() - 24)))
+            hint.configure(text=_text('no_results_hint' if has_catalog else ('first_library_hint' if first_use else 'empty_hint')))
+            self._empty_library_action.configure(text=_text('clear_filters' if filtered else 'choose_library'),
+                command=self._clear_library_filters if filtered else self.app.elegir_biblioteca)
+            if first_use or filtered:
                 self._empty_library_action.pack(pady=(18, 0))
             else:
                 self._empty_library_action.pack_forget()
@@ -2383,7 +2591,7 @@ class Workspace:
             self.dynamic_labels.append(title)
             self.dynamic_muted_labels.append(hint)
         else:
-            columns = max(2, min(6, self.cover_canvas.winfo_width() // 172))
+            columns = max(1, min(6, self.cover_canvas.winfo_width() // 172))
             old_columns = self._cover_columns
             self._cover_columns = columns
             for index, item in enumerate(items):
@@ -2399,7 +2607,7 @@ class Workspace:
                 if getattr(cover, "_cover_key", None) != cover_key:
                     previous = getattr(cover, "_item_path", "")
                     self.cover_images.pop((str(cover), previous), None)
-                    cover.configure(image="", text=item["formato"], width=18, height=11)
+                    cover.configure(image=self._cover_placeholder, text=item["formato"], width=144, height=206)
                     cover._cover_loaded = False
                     cover._cover_key = cover_key
                 cover._item_path = item["ruta"]
@@ -2417,7 +2625,7 @@ class Workspace:
             card.grid_remove()
             # Hidden cards do not retain covers for books no longer displayed.
             self.cover_images.pop((str(cover), getattr(cover, "_item_path", "")), None)
-            cover.configure(image="")
+            cover.configure(image=self._cover_placeholder)
             cover._cover_loaded = False
         shown = min(total, start + len(items))
         self.page_label.configure(text=_text("showing", shown=shown, total=total))
@@ -2430,11 +2638,11 @@ class Workspace:
     def _create_cover_card(self):
         """Keep a bounded pool instead of recreating Tk widgets on every query."""
         card = tk.Frame(self.cover_inner, bd=0, highlightthickness=0, padx=5, pady=4)
-        cover = tk.Button(card, width=18, height=11, relief="flat", bd=0,
-                          font=("Georgia", 12, "bold"), cursor="hand2", highlightthickness=2)
+        cover = tk.Button(card, width=144, height=206, image=self._cover_placeholder, compound='center', relief="flat", bd=0,
+                          font=(self._serif_family, 12, "bold"), cursor="hand2", highlightthickness=2)
         cover.pack()
         title = tk.Button(card, wraplength=144, justify="left", anchor="w", relief="flat", bd=0,
-                          font=("Georgia", 10), cursor="hand2", highlightthickness=2)
+                          font=(self._serif_family, 10), cursor="hand2", highlightthickness=2)
         title.pack(fill="x", pady=(6, 0))
         author = self._muted(card, "", wrap=144)
         author.pack(fill="x", pady=(2, 0))
@@ -2461,7 +2669,7 @@ class Workspace:
 
     def _on_cover_resize(self, event):
         self.cover_canvas.itemconfigure(self.cover_window, width=event.width)
-        columns = max(2, min(6, event.width // 172))
+        columns = max(1, min(6, event.width // 172))
         self._pending_cover_columns = columns
         if self.view_mode != "covers":
             return
@@ -2482,7 +2690,7 @@ class Workspace:
         self._relayout_cover_cards(columns)
 
     def _relayout_cover_cards(self, columns):
-        columns = max(2, min(6, int(columns)))
+        columns = max(1, min(6, int(columns)))
         old_columns = self._cover_columns
         positions = cover_grid_positions(len(self.dynamic_cards), columns)
         for card, (row, column) in zip(self.dynamic_cards, positions):
@@ -2592,19 +2800,23 @@ class Workspace:
                 )
                 if widget is None:
                     return
-            with Image.open(thumbnail) as image:
-                photo = ImageTk.PhotoImage(image.copy())
-            self.cover_images[(str(widget), item_path)] = photo
-            widget._cover_loaded = True
-            widget.configure(image=photo, text="", width=144, height=206)
-            if self.selected_item and self.selected_item.get("ruta") == item_path:
-                with Image.open(thumbnail) as detail_source:
+            with Image.open(thumbnail) as source:
+                if widget is not self.details_cover:
+                    photo = ImageTk.PhotoImage(source.copy(), master=self.root)
+                    self.cover_images[(str(widget), item_path)] = photo
+                    widget.configure(image=photo, text="", width=144, height=206)
+                    widget._cover_loaded = True
+                if self.selected_item and self.selected_item.get("ruta") == item_path:
                     available = max(72, min(170, self.details_panel.winfo_height() - 490))
                     detail_size = (max(50, round(available * 144 / 206)), available)
-                    detail_photo = ImageTk.PhotoImage(detail_source.resize(detail_size, Image.Resampling.LANCZOS))
-                self.cover_images[("details", item_path)] = detail_photo
-                self.details_cover.configure(image=detail_photo, text="", width=detail_size[0], height=detail_size[1])
-                self._schedule_details_fit()
+                    detail_photo = ImageTk.PhotoImage(source.resize(detail_size, Image.Resampling.LANCZOS), master=self.root)
+                    for old_key in tuple(self.cover_images):
+                        if old_key[0] == 'details' or old_key[0] == str(self.details_cover):
+                            self.cover_images.pop(old_key)
+                    self.cover_images[("details", item_path)] = detail_photo
+                    self.details_cover.configure(image=detail_photo, text="", width=detail_size[0], height=detail_size[1])
+                    self.details_cover._cover_loaded = True
+                    self._schedule_details_fit()
         except Exception:
             return
 
@@ -2665,10 +2877,11 @@ class Workspace:
         favorite = item_is_favorite(item)
         self.detail_favorite._detail_accent = favorite
         self.detail_favorite.configure(
-            text=_text("favorite_active" if favorite else "favorite_add"),
+            text='',
             state="normal" if interactive else "disabled",
             cursor=interactive_cursor(interactive),
         )
+        name_control(self.detail_favorite, _text('favorite_remove' if favorite else 'favorite_add'))
 
         series = str(item.get("serie_mostrar") or "").strip()
         if series:
@@ -2761,6 +2974,24 @@ class Workspace:
 
         self.app.bloquear(True)
         self.app._start_worker(task)
+
+    def clear_selection(self):
+        self.selected_item = None
+        self.detail_title.configure(text=_text('no_selection'))
+        name_control(self.detail_title, _text('no_selection'))
+        self.detail_path_var.set('')
+        self.details_cover._item_path = ''
+        self.details_cover.configure(image='', text='▣', width=16, height=1)
+        for key in tuple(self.cover_images):
+            if key[0] == 'details' or key[0] == str(self.details_cover):
+                self.cover_images.pop(key)
+        for value in self.detail_group_values.values():
+            value.configure(text='')
+        for button in (self.open_button, self.metadata_button, self.lookup_metadata_button,
+                       self.copy_path_button, self.show_folder_button):
+            button.configure(state='disabled')
+        self._refresh_detail_metadata_controls()
+        self._update_selected_card()
 
     def select_item(self, item):
         if not item:
@@ -2856,10 +3087,10 @@ class Workspace:
                 continue
             try:
                 button.configure(
-                    image="",
+                    image=self._cover_placeholder,
                     text=getattr(button, "_item_format", ""),
-                    width=18,
-                    height=11,
+                    width=144,
+                    height=206,
                 )
                 button._cover_loaded = False
             except tk.TclError:
@@ -2937,7 +3168,7 @@ class Workspace:
         body = tk.Frame(window, bg=colors.get("bg", "#faf8f4"), padx=22, pady=18)
         body.pack(fill="both", expand=True)
         tk.Label(
-            body, text=_text("edit_metadata"), font=("Georgia", 18), anchor="w",
+            body, text=_text("edit_metadata"), font=(self._serif_family, 18), anchor="w",
             bg=colors.get("bg", "#faf8f4"), fg=colors.get("text", "#2d2a27"),
         ).pack(fill="x")
         tk.Label(
@@ -3121,10 +3352,11 @@ class Workspace:
         self.sort_combo.configure(values=(_text("sort_recent"), _text("sort_title")))
         self.sort_var.set(_text("sort_recent"))
         self.open_button.configure(text=_text("open"))
-        self.metadata_button.configure(text=_text("edit_metadata"))
-        self.lookup_metadata_button.configure(text=_text("lookup_metadata"))
-        self.copy_path_button.configure(text=_text("copy_path"))
-        self.show_folder_button.configure(text=_text("show_folder"))
+        self.metadata_button.configure(text=_text('edit_short'), accessible_name=_text('edit_metadata'))
+        self.lookup_metadata_button.configure(accessible_name=_text("lookup_metadata"))
+        self.copy_path_button.configure(accessible_name=_text("copy_path"))
+        self.show_folder_button.configure(accessible_name=_text("show_folder"))
+        self.search_clear_button.configure(accessible_name=_text('clear_search'))
         self.details_heading.configure(text=_text("details"))
         self._refresh_detail_metadata_controls()
         for key, heading in self.detail_group_headings.items():
@@ -3298,20 +3530,21 @@ class Workspace:
         self.app.style.map(
             style_name,
             fieldbackground=[
-                ("readonly", colors["entry_bg"]),
                 ("disabled", colors["button_disabled"]),
+                ("readonly", colors["entry_bg"]),
             ],
             foreground=[
-                ("readonly", colors["text"]),
                 ("disabled", colors["disabled_text"]),
+                ("readonly", colors["text"]),
             ],
             background=[
+                ("disabled", colors["button_disabled"]),
                 ("readonly", colors["button_bg"]),
                 ("active", colors["button_active"]),
             ],
             arrowcolor=[
-                ("readonly", colors["text"]),
                 ("disabled", colors["disabled_text"]),
+                ("readonly", colors["text"]),
             ],
         )
         self.root.option_add("*TCombobox*Listbox.background", colors["card"])

@@ -68,6 +68,12 @@ def render_icon(name: str, color: str, size: int = 24, scale: int = 4) -> Image.
     elif name == "search":
         ellipse((3, 3, 16, 16))
         line([(14.5, 14.5), (21, 21)])
+    elif name == "close":
+        line([(6, 6), (18, 18)])
+        line([(18, 6), (6, 18)])
+    elif name == "copy":
+        line([(8, 5), (8, 3), (21, 3), (21, 16), (19, 16)])
+        draw.rounded_rectangle(box((3, 8, 16, 21)), radius=p(1.5), outline=color, width=width)
     elif name == "grid":
         for x in (3, 13):
             for y in (3, 13):

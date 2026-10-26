@@ -1840,6 +1840,7 @@ class Workspace:
             for column in range(len(widgets)):
                 parent.grid_columnconfigure(column, weight=1 if column < columns else 0)
         source.bind('<Configure>', fit, add='+')
+        parent._fit_flow_row = fit
         fit()
 
     def _detail_metadata_button(self, parent, icon_name, command):
@@ -3463,6 +3464,9 @@ class Workspace:
                 width = 30 + int(self.root.tk.call('font', 'measure', button.font, button.text))
                 height = int(self.root.tk.call('font', 'metrics', button.font, '-linespace')) + 12
                 button.configure(width=max(54, width + (28 if button.image else 0)), height=max(38, height))
+        for parent in {button.master for button in self.primary_buttons + self.secondary_buttons}:
+            if parent.winfo_exists() and callable(getattr(parent, '_fit_flow_row', None)):
+                parent._fit_flow_row()
         self._pagination_caption_signature = None
         self._fit_pagination()
         self._toolbar_compact = None

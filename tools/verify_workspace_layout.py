@@ -245,10 +245,13 @@ def main():
             workspace.show_page('settings')
             root.after(180, root.quit)
             root.mainloop()
+            def reveal_visible(widget):
+                def ready():
+                    workspace._reveal_pane_focus_target(widget)
+                    return visible_rectangle(widget)
+                return wait_for_ui(root, ready)
             for name, widget in (('settings_theme', workspace.theme_combo), ('settings_ocr', workspace.ocr_spinbox)):
-                workspace._reveal_pane_focus_target(widget)
-                root.after(100, root.quit)
-                root.mainloop()
+                reveal_visible(widget)
                 results.append({'page': 'settings', 'tk_scale_percent': int(scale * 100),
                                 'checks': {name: visible_rectangle(widget)},
                                 'failed_geometry': {} if visible_rectangle(widget) else {
@@ -272,9 +275,7 @@ def main():
                     'activity': (app.btn_undo,),
                 }.get(page, ())
                 for position, widget in enumerate(controls):
-                    workspace._reveal_pane_focus_target(widget)
-                    root.after(80, root.quit)
-                    root.mainloop()
+                    reveal_visible(widget)
                     results.append({'page': page, 'tk_scale_percent': int(scale * 100),
                                     'checks': {'action_' + str(position): visible_rectangle(widget)}})
             if scale in (1.0, 2.0):
@@ -284,22 +285,39 @@ def main():
                     root.geometry('1366x768+0+0' if scale == 1.0 else '760x560+0+0')
                     root.after(200, root.quit)
                     root.mainloop()
+                    wait_for_ui(root, lambda: visible_rectangle(workspace.page_previous)
+                                and visible_rectangle(workspace.filters_button))
+                    root.update_idletasks()
                     checks = {}
+                    caption_geometry = {}
                     for name, button in workspace.nav_buttons.items():
                         font = tkfont.Font(root=root, font=button.font)
                         checks[name] = (font.measure(button.text) <= button.winfo_width() - 58
                                         and font.metrics('linespace') <= button.winfo_height() - 6)
                     for name, button in (('voice_activate', workspace.speech_controls.activate_button),
-                                         ('voice_deactivate', workspace.speech_controls.deactivate_button)):
+                                         ('voice_deactivate', workspace.speech_controls.deactivate_button),
+                                         ('page_next', workspace.page_next),
+                                         ('page_previous', workspace.page_previous),
+                                         ('add_books', app.btn_agregar), ('filters', workspace.filters_button)):
                         font = tkfont.Font(root=root, font=button.font)
                         checks[name] = (visible_rectangle(button)
-                                        and font.measure(button.text) + 20 <= button.winfo_width()
+                                        and font.measure(button.text) + (58 if button.image else 18) <= button.winfo_width()
                                         and font.metrics('linespace') + 10 <= button.winfo_height())
+                        if not checks[name]:
+                            caption_geometry[name] = {'text': button.text,
+                                'actual': [button.winfo_width(), button.winfo_height()],
+                                'required': [font.measure(button.text) + (58 if button.image else 18),
+                                             font.metrics('linespace') + 10],
+                                'visible': visible_rectangle(button)}
                     brand = workspace.brand_label
                     font = tkfont.Font(root=root, font=brand.cget('font'))
                     checks['brand'] = font.measure(brand.cget('text')) + 4 <= brand.winfo_width()
+                    from ui.workspace import _text
+                    checks['translated_filters'] = workspace.filters_button.text == _text('filters')
+                    checks['translated_cancel'] = app.btn_cancelar_operacion.text == core.tr('cancel')
                     results.append({'page': 'localized_navigation', 'language': language,
-                                    'tk_scale_percent': int(scale * 100), 'checks': checks})
+                                    'tk_scale_percent': int(scale * 100), 'checks': checks,
+                                    'failed_captions': caption_geometry})
                     if args.captures and scale == 1 and language == 'es':
                         capture(root, 'library-spanish-light')
             workspace.shutdown()

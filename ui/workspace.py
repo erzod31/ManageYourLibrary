@@ -942,14 +942,32 @@ class Workspace:
         content = tk.Frame(canvas, bd=0, highlightthickness=0)
         window = canvas.create_window((0, 0), window=content, anchor="nw")
         content._wheel_target = canvas
-        content.bind(
-            "<Configure>",
-            lambda _event, target=canvas: target.configure(scrollregion=target.bbox("all")),
-        )
-        canvas.bind(
-            "<Configure>",
-            lambda event, target=canvas, item=window: target.itemconfigure(item, width=event.width),
-        )
+        def reveal_focused():
+            canvas._page_reveal_after = None
+            try:
+                focused = self.root.focus_get()
+                if focused is not None and canvas.winfo_exists():
+                    self._reveal_pane_focus_target(focused)
+            except (KeyError, tk.TclError):
+                pass
+
+        def schedule_reveal():
+            if getattr(canvas, '_page_reveal_after', None) is None:
+                canvas._page_reveal_after = self.root.after_idle(reveal_focused)
+
+        def update_region(_event=None):
+            bounds = canvas.bbox('all')
+            if bounds != getattr(canvas, '_page_scrollregion', None):
+                canvas._page_scrollregion = bounds
+                canvas.configure(scrollregion=bounds)
+                schedule_reveal()
+
+        def resize_viewport(event):
+            canvas.itemconfigure(window, width=event.width)
+            schedule_reveal()
+
+        content.bind('<Configure>', update_region)
+        canvas.bind('<Configure>', resize_viewport)
         self.page_scroll_canvases[name] = canvas
         self.frames.extend((content,))
         return content
@@ -2102,10 +2120,14 @@ class Workspace:
 
     def _fit_pagination(self, event=None):
         compact = self.pagination.winfo_width() < 520
-        self.page_previous.configure(text='‹' if compact else _text('previous'),
-                                     width=38 if compact else 30 + 8 * len(_text('previous')))
-        self.page_next.configure(text='›' if compact else _text('next'),
-                                 width=38 if compact else 30 + 8 * len(_text('next')))
+        signature = (compact, _text('previous'), _text('next'))
+        if getattr(self, '_pagination_caption_signature', None) == signature:
+            return
+        self._pagination_caption_signature = signature
+        for button, caption in ((self.page_previous, '‹' if compact else signature[1]),
+                                (self.page_next, '›' if compact else signature[2])):
+            width = 38 if compact else 30 + int(self.root.tk.call('font', 'measure', button.font, caption))
+            button.configure(text=caption, width=width)
 
     def _schedule_details_fit(self):
         if getattr(self, '_details_fit_after', None) is None:
@@ -3422,7 +3444,7 @@ class Workspace:
         self.copy_path_button.configure(accessible_name=_text("copy_path"))
         self.show_folder_button.configure(accessible_name=_text("show_folder"))
         self.search_clear_button.configure(accessible_name=_text('clear_search'))
-        self.details_heading.configure(text=_text("details"))
+        self.details_heading.configure(text=_text("details") + '…')
         self._refresh_detail_metadata_controls()
         for key, heading in self.detail_group_headings.items():
             heading.configure(text=_text(key))
@@ -3433,6 +3455,18 @@ class Workspace:
             self.tree.heading(column, text=_text(title_key))
         self.page_previous.configure(text=_text("previous"))
         self.page_next.configure(text=_text("next"))
+        self.filters_button.configure(text=_text('filters'))
+        self.app.btn_cancelar_operacion.configure(text=core.tr('cancel'))
+        navigation = set(self.nav_buttons.values()) | {self.app.btn_tema}
+        for button in self.primary_buttons + self.secondary_buttons:
+            if isinstance(button, RoundedButton) and button.winfo_exists() and button.text and button not in navigation:
+                width = 30 + int(self.root.tk.call('font', 'measure', button.font, button.text))
+                height = int(self.root.tk.call('font', 'metrics', button.font, '-linespace')) + 12
+                button.configure(width=max(54, width + (28 if button.image else 0)), height=max(38, height))
+        self._pagination_caption_signature = None
+        self._fit_pagination()
+        self._toolbar_compact = None
+        self._schedule_toolbar_fit()
         self.safe_import_label.configure(text=_text("safe_import"))
         self.resume_reviews_button.configure(text=_text("resume_reviews"))
         self.theme_label.configure(text=_text("theme"))

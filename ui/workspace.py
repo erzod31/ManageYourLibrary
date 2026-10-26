@@ -2662,9 +2662,23 @@ class Workspace:
         title.pack(fill="x", pady=(6, 0))
         author = self._muted(card, "", wrap=144)
         author.pack(fill="x", pady=(2, 0))
+        cover._library_button = title._library_button = True
         self.cards.append(card)
         self.secondary_buttons.extend((cover, title))
         return card, cover, title, author
+
+    @staticmethod
+    def _theme_library_button(button, colors):
+        signature = tuple(colors[key] for key in ('bg', 'text', 'quiet_active', 'accent', 'disabled_text'))
+        if getattr(button, '_library_color_signature', None) == signature:
+            return
+        options = dict(bg=colors['bg'], fg=colors['text'], activebackground=colors['quiet_active'],
+                       activeforeground=colors['text'], highlightcolor=colors['accent'],
+                       disabledforeground=colors['disabled_text'])
+        if not getattr(button, '_item_path', None):
+            options['highlightbackground'] = colors['bg']
+        button.configure(**options)
+        button._library_color_signature = signature
 
     def _style_dynamic_library_items(self):
         colors = getattr(self.app, "tema_actual", {})
@@ -2673,10 +2687,7 @@ class Workspace:
         for card in self.dynamic_cards:
             card.configure(bg=colors["bg"], highlightbackground=colors["bg"])
         for button in self.dynamic_buttons:
-            button.configure(
-                bg=colors["bg"], fg=colors["text"], activebackground=colors["quiet_active"],
-                activeforeground=colors["text"], highlightbackground=colors['bg'], highlightcolor=colors['accent'],
-            )
+            self._theme_library_button(button, colors)
         for label in self.dynamic_labels:
             label.configure(bg=label.master.cget("bg"), fg=colors["text"])
         for label in self.dynamic_muted_labels:
@@ -3125,13 +3136,17 @@ class Workspace:
             if not path:
                 continue
             selected = path == selected_path
+            signature = (selected, colors.get('accent'), colors.get('border'))
+            if getattr(button, '_library_selection_signature', None) == signature:
+                continue
             button.configure(
                 bd=0,
                 relief="flat",
-                highlightthickness=3 if selected else 1,
+                highlightthickness=2,
                 highlightbackground=colors.get("accent" if selected else "border", "#a9573e" if selected else "#ded8d0"),
                 highlightcolor=colors.get("accent", "#a9573e"),
             )
+            button._library_selection_signature = signature
 
     def open_selected(self):
         if not self.selected_item:
@@ -3435,6 +3450,8 @@ class Workspace:
             except Exception:
                 pass
         for button in self.secondary_buttons:
+            if getattr(button, '_library_button', False):
+                continue
             try:
                 self._set_button_theme(
                     button,
@@ -3454,10 +3471,7 @@ class Workspace:
                 pass
         for button in self.dynamic_buttons:
             try:
-                button.configure(
-                    bg=colors["bg"], fg=colors["text"], activebackground=colors["quiet_active"],
-                    activeforeground=colors["text"],
-                )
+                self._theme_library_button(button, colors)
             except Exception:
                 pass
         for button in self.primary_buttons:
@@ -3525,7 +3539,7 @@ class Workspace:
         self._update_navigation_state()
         self._update_filter_state()
         self._update_view_state()
-        self._style_dynamic_library_items()
+        self._update_selected_card()
         self.set_import_step(1 if self.app.trabajando and self.current_page == "import" else 0)
         if self.search_placeholder_active:
             self.search_entry.configure(fg=colors["muted"])

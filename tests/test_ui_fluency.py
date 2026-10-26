@@ -30,6 +30,22 @@ class Scheduler:
 
 
 class FluencyTests(unittest.TestCase):
+    def test_selection_border_has_fixed_geometry_and_unchanged_cards_are_not_repainted(self):
+        from unittest.mock import Mock
+        workspace = object.__new__(Workspace)
+        workspace.app = SimpleNamespace(tema_actual={'accent': '#a9573e', 'border': '#ded8d0'})
+        workspace.selected_item = {'ruta': 'first'}
+        buttons = [SimpleNamespace(_item_path=path, configure=Mock()) for path in ('first', 'second')]
+        workspace.dynamic_buttons = buttons
+        workspace._update_selected_card()
+        workspace._update_selected_card()
+        self.assertEqual([button.configure.call_count for button in buttons], [1, 1])
+        workspace.selected_item = {'ruta': 'second'}
+        workspace._update_selected_card()
+        self.assertEqual([button.configure.call_count for button in buttons], [2, 2])
+        for button in buttons:
+            self.assertTrue(all(call.kwargs['highlightthickness'] == 2 for call in button.configure.call_args_list))
+
     def test_event_drain_yields_with_backlog_and_keeps_order(self):
         queue = UiEventQueue()
         values = []

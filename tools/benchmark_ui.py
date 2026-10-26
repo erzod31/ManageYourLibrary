@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import gc
 import json
+import math
 import re
 import statistics
 import sys
@@ -13,6 +14,13 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
+
+
+def percentile95(values):
+    """Nearest-rank p95, including the tail in small measurement batches."""
+    if not values:
+        raise ValueError('A percentile requires measurements')
+    return sorted(values)[math.ceil(len(values) * .95) - 1]
 
 
 def process_metrics():
@@ -181,7 +189,7 @@ def main():
                 report["table_rows_loaded"] = len(workspace.tree.get_children())
                 for name, measurements in samples.items():
                     report["callbacks"][name] = {"median_ms": round(statistics.median(measurements), 2),
-                                                   'p95_ms': round(sorted(measurements)[int((len(measurements)-1)*.95)], 2),
+                                                   'p95_ms': round(percentile95(measurements), 2),
                                                    "max_ms": round(max(measurements), 2)}
                 print(json.dumps(report, ensure_ascii=True), flush=True)
                 if args.output:
@@ -191,6 +199,7 @@ def main():
                 return
             name, callback = tasks.pop(0)
             started = time.perf_counter()
+            callback_cpu = time.process_time()
             try:
                 callback()
             except Exception as exc:
@@ -198,7 +207,8 @@ def main():
             elapsed_ms = (time.perf_counter() - started) * 1000
             samples.setdefault(name, []).append(elapsed_ms)
             if elapsed_ms > 50:
-                slow_callbacks.append({'name': name, 'ms': round(elapsed_ms, 2)})
+                slow_callbacks.append({'name': name, 'ms': round(elapsed_ms, 2),
+                                       'process_cpu_ms': round((time.process_time() - callback_cpu) * 1000, 2)})
             if name == 'favorite_dispatch':
                 favorite_started = started
                 root.after(5, run_next)

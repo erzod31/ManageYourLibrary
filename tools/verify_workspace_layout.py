@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -29,12 +30,15 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path)
     parser.add_argument('--captures', type=Path, help='Synthetic previews in the private Linux CI Xvfb session only')
+    parser.add_argument('--scale', type=float, choices=(1.0, 1.25, 1.5, 2.0), help=argparse.SUPPRESS)
     args = parser.parse_args()
     if args.captures:
         if not (sys.platform == 'linux' and os.environ.get('GITHUB_ACTIONS') == 'true'
                 and os.environ.get('MYL_ISOLATED_VISUAL_CI') == '1' and os.environ.get('DISPLAY')):
             parser.error('--captures requires the explicitly isolated Linux CI display')
         args.captures.mkdir(parents=True, exist_ok=False)
+    if args.scale is None:
+        return run_matrix(args)
     captured = []
 
     def capture(root, name):
@@ -57,8 +61,11 @@ def main():
                  'autor': 'Autora de ejemplo', 'extension': '.epub', 'tags': ['Prueba'], 'serie': 'Serie'}
                 for i in range(12)]
         rows[0]['read_status'] = 'reading'
-        # A fresh interpreter/Tk root per scale avoids mixing already-created font metrics.
-        for scale in (1.0, 1.25, 1.5, 2.0):
+        from PIL import Image
+        cover = Path(directory) / 'synthetic-cover.png'
+        Image.new('RGB', (144, 206), '#587964').save(cover)
+        # Native platform providers initialize per process, as in the app.
+        for scale in (args.scale,):
             root = tk.Tk()
             root.tk.call('tk', 'scaling', (96 / 72) * scale)
             app = App(root, initial_index={'archivos': rows})
@@ -137,9 +144,6 @@ def main():
                 interactions['hidden_details_survive_resize'] = not workspace.details_visible
                 workspace.toggle_details()
                 root.update()
-                from PIL import Image
-                cover = Path(directory) / 'synthetic-cover.png'
-                Image.new('RGB', (144, 206), '#587964').save(cover)
                 workspace.cover_service.thumbnail_path = lambda *args, **kwargs: None
                 bad_cover = Path(directory) / 'invalid-cover.png'
                 bad_cover.write_bytes(b'not an image')
@@ -212,12 +216,18 @@ def main():
                         app.establecer_preferencia_tema('light')
             root.geometry('760x560+0+0')
             workspace.show_page('settings')
-            root.update()
+            root.after(180, root.quit)
+            root.mainloop()
             for name, widget in (('settings_theme', workspace.theme_combo), ('settings_ocr', workspace.ocr_spinbox)):
                 workspace._reveal_pane_focus_target(widget)
-                root.update()
+                root.after(100, root.quit)
+                root.mainloop()
                 results.append({'page': 'settings', 'tk_scale_percent': int(scale * 100),
-                                'checks': {name: visible_rectangle(widget)}})
+                                'checks': {name: visible_rectangle(widget)},
+                                'failed_geometry': {} if visible_rectangle(widget) else {
+                                    name: {'actual': [widget.winfo_x(), widget.winfo_y(), widget.winfo_width(), widget.winfo_height()],
+                                           'parent': [widget.master.winfo_width(), widget.master.winfo_height()],
+                                           'canvas_yview': workspace.page_scroll_canvases['settings'].yview()}}})
             for page in ('import', 'reviews', 'activity', 'settings'):
                 workspace.show_page(page)
                 root.update()
@@ -255,6 +265,38 @@ def main():
         if args.output:
             args.output.write_text(encoded + '\n', encoding='utf-8')
         return int(bool(errors) or not all(interactions.values()) or any(not all(item['checks'].values()) for item in results))
+
+
+def run_matrix(args):
+    reports, failed = [], []
+    with tempfile.TemporaryDirectory(prefix='myl_layout_reports_') as directory:
+        for scale in (1.0, 1.25, 1.5, 2.0):
+            output = Path(directory) / f'{scale}.json'
+            command = [sys.executable, '-B', str(Path(__file__).resolve()),
+                       '--scale', str(scale), '--output', str(output)]
+            if args.captures and scale in (1.0, 2.0):
+                command += ['--captures', str(args.captures / f'scale-{int(scale * 100)}')]
+            result = subprocess.run(command, capture_output=True, text=True, timeout=90)
+            if not output.is_file():
+                raise RuntimeError(f'Layout child {scale} produced no report: {result.stderr[-3000:]}')
+            report = json.loads(output.read_text(encoding='utf-8'))
+            if result.returncode:
+                failed.append(int(scale * 100))
+            for name in report.get('synthetic_linux_ci_captures', []):
+                report.setdefault('_capture_paths', []).append(f'scale-{int(scale * 100)}/{name}')
+            reports.append(report)
+    combined = {'method': 'Fresh process per Tk text scale; not OS DPI or reader certification',
+                'results': [row for report in reports for row in report['results']],
+                'interactions': {key: value for report in reports for key, value in report['interactions'].items()},
+                'errors': [error for report in reports for error in report['errors']],
+                'failed_scales': failed,
+                'synthetic_linux_ci_captures': [name for report in reports for name in report.get('_capture_paths', [])]}
+    encoded = json.dumps(combined, indent=2)
+    print(encoded)
+    if args.output:
+        args.output.write_text(encoded + '\n', encoding='utf-8')
+    return int(bool(failed) or bool(combined['errors']) or not all(combined['interactions'].values())
+               or any(not all(row['checks'].values()) for row in combined['results']))
 
 
 if __name__ == '__main__':

@@ -105,7 +105,7 @@ jobs:
           name: workspace-layout-${{ matrix.platform }}-${{ matrix.arch }}
           path: |
             dist/workspace-layout.json
-            dist/workspace-preview/*.png
+            dist/workspace-preview/
           if-no-files-found: ignore
           retention-days: 7
       - name: Build and test Linux frozen application

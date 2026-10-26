@@ -381,16 +381,16 @@ TEXT['zh'].update({
 for _language, _copy in {
     'es': {'clear_search': 'Limpiar búsqueda', 'clear_filters': 'Ver todos los libros',
            'no_results': 'No hay libros que coincidan', 'no_results_hint': 'Prueba con otras palabras o elimina los filtros.',
-           'edit_short': 'Editar', 'favorite_remove': 'Quitar de favoritos'},
+           'edit_short': 'Editar', 'favorite_remove': 'Quitar de favoritos', 'theme_system': 'Predeterminado'},
     'en': {'clear_search': 'Clear search', 'clear_filters': 'Show all books',
            'no_results': 'No matching books', 'no_results_hint': 'Try different words or clear the filters.',
-           'edit_short': 'Edit', 'favorite_remove': 'Remove from favorites'},
+           'edit_short': 'Edit', 'favorite_remove': 'Remove from favorites', 'theme_system': 'Default'},
     'fr': {'clear_search': 'Effacer la recherche', 'clear_filters': 'Afficher tous les livres',
            'no_results': 'Aucun livre correspondant', 'no_results_hint': 'Essayez d’autres mots ou effacez les filtres.',
-           'edit_short': 'Modifier', 'favorite_remove': 'Retirer des favoris'},
+           'edit_short': 'Modifier', 'favorite_remove': 'Retirer des favoris', 'theme_system': 'Par défaut'},
     'zh': {'clear_search': '清除搜索', 'clear_filters': '显示所有图书',
            'no_results': '没有匹配的图书', 'no_results_hint': '请尝试其他关键词或清除筛选。',
-           'edit_short': '编辑', 'favorite_remove': '取消收藏'},
+           'edit_short': '编辑', 'favorite_remove': '取消收藏', 'theme_system': '默认'},
 }.items():
     TEXT[_language].update(_copy)
 
@@ -955,6 +955,8 @@ class Workspace:
     def _build_library_page(self):
         page = self._new_page("library")
         toolbar = tk.Frame(page, bd=0)
+        self.library_toolbar = toolbar
+        self._library_top_margin = 0
         toolbar.pack(fill="x", pady=(0, 12))
         toolbar.grid_columnconfigure(0, weight=1)
         self.frames.append(toolbar)
@@ -978,6 +980,7 @@ class Workspace:
             textvariable=self.search_var,
             relief="flat",
             bd=0,
+            highlightthickness=0,
             font=("Segoe UI", 13),
         )
         self.search_entry.pack(side="left", fill="x", expand=True, padx=(2, 8), pady=16)
@@ -1198,10 +1201,13 @@ class Workspace:
         self.detail_actions = tk.Frame(self.details_panel, bd=0)
         self.detail_actions.pack(side="bottom", fill="x", pady=(8, 0))
         self.cards.append(self.detail_actions)
-        self.details_heading = tk.Button(self.details_panel, text=_text("details") + '…', font=("Segoe UI", 9),
+        self.detail_heading_bar = tk.Frame(self.details_panel, bd=0)
+        self.detail_heading_bar.pack(fill='x')
+        self.cards.append(self.detail_heading_bar)
+        self.details_heading = tk.Button(self.detail_heading_bar, text=_text("details") + '…', font=("Segoe UI", 9),
                                          anchor="w", bd=0, relief='flat', cursor='hand2', takefocus=True,
                                          command=lambda: self._show_detail_group('details'))
-        self.details_heading.pack(fill="x")
+        self.details_heading.pack(side='left', fill='x', expand=True)
         self.muted_labels.append(self.details_heading)
         self.details_cover = tk.Label(
             self.details_panel,
@@ -1260,7 +1266,7 @@ class Workspace:
         self.detail_separator = tk.Frame(self.details_panel, height=1, bd=0)
         self.detail_separator.pack(fill="x", pady=(0, 4))
         self.frames.append(self.detail_separator)
-        self.detail_compact_relations = tk.Frame(self.details_panel, bd=0)
+        self.detail_compact_relations = tk.Frame(self.detail_heading_bar, bd=0)
         self.cards.append(self.detail_compact_relations)
         self.detail_compact_relations.grid_columnconfigure(0, weight=1)
         self.detail_compact_relations.grid_columnconfigure(1, weight=1)
@@ -1328,7 +1334,7 @@ class Workspace:
         self.lookup_metadata_button.configure(state="disabled")
         self.copy_path_button.configure(state="disabled")
         self.show_folder_button.configure(state="disabled")
-        for frame in (self.detail_actions, self.detail_primary_metadata, self.detail_compact_relations):
+        for frame in (self.detail_actions, self.detail_primary_metadata, self.detail_compact_relations, self.detail_heading_bar):
             frame.bind('<Configure>', lambda _event: self._schedule_details_fit(), add='+')
 
     def _show_detail_group(self, group):
@@ -1996,6 +2002,10 @@ class Workspace:
 
     def _apply_responsive_layout(self):
         self._responsive_after = None
+        margin = 8 if self.root.winfo_height() >= 700 else 0
+        if margin != self._library_top_margin:
+            self._library_top_margin = margin
+            self.library_toolbar.pack_configure(pady=(margin, 12))
         width = max(1, self.main.winfo_width())
         band = "narrow" if width < 620 else "wide"
         if band != self._responsive_band:
@@ -2110,8 +2120,7 @@ class Workspace:
             name_control(self.compact_series, _text('series') + ': ' + str(series or '—'))
             name_control(self.compact_tags, _text('tags') + ': ' + ', '.join(tags or []))
             if not self.detail_compact_relations.winfo_manager():
-                self.detail_compact_relations.pack(fill='x', pady=(0, 3), before=self.detail_separator)
-            required += self.detail_compact_relations.winfo_reqheight() + 3
+                self.detail_compact_relations.pack(side='right', padx=(6, 0))
         else:
             self.detail_compact_relations.pack_forget()
             if series and not self.detail_series.winfo_manager():
@@ -2124,6 +2133,11 @@ class Workspace:
             required -= line_height
         if desired_lines != title_lines:
             self.detail_title.configure(height=desired_lines)
+        padding = int(self.details_panel.cget('pady'))
+        desired_padding = 4 if required - 2 * padding + 24 > self.details_panel.winfo_height() else 12
+        if desired_padding != padding:
+            self.details_panel.configure(pady=desired_padding)
+            required += 2 * (desired_padding - padding)
         groups_height = sum(child.winfo_reqheight() + 12 for child in groups)
         collapse_groups = required + groups_height > self.details_panel.winfo_height()
         for child in groups:
@@ -2638,10 +2652,10 @@ class Workspace:
     def _create_cover_card(self):
         """Keep a bounded pool instead of recreating Tk widgets on every query."""
         card = tk.Frame(self.cover_inner, bd=0, highlightthickness=0, padx=5, pady=4)
-        cover = tk.Button(card, width=144, height=206, image=self._cover_placeholder, compound='center', relief="flat", bd=0,
+        cover = tk.Button(card, width=144, height=206, image=self._cover_placeholder, compound='center', relief="flat", bd=0, padx=0, pady=0,
                           font=(self._serif_family, 12, "bold"), cursor="hand2", highlightthickness=2)
         cover.pack()
-        title = tk.Button(card, wraplength=144, justify="left", anchor="w", relief="flat", bd=0,
+        title = tk.Button(card, wraplength=144, justify="left", anchor="w", relief="flat", bd=0, padx=0, pady=0,
                           font=(self._serif_family, 10), cursor="hand2", highlightthickness=2)
         title.pack(fill="x", pady=(6, 0))
         author = self._muted(card, "", wrap=144)
@@ -2659,7 +2673,7 @@ class Workspace:
         for button in self.dynamic_buttons:
             button.configure(
                 bg=colors["bg"], fg=colors["text"], activebackground=colors["quiet_active"],
-                activeforeground=colors["text"],
+                activeforeground=colors["text"], highlightbackground=colors['bg'], highlightcolor=colors['accent'],
             )
         for label in self.dynamic_labels:
             label.configure(bg=label.master.cget("bg"), fg=colors["text"])
@@ -3387,7 +3401,7 @@ class Workspace:
             return
         self._hide_tooltip()
         self.root.configure(bg=colors["bg"])
-        self.shell.configure(bg=colors["border"])
+        self.shell.configure(bg=colors["bg"])
         for frame in self.frames:
             try:
                 frame.configure(bg=colors["bg"])
@@ -3414,7 +3428,8 @@ class Workspace:
                 pass
         for entry in self.entries:
             try:
-                entry.configure(bg=colors["entry_bg"], fg=colors["text"], insertbackground=colors["text"])
+                entry.configure(bg=colors["entry_bg"], fg=colors["text"], insertbackground=colors["text"],
+                                highlightbackground=colors['border'], highlightcolor=colors['accent'])
             except Exception:
                 pass
         for button in self.secondary_buttons:
@@ -3464,7 +3479,7 @@ class Workspace:
                 pass
         try:
             self.cover_canvas.configure(bg=colors["bg"])
-            self.library_panes.configure(bg=colors["border"])
+            self.library_panes.configure(bg=colors["bg"])
             self.search_shell.set_theme(colors["bg"], colors["entry_bg"], colors["accent"])
             self._draw_search_icon(colors)
             for canvas in self.page_scroll_canvases.values():
@@ -3497,16 +3512,18 @@ class Workspace:
             except tk.TclError:
                 pass
         self.search_shortcut.configure(bg=colors['entry_bg'])
-        self.app.style.configure('Library.TEntry', fieldbackground=colors['entry_bg'], foreground=colors['text'])
+        self.app.style.configure('Library.TEntry', fieldbackground=colors['entry_bg'], foreground=colors['text'],
+                                 bordercolor=colors['border'], lightcolor=colors['border'], darkcolor=colors['border'])
         self.app.style.map('Library.TEntry', fieldbackground=[('readonly', colors['entry_bg'])],
                            foreground=[('readonly', colors['text'])])
         for heading in (self.details_heading, *self.detail_group_headings.values()):
-            heading.configure(activebackground=colors['quiet_active'], activeforeground=colors['text'])
+            heading.configure(activebackground=colors['quiet_active'], activeforeground=colors['text'],
+                              highlightbackground=colors['card'], highlightcolor=colors['accent'])
         self._apply_detail_metadata_theme(colors)
         self._update_navigation_state()
         self._update_filter_state()
         self._update_view_state()
-        self._update_selected_card()
+        self._style_dynamic_library_items()
         self.set_import_step(1 if self.app.trabajando and self.current_page == "import" else 0)
         if self.search_placeholder_active:
             self.search_entry.configure(fg=colors["muted"])

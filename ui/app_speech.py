@@ -6,6 +6,7 @@ Tests inject a silent backend; they must not click Activate with a real voice.
 from __future__ import annotations
 
 import tkinter as tk
+from tkinter import font as tkfont
 
 from core.app_speech import AppSpeech
 from ui.accessibility import name_control
@@ -62,13 +63,32 @@ class SpeechControls:
     def translate(self):
         for button, key in ((self.activate_button, 'activate'), (self.deactivate_button, 'deactivate')):
             text = self._text(key)
+            font = tkfont.Font(root=self.root, font=button.font)
             button.configure(text=text, accessible_name=text + ': ' + self._text('title'),
-                             width=max(82, min(180, 30 + len(text) * 8)))
+                             width=max(82, font.measure(text) + 30), height=max(36, font.metrics('linespace') + 14))
         self._render(force=True)
+        self._resize()
 
-    def _resize(self, event):
-        available = event.width - self.activate_button.winfo_reqwidth() - self.deactivate_button.winfo_reqwidth() - 36
-        self.status.configure(wraplength=max(60, available))
+    def _resize(self, event=None):
+        width = event.width if event is not None else self.frame.winfo_width()
+        if width <= 1:
+            return
+        available = width - self.activate_button.winfo_reqwidth() - self.deactivate_button.winfo_reqwidth() - 36
+        status_font = tkfont.Font(root=self.root, font=self.status.cget('font'))
+        stacked = available < min(190, status_font.measure(self.status.cget('text')) + 4)
+        wrap = max(60, width - 24 if stacked else available)
+        signature = (stacked, wrap, self.status.cget('text'))
+        if getattr(self, '_layout_signature', None) == signature:
+            return
+        self._layout_signature = signature
+        self.status.grid_configure(row=0, column=0, columnspan=3 if stacked else 1, sticky='ew')
+        self.activate_button.grid_configure(row=1 if stacked else 0)
+        self.deactivate_button.grid_configure(row=1 if stacked else 0)
+        self.status.configure(wraplength=wrap)
+        label_height = self.status.winfo_reqheight() + 12
+        buttons_height = max(self.activate_button.winfo_reqheight(), self.deactivate_button.winfo_reqheight()) + 10
+        self.frame.configure(height=max(50, (label_height + buttons_height if stacked
+                                            else max(label_height, buttons_height)) + 4))
 
     def _render(self, *, force=False):
         state = self.session.state
@@ -80,6 +100,7 @@ class SpeechControls:
         name_control(self.status, self.status.cget('text'), self._text('help'))
         self.activate_button.configure(state='normal' if self.session.supported and state in {'off', 'error'} else 'disabled')
         self.deactivate_button.configure(state='normal' if state in {'starting', 'on'} else 'disabled')
+        self._resize()
 
     def _sync_foreground(self):
         try:

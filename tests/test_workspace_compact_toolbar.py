@@ -72,12 +72,24 @@ class CompactToolbarTests(unittest.TestCase):
     def test_status_strip_reserves_cancel_space_and_coalesces_width_band(self):
         target = object.__new__(Workspace)
         target._status_strip_compact = None
-        target.app = SimpleNamespace(barra_progreso=Mock(), label_estado_titulo=Mock())
-        target._fit_activity_strip(SimpleNamespace(width=472))
+        target.app = SimpleNamespace(barra_progreso=Mock(), label_estado_titulo=Mock(),
+                                    btn_cancelar_operacion=SimpleNamespace(winfo_reqheight=Mock(return_value=38)),
+                                    label_estado=SimpleNamespace(winfo_reqheight=lambda: 20))
+        strip = SimpleNamespace(height=50)
+        strip.cget = lambda _key: strip.height
+        strip.configure = Mock(side_effect=lambda **options: setattr(strip, 'height', options['height']))
+        target._fit_activity_strip(SimpleNamespace(width=472, widget=strip))
+        self.assertEqual(strip.height, 52)
         target.app.barra_progreso.configure.assert_called_once_with(length=100)
         target.app.label_estado_titulo.grid_remove.assert_called_once()
-        target._fit_activity_strip(SimpleNamespace(width=480))
+        target._fit_activity_strip(SimpleNamespace(width=480, widget=strip))
+        strip.configure.assert_called_once()
         target.app.barra_progreso.configure.assert_called_once()
-        target._fit_activity_strip(SimpleNamespace(width=900))
+        target._fit_activity_strip(SimpleNamespace(width=900, widget=strip))
         target.app.barra_progreso.configure.assert_called_with(length=180)
         target.app.label_estado_titulo.grid.assert_called_once()
+        target.app.btn_cancelar_operacion.winfo_reqheight.return_value = 65
+        target._fit_activity_strip(SimpleNamespace(width=900, widget=strip))
+        target._fit_activity_strip(SimpleNamespace(width=900, widget=strip))
+        self.assertEqual(strip.height, 79)
+        self.assertEqual(strip.configure.call_count, 2)

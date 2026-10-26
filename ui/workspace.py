@@ -11,6 +11,7 @@ import tkinter as tk
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from tkinter import filedialog, messagebox, simpledialog, ttk
+from tkinter import font as tkfont
 from tkinter.scrolledtext import ScrolledText
 
 from PIL import Image, ImageTk
@@ -875,12 +876,13 @@ class Workspace:
         self.main.bind('<Configure>', self._schedule_responsive_layout, add='+')
         self.frames.append(self.main)
 
-        self.topbar = tk.Frame(self.main, height=64, bd=0)
+        self.topbar = tk.Frame(self.main, bd=0)
         self.topbar.pack(fill="x", padx=20, pady=(12, 6))
+        self.topbar.grid_columnconfigure(0, weight=1)
         self.frames.append(self.topbar)
 
         heading = tk.Frame(self.topbar, bd=0)
-        heading.pack(side="left", fill="both", expand=True)
+        heading.grid(row=0, column=0, sticky='nsew')
         self.heading = heading
         heading.bind('<Configure>', self._fit_page_heading, add='+')
         self.frames.append(heading)
@@ -897,7 +899,7 @@ class Workspace:
             f"{self.app.idioma_var.get()}  ▼",
             self.app.abrir_menu_idioma,
         )
-        self.app.btn_idioma.pack(side="right", padx=(8, 0), pady=8)
+        self.app.btn_idioma.grid(row=0, column=1, sticky='ne', padx=(8, 0), pady=8)
         self.app.label_idioma = tk.Label(self.topbar, text=core.tr("language"), font=("Segoe UI", 9), bd=0)
         self.muted_labels.append(self.app.label_idioma)
 
@@ -1228,7 +1230,7 @@ class Workspace:
 
         primary_metadata = tk.Frame(self.details_panel, bd=0)
         self.detail_primary_metadata = primary_metadata
-        primary_metadata.pack(fill="x", pady=(7, 5))
+        primary_metadata.pack(fill="x", pady=(5, 3))
         primary_metadata.grid_columnconfigure(0, weight=1)
         self.cards.append(primary_metadata)
         self.detail_author = self._detail_metadata_button(
@@ -1746,6 +1748,10 @@ class Workspace:
         self.set_format_filter(selected)
 
     def _fit_activity_strip(self, event):
+        height = max(50, self.app.btn_cancelar_operacion.winfo_reqheight() + 14,
+                     self.app.label_estado.winfo_reqheight() + 14)
+        if int(event.widget.cget('height')) != height:
+            event.widget.configure(height=height)
         compact = event.width < 600
         if compact != self._status_strip_compact:
             self._status_strip_compact = compact
@@ -1984,7 +1990,20 @@ class Workspace:
             return
         compact = width < 154
         short = self.sidebar.winfo_height() < 640
+        width_changed = getattr(self, '_sidebar_width', None) != width
+        self._sidebar_width = width
+        if not compact:
+            font = tkfont.Font(root=self.root, family=self._serif_family, size=15)
+            size = 15
+            while size > 6 and font.measure(self.brand_label.cget('text')) + 4 > width - 80:
+                size -= 1
+                font.configure(size=size)
+            if getattr(self, '_brand_font_size', None) != size:
+                self.brand_label.configure(font=(self._serif_family, size))
+                self._brand_font_size = size
         if compact == self._sidebar_compact and short == self._sidebar_short:
+            if width_changed:
+                self._update_navigation_state()
             return
         self._sidebar_compact = compact
         self._sidebar_short = short
@@ -2042,6 +2061,7 @@ class Workspace:
             self.speech_controls.translate()
         if hasattr(self, 'filter_bar'):
             self._schedule_toolbar_fit()
+        self._update_navigation_state()
 
     def _set_details_visible(self, visible):
         panes = {str(value) for value in self.library_panes.panes()}
@@ -2102,7 +2122,7 @@ class Workspace:
         relations = (self.detail_series, self.detail_tags, self.detail_compact_relations)
         title_lines = int(self.detail_title.cget('height'))
         line_height = int(self.root.tk.call('font', 'metrics', self.detail_title.cget('font'), '-linespace'))
-        required = 2 * int(self.details_panel.cget('pady'))
+        required = 4 + 2 * int(self.details_panel.cget('pady'))
         for child in self.details_panel.pack_slaves():
             if child is not self.details_cover and child not in groups and child not in relations:
                 required += child.winfo_reqheight() + vertical_padding(child)
@@ -2251,8 +2271,21 @@ class Workspace:
                 colors.get("disabled_text", "#aaa19a"),
             )
             icon_name = self.nav_icon_names.get(page)
+            width = button.winfo_width() if button.winfo_width() > 1 else int(button.cget('width'))
+            height = button.winfo_height() if button.winfo_height() > 1 else int(button.cget('height'))
+            signature = (button.text, width, height, active, self.root.tk.call('tk', 'scaling'))
+            if getattr(button, '_navigation_font_signature', None) != signature:
+                size, weight = 10, 'bold' if active else 'normal'
+                while size > 6:
+                    font = ('Segoe UI', size, weight)
+                    if (int(self.root.tk.call('font', 'measure', font, button.text)) <= max(20, width - 58)
+                            and int(self.root.tk.call('font', 'metrics', font, '-linespace')) <= height - 6):
+                        break
+                    size -= 1
+                button._navigation_font = ('Segoe UI', size, weight)
+                button._navigation_font_signature = signature
             button.configure(
-                font=("Segoe UI", 10, "bold" if active else "normal"),
+                font=button._navigation_font,
                 image=self._icon_photo(icon_name, foreground) if icon_name else "",
             )
 
@@ -3368,6 +3401,7 @@ class Workspace:
     def translate(self):
         self.brand_label.configure(text=_text("brand"))
         self.brand_tagline.configure(text=_text("brand_tagline"))
+        self._schedule_sidebar_layout()
         self._refresh_navigation_labels()
         if self.search_placeholder_active:
             self.search_var.set(_text("search"))

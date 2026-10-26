@@ -7,6 +7,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -24,6 +25,17 @@ def visible_rectangle(widget):
             return False
         ancestor = ancestor.master
     return widget.winfo_width() > 2 and widget.winfo_height() > 2
+
+
+def wait_for_ui(root, condition, timeout=3):
+    """Wait for the actual debounced result and layout, within a fixed deadline."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if condition():
+            return True
+        root.after(20, root.quit)
+        root.mainloop()
+    return bool(condition())
 
 
 def main():
@@ -126,11 +138,9 @@ def main():
                 preview.destroy()
                 workspace.search_placeholder_active = False
                 workspace.search_var.set('No-matching-synthetic-book-xyz')
-                root.after(160, root.quit)
-                root.mainloop()
-                interactions['filtered_empty_state'] = (not workspace.filtered_items
+                interactions['filtered_empty_state'] = wait_for_ui(root, lambda: (not workspace.filtered_items
                     and workspace._empty_library_action.winfo_ismapped()
-                    and workspace.selected_item is None and workspace.open_button.state == 'disabled')
+                    and workspace.selected_item is None and workspace.open_button.state == 'disabled'))
                 interactions['clear_search_visible'] = workspace.search_clear_button.winfo_ismapped()
                 workspace._empty_library_action.invoke()
                 root.update()
@@ -177,6 +187,11 @@ def main():
                     'search_entry', 'page_next', 'filters_button', 'details_button')}
                 widgets.update({'nav_' + key: button for key, button in workspace.nav_buttons.items()})
                 widgets['theme_button'] = app.btn_tema
+                widgets.update({'voice_status': workspace.speech_controls.status,
+                                'voice_activate': workspace.speech_controls.activate_button,
+                                'voice_deactivate': workspace.speech_controls.deactivate_button,
+                                'operation_status': app.label_estado,
+                                'operation_cancel': app.btn_cancelar_operacion})
                 if workspace.details_visible:
                     widgets.update({key: getattr(workspace, key) for key in (
                     'detail_path_entry', 'copy_path_button', 'show_folder_button',
@@ -188,6 +203,18 @@ def main():
                     widgets.update({key: widget for key, widget in workspace.detail_group_headings.items()
                                     if widget.winfo_manager()})
                 checks = {name: visible_rectangle(widget) for name, widget in widgets.items()}
+                from tkinter import font as tkfont
+                for name in ('voice_activate', 'voice_deactivate', 'operation_cancel'):
+                    widget = widgets[name]
+                    font = tkfont.Font(root=root, font=widget.font)
+                    checks[name + '_text'] = (font.measure(widget.text) + 20 <= widget.winfo_width()
+                                             and font.metrics('linespace') + 10 <= widget.winfo_height())
+                voice_status = workspace.speech_controls.status
+                checks['voice_status_height'] = voice_status.winfo_height() >= voice_status.winfo_reqheight()
+                if workspace.brand_copy.winfo_ismapped():
+                    brand = workspace.brand_label
+                    font = tkfont.Font(root=root, font=brand.cget('font'))
+                    checks['brand_text'] = font.measure(brand.cget('text')) + 4 <= brand.winfo_width()
                 if workspace.cover_view.winfo_ismapped() and workspace._cover_card_pool:
                     first_cover = workspace._cover_card_pool[0][1]
                     left = first_cover.winfo_rootx() - workspace.cover_canvas.winfo_rootx()
@@ -250,6 +277,31 @@ def main():
                     root.mainloop()
                     results.append({'page': page, 'tk_scale_percent': int(scale * 100),
                                     'checks': {'action_' + str(position): visible_rectangle(widget)}})
+            if scale in (1.0, 2.0):
+                for language in ('en', 'es', 'fr', 'zh'):
+                    app.seleccionar_idioma(language)
+                    workspace.show_page('library')
+                    root.geometry('1366x768+0+0' if scale == 1.0 else '760x560+0+0')
+                    root.after(200, root.quit)
+                    root.mainloop()
+                    checks = {}
+                    for name, button in workspace.nav_buttons.items():
+                        font = tkfont.Font(root=root, font=button.font)
+                        checks[name] = (font.measure(button.text) <= button.winfo_width() - 58
+                                        and font.metrics('linespace') <= button.winfo_height() - 6)
+                    for name, button in (('voice_activate', workspace.speech_controls.activate_button),
+                                         ('voice_deactivate', workspace.speech_controls.deactivate_button)):
+                        font = tkfont.Font(root=root, font=button.font)
+                        checks[name] = (visible_rectangle(button)
+                                        and font.measure(button.text) + 20 <= button.winfo_width()
+                                        and font.metrics('linespace') + 10 <= button.winfo_height())
+                    brand = workspace.brand_label
+                    font = tkfont.Font(root=root, font=brand.cget('font'))
+                    checks['brand'] = font.measure(brand.cget('text')) + 4 <= brand.winfo_width()
+                    results.append({'page': 'localized_navigation', 'language': language,
+                                    'tk_scale_percent': int(scale * 100), 'checks': checks})
+                    if args.captures and scale == 1 and language == 'es':
+                        capture(root, 'library-spanish-light')
             workspace.shutdown()
             for identifier in root.tk.call('after', 'info'):
                 # Child-owned Map annotations own their Python Tcl commands.

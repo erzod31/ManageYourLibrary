@@ -1799,6 +1799,8 @@ class Workspace:
                 return
             columns = len(widgets)
             for count in range(len(widgets), 0, -1):
+                if len(widgets) == 4 and count == 3:
+                    continue  # Keep four-step flows balanced as 2×2 when narrow.
                 required = sum(max(widget.winfo_reqwidth() for widget in widgets[col::count])
                                for col in range(count)) + 8 * (count - 1)
                 if required <= width or count == 1:

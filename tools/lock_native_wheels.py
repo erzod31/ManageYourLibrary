@@ -5,6 +5,7 @@ import argparse
 import email
 import hashlib
 import json
+import os
 import platform
 import subprocess
 import sys
@@ -16,9 +17,9 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def wheel_record(path):
     with zipfile.ZipFile(path) as archive:
-        names = [n for n in archive.namelist() if n.endswith('.dist-info/METADATA')]
+        names = [n for n in archive.namelist() if n.count('/') == 1 and n.endswith('.dist-info/METADATA')]
         if len(names) != 1:
-            raise ValueError('Wheel must contain one distribution metadata record')
+            raise ValueError('Wheel must contain one top-level distribution metadata record: '+path.name)
         metadata = email.message_from_bytes(archive.read(names[0]))
     name, version = metadata['Name'], metadata['Version']
     import re
@@ -39,8 +40,11 @@ def main():
     output.mkdir(parents=True, exist_ok=False)
     wheels = output / 'wheels'
     wheels.mkdir()
-    subprocess.run([sys.executable, '-m', 'pip', 'download', '--only-binary=:all:', '--dest', str(wheels),
-                    '-r', str(ROOT / 'requirements-build.txt')], check=True)
+    command = [sys.executable, '-m', 'pip', 'download', '--only-binary=:all:', '--dest', str(wheels),
+               '-r', str(ROOT / 'requirements-build.txt')]
+    if os.environ.get('MYL_NATIVE_EXTRA_WHEELS'):
+        command += ['--find-links', os.environ['MYL_NATIVE_EXTRA_WHEELS']]
+    subprocess.run(command, check=True)
     records = [wheel_record(p) for p in sorted(wheels.glob('*.whl'))]
     names = [r['name'].lower().replace('_', '-') for r in records]
     if not records or len(names) != len(set(names)):

@@ -122,6 +122,8 @@ class AndroidInputAndWheelTests(unittest.TestCase):
             with zipfile.ZipFile(wheel,'w') as archive:archive.writestr('fixture-1.0.dist-info/METADATA','Name: fixture\nVersion: 1.0\n')
             record=wheel_record(wheel)
             self.assertEqual(record['name'],'fixture');self.assertEqual(record['sha256'],android.digest(wheel))
+            with zipfile.ZipFile(wheel,'a') as archive:archive.writestr('fixture/_vendor/nested-1.0.dist-info/METADATA','Name: nested\nVersion: 1.0\n')
+            self.assertEqual(wheel_record(wheel)['name'],'fixture')
             with zipfile.ZipFile(wheel,'a') as archive:archive.writestr('other-1.0.dist-info/METADATA','Name: other\nVersion: 1.0\n')
             with self.assertRaises(ValueError):wheel_record(wheel)
 

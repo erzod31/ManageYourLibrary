@@ -15,6 +15,14 @@ bundle/update identity, codesign, Gatekeeper and stapled-ticket status. After
 ZIP packaging, it checks file bytes, executable permissions and symlinks and
 reruns the frozen diagnostics from an independent extraction.
 
+If PyPI has no macOS Intel wheel for the pinned ONNX Runtime 1.31.1, the Intel
+runner attempts a CPU build of that exact version from the upstream release
+commit `6af1a932e2286d5c58166085d24c68783033edee`. It records submodule revisions,
+hash-locks bootstrap wheels and feeds the resulting native wheel into the normal
+hash-locked dependency resolver. It does not silently downgrade the OCR runtime
+or substitute an Apple Silicon/Linux binary. Failure remains a native build
+failure, with diagnostics retained outside the app.
+
 The default workflow produces **QA artifacts only**. The disposable Android
 input key is isolated to the runner and never replaces the maintainer's signing
 key. `distributionEligible: false` is expected for ad-hoc Mac signatures or a

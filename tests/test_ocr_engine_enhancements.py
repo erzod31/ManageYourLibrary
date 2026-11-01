@@ -18,42 +18,14 @@ class OcrEngineEnhancementTests(unittest.TestCase):
         self.assertEqual(ocr_engine.detectar_idioma_ocr_rapido("El prólogo de la edición"), "spa+eng")
         self.assertEqual(ocr_engine.detectar_idioma_ocr_rapido("三体 Liu Cixin"), "chi_sim+eng")
 
-    def test_prepare_image_variants_keeps_multiple_safe_preprocessing_options(self):
-        from PIL import Image, ImageDraw
-
-        image = Image.new("RGB", (460, 180), "black")
-        draw = ImageDraw.Draw(image)
-        draw.text((40, 70), "SAND LAND", fill="white")
-        with tempfile.TemporaryDirectory() as tmp:
-            image_path = Path(tmp) / "dark-cover.png"
-            image.save(image_path)
-            raw = image_path.read_bytes()
-
-        variants = ocr_engine._prepare_image_variants_raw(raw, include_rotations=True)
-        names = {item["name"] for item in variants}
-
-        self.assertIn("normalized", names)
-        self.assertIn("binary", names)
-        self.assertTrue(any(item["rotation"] in {90, 180, 270} for item in variants))
-
-    def test_best_ocr_attempt_prefers_useful_variant_over_longer_noise(self):
-        variants = [
-            {"name": "normalized", "image_bytes": b"v1", "rotation": 0},
-            {"name": "binary", "image_bytes": b"v2", "rotation": 0},
-        ]
-
-        def fake_ocr(image_bytes, lang, psm="6", timeout=45):
-            if image_bytes == b"v2":
-                return "El nombre de la rosa\nUmberto Eco\n1980", None
-            return "@@@ ### === " * 20, None
-
-        with patch.object(ocr_engine, "_prepare_image_variants_raw", return_value=variants), \
-                patch.object(ocr_engine, "_run_tesseract_bytes", side_effect=fake_ocr):
-            best = ocr_engine._run_best_ocr_image(b"raw", "spa+eng", psms=("6",), allow_variants=True)
-
-        self.assertEqual(best["variant"], "binary")
-        self.assertIn("Umberto Eco", best["text"])
-        self.assertGreater(best["score"], 40)
+    def test_indra_reuses_one_inference_for_text_language_and_layout(self):
+        page = {"text": "El nombre de la rosa\nUmberto Eco\n1980", "lines": [], "error": None}
+        with patch.object(ocr_engine.ocr_runtime, "recognize", return_value=page) as inference:
+            result = ocr_engine.extraer_texto_imagen_bytes_ocr(b"image")
+        inference.assert_called_once()
+        self.assertIn("Umberto Eco", result["texto"])
+        self.assertEqual(result["ocr_engine"], "indra-ocr")
+        self.assertIn("OPEN RAIL", result["ocr_model_license"])
 
     def test_layout_tokens_use_relative_page_geometry(self):
         tokens = [
@@ -64,7 +36,7 @@ class OcrEngineEnhancementTests(unittest.TestCase):
             {"text": "rosa", "page": 1, "block": 1, "line": 1, "x": 800, "y": 900, "width": 120, "height": 80, "confidence": 91},
             {"text": "Editorial", "page": 1, "block": 2, "line": 1, "x": 80, "y": 1780, "width": 160, "height": 30, "confidence": 80},
         ]
-        with patch.object(ocr_engine, "_run_tesseract_tsv_bytes", return_value=(tokens, None)):
+        with patch.object(ocr_engine.ocr_runtime, "recognize", return_value={"lines": tokens, "error": None}):
             layout = ocr_engine.extract_layout_tokens(b"image", lang="spa+eng", psm="6")
 
         title_line = layout["lines"][0]

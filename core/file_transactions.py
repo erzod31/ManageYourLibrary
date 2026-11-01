@@ -361,7 +361,7 @@ def registrar_manifest_cuarentena(manifest_path, destino, origen, motivo="", con
     append_jsonl_durable(manifest_path, registro)
 
 
-def descartar_archivo_seguro(ruta: Path, base_cuarentena: Path | None = None, motivo: str = "", conservado: Path | str | None = None, op_id: str | None = None, *, journal_path, app_data, manifest_path, library_root=None, trash_dir_name=TRASH_DIR_NAME) -> Path | None:
+def descartar_archivo_seguro(ruta: Path, base_cuarentena: Path | None = None, motivo: str = "", conservado: Path | str | None = None, op_id: str | None = None, *, journal_path, app_data, manifest_path, library_root=None, trash_dir_name=TRASH_DIR_NAME, expected_hash="") -> Path | None:
     ruta = Path(ruta)
     if not ruta.exists() or not ruta.is_file():
         return None
@@ -375,6 +375,7 @@ def descartar_archivo_seguro(ruta: Path, base_cuarentena: Path | None = None, mo
         hash_archivo = _mover_verificado(
             ruta, destino, journal_path=journal_path, app_data=app_data,
             op_id=op_id, tipo="quarantine", motivo=motivo, cuarentena=destino,
+            hash_esperado=expected_hash,
         )
         registrar_manifest_cuarentena(manifest_path, destino, ruta, motivo, conservado or "", op_id)
         estado = "committed" if transaccion_propia else "pending"
@@ -425,7 +426,7 @@ def mover_a_revisar_nuevamente(ruta: Path, carpeta: Path, motivo: str = "", op_i
         raise
 
 
-def mover_a_final(libro: Path, nombre_destino: str, library_root: Path, motivo: str = "", op_id: str | None = None, *, journal_path, app_data, cuarentena="") -> Path:
+def mover_a_final(libro: Path, nombre_destino: str, library_root: Path, motivo: str = "", op_id: str | None = None, *, journal_path, app_data, cuarentena="", expected_hash="") -> Path:
     library_root = Path(library_root)
     library_root.mkdir(parents=True, exist_ok=True)
     destino = destino_sin_colision(library_root / nombre_destino)
@@ -435,6 +436,7 @@ def mover_a_final(libro: Path, nombre_destino: str, library_root: Path, motivo: 
         hash_archivo = _mover_verificado(
             libro, destino, journal_path=journal_path, app_data=app_data,
             op_id=op_id, tipo="move_to_library", motivo=motivo, cuarentena=cuarentena,
+            hash_esperado=expected_hash,
         )
         estado = "committed" if transaccion_propia else "pending"
         actualizar_transaccion_archivo(journal_path, app_data, op_id, estado, "move_to_library", libro, destino, cuarentena, motivo, hash_archivo)

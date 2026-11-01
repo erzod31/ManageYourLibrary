@@ -30,6 +30,39 @@ def smoke_test():
 
 def cli(argv=None):
     argv = list(sys.argv[1:] if argv is None else argv)
+    if argv == ["--ocr-worker"]:
+        from core.ocr_runtime import worker_main
+
+        return worker_main()
+    if "--update-self-test" in argv:
+        from tools.update_runtime_self_test import run_and_record
+
+        position=argv.index("--update-self-test")
+        if position+1>=len(argv):
+            raise ValueError("--update-self-test requires an output JSON path")
+        return run_and_record(Path(argv[position+1]),version=_version())
+    if "--apply-update" in argv:
+        if not getattr(sys, "frozen", False) or sys.platform == "win32":
+            raise ValueError("The POSIX update helper requires the installed native application")
+        from core.config_store import app_data_dir
+        from core.update_apply import apply_posix_plan
+
+        position = argv.index("--apply-update")
+        if position + 1 >= len(argv):
+            raise ValueError("--apply-update requires a private confirmed plan")
+        plan=json.loads(Path(argv[position+1]).read_text(encoding="utf-8"))
+        actual_root=Path(sys.executable).resolve().parents[2] if sys.platform=="darwin" else Path(sys.executable).resolve().parent
+        if Path(plan["installRoot"]).resolve()!=actual_root:
+            raise ValueError("The update plan does not belong to this installed application")
+        apply_posix_plan(Path(argv[position + 1]), app_data_dir() / "updates")
+        return 0
+    if "--mobile-self-test" in argv:
+        from tools.mobile_runtime_self_test import run_and_record
+
+        position = argv.index("--mobile-self-test")
+        if position + 1 >= len(argv):
+            raise ValueError("--mobile-self-test requires an output JSON path")
+        return run_and_record(Path(argv[position + 1]), version=_version())
     if "--first-use-self-test" in argv:
         from tools.first_use_self_test import run_and_record
 

@@ -1,0 +1,25 @@
+Indra OCR by Datalab
+https://github.com/datalab-to/indra
+https://huggingface.co/datalab-to/indra-ocr
+
+The Indra OCR Python code is Apache-2.0 (CODE_LICENSE.txt).
+The unmodified model weights are subject to the separate AI PUBS OPEN RAIL-M
+LICENSE (MODIFIED), included in full as MODEL_LICENSE.txt and ocr_models/indra/LICENSE.
+This model license governs use and distribution of the models and OCR Output,
+including its use restrictions and share-alike conditions. It does not become
+the license of the original books. No endorsement by Datalab is implied.
+
+Model version: v1.1.0, revision bd02167fdf2005a19962cc15188f8496a2c87d3b.
+Python package: indra-ocr 1.1.2. No model weights have been modified.
+Required notices, restrictions and the original model license must accompany
+redistribution of the models and their OCR Output as applicable. Generated OCR
+records identify the engine, revision, attribution and model license.
+
+Users of these models and their Output must comply with paragraph 5 and
+Attachment A of MODEL_LICENSE.txt. The installer presents these terms for
+acceptance. By using the bundled models, you agree to that model license;
+do not use them if you cannot comply. These model terms are additional to,
+and do not replace, the licenses of application code and other components.
+
+All recognition runs locally. Models are downloaded and hash-verified when
+preparing a build; processing books never downloads models or sends content.

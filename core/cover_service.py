@@ -124,7 +124,7 @@ class CoverService:
         request = urllib.request.Request(
             url,
             headers={
-                "User-Agent": "ManageYourLibrary/0.5 (cover preview; +https://github.com/erzod31/ManageYourLibrary)",
+                "User-Agent": "ManageYourLibrary/0.5 (cover preview; +https://github.com/erzod31/ManageYourLibrary_GitHub)",
                 "Accept": "image/avif,image/webp,image/*;q=0.8",
             },
         )

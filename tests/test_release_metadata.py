@@ -5,7 +5,7 @@ from tools import check_manual_release_results as manual_checker
 
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = "0.5.3"
+VERSION = "0.5.5"
 
 
 class WindowsReleaseMetadataTests(unittest.TestCase):
@@ -15,7 +15,7 @@ class WindowsReleaseMetadataTests(unittest.TestCase):
     def test_changelog_records_final_release(self):
         changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
 
-        self.assertIn(f"## {VERSION} - 2026-10-06", changelog)
+        self.assertIn(f"## {VERSION} - 2026-10-28", changelog)
         self.assertIn(".trash_manageyourlibrary/", changelog)
 
     def test_release_notes_document_safety_and_local_runtime(self):
@@ -24,7 +24,7 @@ class WindowsReleaseMetadataTests(unittest.TestCase):
         for marker in (
             VERSION,
             ".trash_manageyourlibrary/",
-            "Tesseract",
+            "Indra",
             "pypdfium2",
             "metadata lookup",
             "OCR remains local",
@@ -36,7 +36,7 @@ class WindowsReleaseMetadataTests(unittest.TestCase):
     def test_readme_links_final_release_docs(self):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
 
-        self.assertIn(f"Published Windows release: [`{VERSION}`]", readme)
+        self.assertIn(f"Prepared Windows release: [`{VERSION}`]", readme)
         self.assertNotIn("Current Windows release candidate:", readme)
         for marker in (
             f"docs/release_notes_windows_{VERSION}.md",
@@ -59,9 +59,10 @@ class WindowsReleaseMetadataTests(unittest.TestCase):
         report = (ROOT / "docs" / "windows_frozen_exe_manual_validation.md").read_text(encoding="utf-8")
 
         for marker in (
-            VERSION,
-            "dist/windows/ManageYourLibrary/ManageYourLibrary.exe",
-            "not performed",
+            "0.1.0",
+            "dist/windows/ManageYourLibrary.exe",
+            "approved for the final Windows build",
+            "Passed",
             ".trash_manageyourlibrary/",
             "Tesseract",
             "PDFium",
@@ -84,11 +85,11 @@ class WindowsReleaseMetadataTests(unittest.TestCase):
         for marker in ("build/", "dist/", "manual_release_validation/", ".trash_manageyourlibrary/"):
             self.assertIn(marker, gitignore)
 
-    def test_manual_checker_does_not_inherit_historical_ui_approval(self):
+    def test_manual_checker_reads_completed_frozen_ui_form(self):
         checks = {item.name: item for item in manual_checker._manual_checks_from_form()}
 
-        self.assertEqual(checks["Undo button"].status, "PENDING")
-        self.assertEqual(checks["Frozen OCR and PDFium buttons"].status, "PENDING")
+        self.assertEqual(checks["Undo button"].status, "PASS")
+        self.assertEqual(checks["Frozen OCR and PDFium buttons"].status, "PASS")
 
 
 if __name__ == "__main__":

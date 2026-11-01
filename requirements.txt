@@ -2,3 +2,4 @@ pypdf>=4.0
 pypdfium2>=4.30
 Pillow>=10.0
 ftfy>=6.3
+indra-ocr==1.1.2

@@ -83,6 +83,9 @@ def run_checks(version: str) -> dict:
                         require(app.workspace._empty_library_action.winfo_manager() == "pack", "Choose-folder action missing")
                         checks["empty_workspace"] = "passed"
                         require(not app.trabajando, "Automatic book operation started")
+                        from core import ocr_runtime
+                        require(ocr_runtime._WORKER._process is None, "OCR worker started before user action")
+                        require("onnxruntime" not in sys.modules, "OCR models/runtime loaded during UI startup")
                         require(not core.operation_plan_store().list_resumable(), "Pending plans found")
                         require(core.obtener_ultima_accion_undo() == (None, []), "Undo history found")
                         checks["no_background_operations"] = "passed"

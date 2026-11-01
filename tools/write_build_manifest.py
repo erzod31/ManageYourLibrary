@@ -34,7 +34,7 @@ def source_tree_fingerprint():
     allowed_suffixes = {
         ".bat", ".ico", ".iss", ".json", ".lock", ".md", ".ps1",
         ".py", ".sh", ".spec", ".txt", ".yaml", ".yml",
-        ".dll", ".exe", ".traineddata", ".svg", ".png", ".webp",
+        ".dll", ".exe", ".traineddata", ".svg", ".png", ".webp", ".java", ".xml",
     }
     digest = hashlib.sha256()
     count = 0
@@ -42,13 +42,15 @@ def source_tree_fingerprint():
         path = ROOT / relative
         if not path.is_file() or (
             path.suffix.lower() not in allowed_suffixes
-            and relative not in {"VERSION", ".gitignore"}
+            and relative not in {"VERSION", ".gitignore", "LICENSE"}
         ):
             continue
         # Derived evidence is completed after building; it is not a build input.
         if re.fullmatch(r"docs/windows_[^/]+_checksums\.md", relative.replace("\\", "/")):
             continue
-        if any(part in {"build", "dist", "__pycache__", ".ruff_cache"} for part in path.parts):
+        if relative.replace("\\", "/") in {"docs/in-app-updates-DG-0020.json", "docs/in-app-updates-DG-0020-plan.md"}:
+            continue
+        if any(part in {"build", "dist", "__pycache__", ".ruff_cache"} for part in Path(relative).parts):
             continue
         encoded_path = relative.replace("\\", "/").encode("utf-8")
         digest.update(len(encoded_path).to_bytes(4, "big"))
@@ -70,12 +72,16 @@ def main(argv=None):
     parser.add_argument("--validated-release-gates", action="store_true")
     parser.add_argument("--validated-runtime", action="store_true")
     parser.add_argument("--validated-first-use", action="store_true")
+    parser.add_argument("--validated-mobile", action="store_true")
+    parser.add_argument("--validated-updater", action="store_true")
+    parser.add_argument("--output", type=Path)
     args = parser.parse_args(sys.argv[1:] if argv is None else argv)
     artifact = args.artifact.resolve()
     if not artifact.exists():
         raise SystemExit(f"Artifact not found: {artifact}")
     packages = {}
-    for name in ("pypdf", "pypdfium2", "Pillow", "ftfy", "pyinstaller"):
+    for name in ("pypdf", "pypdfium2", "Pillow", "ftfy", "pyinstaller",
+                 "indra-ocr", "numpy", "onnxruntime", "opencv-python-headless"):
         try:
             packages[name] = importlib.metadata.version(name)
         except importlib.metadata.PackageNotFoundError:
@@ -99,11 +105,17 @@ def main(argv=None):
             "frozen_smoke": "passed" if args.validated_release_gates else "not_recorded",
             "runtime_self_test": "passed" if args.validated_runtime else "not_recorded",
             "first_use_self_test": "passed" if args.validated_first_use else "not_recorded",
+            "mobile_self_test": "passed" if args.validated_mobile else "not_recorded",
+            "updater_self_test": "passed" if args.validated_updater else "not_recorded",
             "manual_installed_ui": "not_run",
             "code_signing": "not_performed",
         },
     }
-    output = artifact.parent / "build-manifest.json"
+    apk = ROOT / "dist/android" / f"ManageYourLibrary-{manifest['version']}.apk"
+    if apk.is_file():
+        manifest["android_companion"] = {"name": apk.name, "sha256": sha256(apk), "bytes": apk.stat().st_size}
+    output = args.output or artifact.parent / "build-manifest.json"
+    output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
     print(output)
 

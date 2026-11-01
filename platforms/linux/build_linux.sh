@@ -18,64 +18,56 @@ python3 -c 'import sys; raise SystemExit(0 if sys.version_info[:2] == (3, 12) el
   exit 1
 }
 
-if [ -f "$ROOT/dist/native-dependencies/requirements.lock" ]; then
-  python3 -m pip install --no-index --find-links "$ROOT/dist/native-dependencies" --require-hashes -r "$ROOT/dist/native-dependencies/requirements.lock"
-else
-  python3 -m pip install -r "$ROOT/requirements-build.txt"
-fi
+python3 -m pip install -r "$ROOT/requirements-build.txt"
+python3 tools/prepare_indra_models.py
 python3 -m unittest discover -s tests -v
 python3 main.py --smoke-test
 python3 tools/benchmark_catalog.py --check
 
+WORK="$(mktemp -d "${TMPDIR:-/tmp}/ManageYourLibrary_linux_XXXXXX")"
 if [ -e "$ROOT/dist/linux" ]; then
-  echo "Refusing to overwrite an existing build. Use a clean checkout."
-  exit 1
+  ARCHIVE="$ROOT/dist/archive/linux-before-$(date +%Y%m%d-%H%M%S)-$$"
+  mkdir -p "$ROOT/dist/archive"
+  mv "$ROOT/dist/linux" "$ARCHIVE"
 fi
-BUILD_TEMP="$(mktemp -d "${TMPDIR:-/tmp}/myl-linux.XXXXXX")"
-trap 'rm -rf -- "$BUILD_TEMP"' EXIT
 mkdir -p "$ROOT/dist/linux"
-
-TESSERACT_ARGS=()
-if [ -x "$ROOT/platforms/linux/tesseract/tesseract" ]; then
-  TESSERACT_ARGS+=(--add-data "$ROOT/platforms/linux/tesseract:tesseract")
-  echo "Bundled Linux Tesseract found: platforms/linux/tesseract/tesseract"
-elif [ -x "$ROOT/platforms/linux/tesseract/bin/tesseract" ]; then
-  TESSERACT_ARGS+=(--add-data "$ROOT/platforms/linux/tesseract:tesseract")
-  echo "Bundled Linux Tesseract found: platforms/linux/tesseract/bin/tesseract"
-else
-  if [ "${MANAGE_YOUR_LIBRARY_ALLOW_SYSTEM_TESSERACT:-}" = "1" ]; then
-    echo "WARNING: No bundled Linux Tesseract runtime found."
-    echo "OCR will require tesseract to be installed on PATH on the target computer."
-  else
-    echo "ERROR: Linux Tesseract runtime was not found."
-    echo "Put a native Linux runtime in platforms/linux/tesseract/ before building a release."
-    echo "For development-only builds, set MANAGE_YOUR_LIBRARY_ALLOW_SYSTEM_TESSERACT=1."
-    exit 1
-  fi
-fi
-
-if [ "${#TESSERACT_ARGS[@]}" -gt 0 ]; then
-  for lang in eng spa fra nld chi_sim; do
-    if [ ! -f "$ROOT/platforms/linux/tesseract/tessdata/${lang}.traineddata" ] && [ ! -f "$ROOT/platforms/linux/tesseract/share/tessdata/${lang}.traineddata" ]; then
-      echo "ERROR: Linux Tesseract language data is incomplete."
-      echo "Missing: ${lang}.traineddata"
-      exit 1
-    fi
-  done
-fi
+VERSION="$(tr -d '\r\n' < VERSION)"
+APK="$ROOT/dist/android/ManageYourLibrary-$VERSION.apk"
+test -f "$APK" && test -f "${APK%.apk}.update.json" || { echo "Prepare the matching signed Android bundle first"; exit 1; }
+python3 tools/write_update_identity.py "$WORK/update-identity.json" --platform linux
 
 python3 -m PyInstaller \
   --clean \
   --noconfirm \
   --onedir \
   --windowed \
-  --workpath "$BUILD_TEMP/build" \
-  --specpath "$BUILD_TEMP" \
+  --workpath "$WORK/build" \
+  --specpath "$WORK" \
   --distpath "$ROOT/dist/linux" \
   --add-data "$ROOT/app_icon.ico:." \
   --add-data "$ROOT/VERSION:." \
+  --add-data "$ROOT/LICENSE:." \
+  --add-data "$ROOT/THIRD_PARTY_NOTICES.md:." \
+  --add-data "$WORK/update-identity.json:." \
+  --add-data "$APK:android" \
+  --add-data "${APK%.apk}.update.json:android" \
   --add-data "$ROOT/data:data" \
-  "${TESSERACT_ARGS[@]}" \
+  --add-data "$ROOT/ocr_models/indra:ocr_models/indra" \
+  --add-data "$ROOT/third_party:third_party" \
+  --hidden-import indra_ocr \
+  --hidden-import onnxruntime \
+  --hidden-import cv2 \
+  --hidden-import numpy \
+  --exclude-module huggingface_hub \
+  --exclude-module hf_xet \
+  --copy-metadata indra-ocr \
+  --copy-metadata onnxruntime \
+  --copy-metadata opencv-python-headless \
+  --copy-metadata numpy \
+  --copy-metadata Pillow \
+  --copy-metadata pypdf \
+  --copy-metadata pypdfium2 \
+  --copy-metadata ftfy \
   --collect-all pypdfium2 \
   --collect-all ftfy \
   --exclude-module pandas \
@@ -96,9 +88,12 @@ python3 -m PyInstaller \
   main.py
 
 "$ROOT/dist/linux/ManageYourLibrary/ManageYourLibrary" --smoke-test
-"$ROOT/dist/linux/ManageYourLibrary/ManageYourLibrary" --runtime-self-test "$ROOT/dist/linux/ManageYourLibrary/runtime-self-test.json"
-"$ROOT/dist/linux/ManageYourLibrary/ManageYourLibrary" --first-use-self-test "$ROOT/dist/linux/ManageYourLibrary/first-use-self-test.json"
-python3 tools/write_build_manifest.py "$ROOT/dist/linux/ManageYourLibrary/ManageYourLibrary" --platform linux --validated-release-gates --validated-runtime --validated-first-use
+"$ROOT/dist/linux/ManageYourLibrary/ManageYourLibrary" --runtime-self-test "$WORK/runtime-self-test.json"
+"$ROOT/dist/linux/ManageYourLibrary/ManageYourLibrary" --first-use-self-test "$WORK/first-use-self-test.json"
+"$ROOT/dist/linux/ManageYourLibrary/ManageYourLibrary" --mobile-self-test "$WORK/mobile-self-test.json"
+"$ROOT/dist/linux/ManageYourLibrary/ManageYourLibrary" --update-self-test "$WORK/update-self-test.json"
+python3 tools/write_build_manifest.py "$ROOT/dist/linux/ManageYourLibrary/ManageYourLibrary" --platform linux --validated-release-gates --validated-runtime --validated-first-use --validated-mobile --validated-updater
+python3 tools/package_native_release.py --platform linux
 
 echo
 echo "DONE"

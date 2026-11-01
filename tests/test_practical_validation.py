@@ -120,22 +120,46 @@ class PracticalFileWorkflowTests(unittest.TestCase):
 
 
 class LocalOcrSmokeTests(unittest.TestCase):
-    def test_local_tesseract_processes_synthetic_image(self):
-        if not ocr_engine._tesseract_path():
-            self.skipTest("Local Tesseract runtime is not available")
-        from PIL import Image, ImageDraw
+    def test_local_indra_recovers_a_short_chinese_cover_title(self):
+        font_path = Path("C:/Windows/Fonts/msyh.ttc")
+        if not ocr_engine.ocr_runtime.available() or not font_path.is_file():
+            self.skipTest("Indra models and Chinese font required for the short-title regression")
+        from io import BytesIO
+        from PIL import Image, ImageDraw, ImageFont
+
+        with Image.new("RGB", (1300, 1700), "white") as image, BytesIO() as output:
+            draw = ImageDraw.Draw(image)
+            font = ImageFont.truetype(str(font_path), 72)
+            draw.text((140, 260), "三体", font=font, fill="black")
+            draw.text((140, 550), "刘慈欣", font=font, fill="black")
+            image.save(output, format="PNG")
+            try:
+                result = ocr_engine.extraer_texto_imagen_bytes_ocr(output.getvalue())
+            finally:
+                ocr_engine.limpiar_cache_ocr()
+        self.assertIsNone(result["error"])
+        self.assertIn("三体", result["texto"])
+        self.assertIn("刘慈欣", result["texto"])
+
+    def test_local_indra_processes_synthetic_image(self):
+        if not ocr_engine.ocr_runtime.available():
+            self.skipTest("Local Indra runtime/models are not available")
+        from PIL import Image, ImageDraw, ImageFont
 
         with tempfile.TemporaryDirectory() as tmp:
             image_path = Path(tmp) / "ocr-smoke.png"
             image = Image.new("RGB", (1400, 360), "white")
             draw = ImageDraw.Draw(image)
-            draw.text((80, 100), "MANAGE YOUR LIBRARY OCR TEST 2026", fill="black")
+            draw.text((80, 100), "MANAGE YOUR LIBRARY OCR TEST 2026", fill="black", font=ImageFont.load_default(size=38))
             image.save(image_path)
 
-            text, error = ocr_engine._run_tesseract_file(image_path, "eng", psm="6", timeout=30)
+            result = ocr_engine.extraer_texto_documento_ocr(image_path)
+            text, error = result["texto"], result["error"]
+            ocr_engine.limpiar_cache_ocr()
 
         self.assertIsNone(error)
         self.assertTrue(text.strip())
+        self.assertIn("LIBRARY", text.upper())
 
     def test_pdfium_renders_synthetic_scanned_pdf_when_available(self):
         if importlib.util.find_spec("pypdfium2") is None:

@@ -8,6 +8,7 @@ import shutil
 import struct
 import subprocess
 import sys
+import threading
 import urllib.parse
 import zipfile
 from datetime import datetime
@@ -67,7 +68,7 @@ DUPLICATE_REVIEW_DB = APP_DATA / "duplicate_reviews.sqlite3"
 CATALOG_DB = APP_DATA / "library_catalog.sqlite3"
 TRASH_DIR_NAME = ".trash_manageyourlibrary"
 MAX_WEB_CACHE_ENTRIES = 2500
-ANALYSIS_CACHE_VERSION = "identity_v11_provenance"
+ANALYSIS_CACHE_VERSION = "identity_v11_provenance_indra_1_1_2"
 AI_CONFIG_KEY = "ai_local"
 
 FAST_OK = _performance_pipeline.FAST_OK
@@ -1167,10 +1168,21 @@ def recuperar_transacciones_archivo_pendientes():
     return _file_transactions.recuperar_transacciones_archivo_pendientes(FILE_TRANSACTION_JOURNAL, APP_DATA)
 
 
+_operation_store_lock = threading.RLock()
+_operation_store = None
+_operation_store_path = None
+
+
 def operation_plan_store():
-    store = OperationPlanStore(OPERATION_PLANS_DB)
-    store.reconcile_from_journal(_file_transactions.leer_jsonl(FILE_TRANSACTION_JOURNAL))
-    return store
+    # Recovery resets interrupted rows; it must not run on a live plan.
+    global _operation_store, _operation_store_path
+    path = Path(OPERATION_PLANS_DB).resolve()
+    with _operation_store_lock:
+        if _operation_store is None or _operation_store_path != path or not path.is_file():
+            store = OperationPlanStore(path)
+            store.reconcile_from_journal(_file_transactions.leer_jsonl(FILE_TRANSACTION_JOURNAL))
+            _operation_store, _operation_store_path = store, path
+        return _operation_store
 
 
 def duplicate_review_store():
@@ -1901,6 +1913,7 @@ def descartar_archivo_seguro(
     motivo: str = "",
     conservado: Path | str | None = None,
     op_id: str | None = None,
+    *, expected_hash: str = "",
 ) -> Path | None:
     return _file_transactions.descartar_archivo_seguro(
         ruta,
@@ -1913,6 +1926,7 @@ def descartar_archivo_seguro(
         manifest_path=TRASH_MANIFEST_JSONL,
         library_root=FINAL if biblioteca_configurada() else None,
         trash_dir_name=TRASH_DIR_NAME,
+        expected_hash=expected_hash,
     )
 
 
@@ -4974,6 +4988,11 @@ def extraer_datos_locales(ruta: Path, callback=None, permitir_ocr=True, max_pagi
         "ocr_idioma": ocr_result.get("idioma_detectado", ""),
         "ocr_paginas": ocr_result.get("paginas_analizadas", 0),
         "ocr_isbn": ocr_result.get("isbn_detectado", ""),
+        "ocr_engine": ocr_result.get("ocr_engine", ""),
+        "ocr_engine_version": ocr_result.get("ocr_engine_version", ""),
+        "ocr_model_revision": ocr_result.get("ocr_model_revision", ""),
+        "ocr_model_license": ocr_result.get("ocr_model_license", ""),
+        "ocr_attribution": ocr_result.get("ocr_attribution", ""),
         "ocr_recomendado": bool(epub_requiere_ocr_portada or mobi_requiere_ocr_portada or cbz_requiere_ocr_portada or documento_requiere_ocr),
         "ocr_diferido_ejecutado": bool(ocr_result.get("metodo")),
         "tipo_documento": detectar_tipo_documento_desde_texto(texto, ruta),
@@ -6925,7 +6944,7 @@ def obtener_nombre_web(libro: Path, callback=None, modo_analisis=DEEP_MODE, canc
     )
 
 
-def mover_a_final(libro: Path, nombre_destino: str, motivo: str = "", op_id: str | None = None) -> Path:
+def mover_a_final(libro: Path, nombre_destino: str, motivo: str = "", op_id: str | None = None, *, expected_hash: str = "") -> Path:
     """
     Mueve el archivo original a la biblioteca elegida.
     Si el movimiento falla, el archivo original queda en su ubicación.
@@ -6940,6 +6959,7 @@ def mover_a_final(libro: Path, nombre_destino: str, motivo: str = "", op_id: str
         op_id,
         journal_path=FILE_TRANSACTION_JOURNAL,
         app_data=APP_DATA,
+        expected_hash=expected_hash,
     )
 
 
@@ -6996,3 +7016,5 @@ def restaurar_accion_undo(item):
         journal_path=FILE_TRANSACTION_JOURNAL,
         app_data=APP_DATA,
     )
+
+

@@ -17,16 +17,37 @@ jobs:
           cache: pip
       - name: Install locked dependencies
         run: python -m pip install --require-hashes -r requirements.lock
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@v3
+      - name: Build Android companion for CI validation
+        shell: pwsh
+        run: |
+          sdkmanager 'platforms;android-37.0' 'build-tools;36.0.0'
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          ./platforms/android/BUILD_ANDROID.ps1
+        # The runner's disposable signing key is for CI artifacts only.
+        # Public APK updates require the maintainer's preserved release key.
       - name: Test
-        run: python -m unittest discover -s tests -v
+        run: |
+          python tools/prepare_indra_models.py
+          python -m unittest discover -s tests -v
       - name: Build application
         shell: cmd
         run: platforms\windows\BUILD_WINDOWS.bat
         env:
           MANAGE_YOUR_LIBRARY_SKIP_INSTALL: '1'
           MANAGE_YOUR_LIBRARY_NO_PAUSE: '1'
+      - name: Build Windows installer
+        shell: cmd
+        run: platforms\windows\BUILD_INSTALLER.bat
       - name: Upload unpacked application
         uses: actions/upload-artifact@v4
         with:
           name: ManageYourLibrary-windows-x64
-          path: dist/windows/ManageYourLibrary
+          path: |
+            dist/windows/ManageYourLibrary
+            dist/installer/*-Setup-x64.exe
+            dist/android/*.apk

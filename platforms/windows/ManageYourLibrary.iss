@@ -2,7 +2,7 @@
   #define SourceRoot "..\.."
 #endif
 #ifndef AppVersion
-  #define AppVersion "0.5.3"
+  #define AppVersion "0.5.5"
 #endif
 
 [Setup]
@@ -19,6 +19,8 @@ SolidCompression=yes
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 PrivilegesRequired=lowest
+LicenseFile={#SourceRoot}\third_party\indra\MODEL_LICENSE.txt
+InfoBeforeFile={#SourceRoot}\third_party\indra\NOTICE.txt
 SetupIconFile={#SourceRoot}\app_icon.ico
 UninstallDisplayIcon={app}\ManageYourLibrary.exe
 WizardStyle=modern

@@ -42,7 +42,7 @@ class FirstUseTests(unittest.TestCase):
 
     def test_first_use_diagnostic_refuses_to_redirect_a_running_profile(self):
         with patch.object(config_store, "app_data_dir") as profile:
-            report = first_use_self_test.run_checks("0.5.3")
+            report = first_use_self_test.run_checks("0.5.2")
         profile.assert_not_called()
         self.assertFalse(report["passed"])
         self.assertIn("fresh process", report["error"])

@@ -1,4 +1,4 @@
-# Windows manual test plan
+﻿# Windows manual test plan
 
 This plan validates the frozen Windows EXE without touching a personal ebook library.
 
@@ -214,3 +214,4 @@ git status --short --branch
 ```
 
 Confirm that no temporary file, EXE, `dist/`, build folder, cache, or quarantine folder is staged.
+

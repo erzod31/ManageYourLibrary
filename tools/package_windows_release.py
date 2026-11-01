@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from tools.write_build_manifest import sha256, source_tree_fingerprint
 from tools.first_use_self_test import REQUIRED_CHECKS as FIRST_USE_CHECKS
+from tools.runtime_self_test import REQUIRED_CHECKS as RUNTIME_CHECKS
 
 PRIVATE_NAMES = {"config.json", "library_index.json", "library_history.csv", "historial.csv",
                  "undo_log.jsonl", "file_transactions.jsonl", "trash_manifest.jsonl"}
@@ -36,7 +37,7 @@ def validate_payload(folder: Path, *, version: str, fingerprint: dict) -> dict:
                  "frozen_smoke", "runtime_self_test", "first_use_self_test"):
         if manifest["validation"].get(gate) != "passed":
             raise ValueError(f"Missing automated build gate: {gate}")
-    expected_checks = {"tk_init", "bundled_languages", "image_ocr", "pdfium_ocr"}
+    expected_checks = RUNTIME_CHECKS
     if (runtime.get("passed") is not True or runtime.get("frozen") is not True
             or set(runtime.get("checks", {})) != expected_checks
             or any(value != "passed" for value in runtime["checks"].values())):
@@ -53,6 +54,20 @@ def validate_payload(folder: Path, *, version: str, fingerprint: dict) -> dict:
                 or name.startswith(("metadata_cache", "ocr_cache", "analysis_cache"))
                 or name in {".trash_manageyourlibrary", "ui_thumbnails", "__pycache__", "test_reports", "backups"}):
             raise ValueError(f"Personal state or cache in release payload: {path.name}")
+    companion = manifest.get("android_companion")
+    if companion:
+        bundled = folder / "_internal/android" / companion["name"]
+        if not bundled.is_file() or sha256(bundled) != companion["sha256"]:
+            raise ValueError("Bundled Android companion no longer matches the recorded SHA-256")
+        mobile = json.loads((folder / "mobile-self-test.json").read_text(encoding="utf-8"))
+        if (mobile.get("passed") is not True or mobile.get("frozen") is not True or
+                mobile.get("version") != version or manifest["validation"].get("mobile_self_test") != "passed"):
+            raise ValueError("Frozen Android companion checks are incomplete or failed")
+    if manifest.get("validation", {}).get("updater_self_test") == "passed":
+        updater = json.loads((folder / "update-self-test.json").read_text(encoding="utf-8"))
+        if (updater.get("passed") is not True or updater.get("frozen") is not True or updater.get("version") != version or
+                updater.get("realInstallerExecuted") is not False):
+            raise ValueError("Frozen updater fake-launcher checks are incomplete or unsafe")
     return manifest
 
 

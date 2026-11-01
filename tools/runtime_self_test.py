@@ -8,7 +8,7 @@ import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
-REQUIRED_LANGUAGES = ("eng", "spa", "fra", "nld", "chi_sim")
+REQUIRED_CHECKS = {"tk_init", "bundled_models", "image_ocr", "pdfium_ocr"}
 FIXTURE_TEXT = "LIBRARY TEST 2026"
 
 
@@ -40,21 +40,16 @@ def run_checks(version: str) -> dict:
         finally:
             root.destroy()
 
-    def bundled_languages():
-        import ocr_engine
-        base = ocr_engine._resource_path("tesseract")
-        executable = base / ("tesseract.exe" if sys.platform == "win32" else "tesseract")
-        if not executable.is_file() or ocr_engine._tesseract_path() != executable:
-            raise RuntimeError("Expected the bundled OCR executable, not a PATH fallback")
-        for language in REQUIRED_LANGUAGES:
-            if not (base / "tessdata" / f"{language}.traineddata").is_file():
-                raise RuntimeError(f"Missing OCR language: {language}")
+    def bundled_models():
+        from core import ocr_runtime
+        ocr_runtime.validate_models()
 
     def recognize(image):
         import ocr_engine
         with io.BytesIO() as stream:
             image.save(stream, format="PNG")
-            text, error = ocr_engine._run_tesseract_bytes(stream.getvalue(), "eng", timeout=20)
+            result = ocr_engine.extraer_texto_imagen_bytes_ocr(stream.getvalue())
+            text, error = result["texto"], result["error"]
         if error or FIXTURE_TEXT not in text.upper():
             raise RuntimeError(error or f"Synthetic OCR text mismatch: {text!r}")
 
@@ -84,10 +79,12 @@ def run_checks(version: str) -> dict:
     # The synthetic checks write no application state and use no network.
     with tempfile.TemporaryDirectory(prefix="myl_runtime_"):
         check("tk_init", tk_runtime)
-        check("bundled_languages", bundled_languages)
+        check("bundled_models", bundled_models)
         check("image_ocr", image_ocr)
         check("pdfium_ocr", pdf_ocr)
-    report["passed"] = all(value == "passed" for value in checks.values())
+    from core import ocr_runtime
+    ocr_runtime.close()
+    report["passed"] = set(checks) == REQUIRED_CHECKS and all(value == "passed" for value in checks.values())
     report["manual_installed_ui"] = "not_run"
     return report
 

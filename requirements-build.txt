@@ -5,3 +5,7 @@ pypdfium2==5.9.0
 Pillow==12.2.0
 ftfy==6.3.1
 pyinstaller==6.21.0
+indra-ocr==1.1.2
+numpy==2.5.4
+onnxruntime==1.31.1
+opencv-python-headless==5.0.0.93

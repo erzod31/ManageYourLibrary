@@ -67,6 +67,8 @@ class App:
         self.ui_events = core.UiEventQueue()
         self.indice = cargar_indice()
         self.trabajando = False
+        self.mobile_panel = None
+        self.update_panel = None
         self.cancel_token = CancellationToken()
         self.worker_threads = set()
         self.worker_threads_lock = threading.RLock()
@@ -148,6 +150,10 @@ class App:
 
     def cerrar_aplicacion(self):
         self.cancel_token.cancel()
+        if self.update_panel is not None:
+            self.update_panel.close()
+        if self.mobile_panel is not None:
+            self.mobile_panel.close()
         try:
             workspace = getattr(self, "workspace", None)
             if workspace is not None:
@@ -173,6 +179,18 @@ class App:
             pass
 
         self.root.destroy()
+
+    def abrir_panel_android(self):
+        if self.mobile_panel is None:
+            from ui.mobile_panel import MobilePanel
+            self.mobile_panel = MobilePanel(self)
+        self.mobile_panel.show()
+
+    def abrir_actualizaciones(self):
+        if self.update_panel is None:
+            from ui.update_panel import UpdatePanel
+            self.update_panel = UpdatePanel(self)
+        self.update_panel.show()
 
     def _start_worker(self, target):
         self.cancel_token = CancellationToken()

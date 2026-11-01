@@ -1,4 +1,4 @@
-# Windows release checklist
+﻿# Windows release checklist
 
 Use this checklist before publishing a Windows build of Manage Your Library.
 
@@ -126,3 +126,4 @@ Use only the temporary release-validation library described in the manual test p
 - [ ] Record the EXE SHA256 and compare it with the checksum document for the intended release.
 - [ ] Record EXE size and build date.
 - [ ] Keep the generated EXE outside Git unless publishing it separately as a release asset.
+

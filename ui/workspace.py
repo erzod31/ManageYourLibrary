@@ -1181,6 +1181,18 @@ class Workspace:
         self.app.btn_ia_local.pack(anchor="w")
         self.refresh_provider_health()
 
+        update_card = self._card(page)
+        update_card.pack(fill="x", pady=(10, 0))
+        self._label(update_card, "Actualizaciones de la aplicación", bold=True).pack(anchor="w")
+        self._muted(update_card, "Consultar versión, descargar, verificar e instalar desde esta aplicación.", wrap=760).pack(anchor="w", pady=(5, 10))
+        self._button(update_card, "Buscar / instalar actualización", self.app.abrir_actualizaciones).pack(anchor="w")
+
+        mobile_card = self._card(page)
+        mobile_card.pack(fill="x", pady=(10, 0))
+        self._label(mobile_card, "Android · Tailscale", bold=True).pack(anchor="w")
+        self._muted(mobile_card, "Galaxy / Android · conexión privada con este PC", wrap=760).pack(anchor="w", pady=(5, 10))
+        self._button(mobile_card, "Android / Tailscale", self.app.abrir_panel_android).pack(anchor="w")
+
     def _build_activity_strip(self):
         self.page_host.pack_forget()
         strip = tk.Frame(self.main, height=50, bd=1, highlightthickness=1)

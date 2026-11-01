@@ -1,115 +1,109 @@
-name: Native macOS and Linux packages
+name: Native updater candidates (DG-0035)
 
 on:
   workflow_dispatch:
     inputs:
-      native_revision:
-        description: Native supplement number; an existing release is never overwritten
+      android_bundle_run_id:
+        description: Optional Actions run containing a verified signed Android build input
         type: string
-        default: '2'
-      publish:
-        description: Publish the validated native supplement (never overwrite a release)
-        type: boolean
-        default: false
+        default: ''
+      android_artifact_name:
+        description: Artifact name in that run; release signing identity is verified before use
+        type: string
+        default: signed-android-build-input
+  push:
+    branches: ['codex/dg-0035-native-*']
 
+# Candidate validation cannot create releases, change channels or update devices.
 permissions:
   contents: read
+  actions: read
 
 jobs:
-  native-build:
+  android-input:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@v3
+      - name: Prepare SDK verifier
+        shell: pwsh
+        run: |
+          sdkmanager 'platforms;android-37.0' 'build-tools;36.0.0'
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12.16'
+      - name: Download approved signed Android input when supplied
+        if: inputs.android_bundle_run_id != ''
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.android_bundle_run_id }}
+          name: ${{ inputs.android_artifact_name }}
+          path: dist/android
+      - name: Build disposable CI Android input otherwise
+        if: inputs.android_bundle_run_id == ''
+        shell: pwsh
+        run: ./platforms/android/BUILD_ANDROID.ps1
+        # This independent runner's key is NOT the maintainer's update key.
+      - name: Verify actual APK and record release eligibility
+        shell: pwsh
+        env:
+          SIGNED_INPUT_RUN: ${{ inputs.android_bundle_run_id }}
+        run: |
+          $options = @()
+          if (-not $env:SIGNED_INPUT_RUN) { $options += '--allow-ci-certificate' }
+          python tools/validate_android_build_input.py --output dist/android/build-input-validation.json @options
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-build-input-${{ github.sha }}
+          path: |
+            dist/android/ManageYourLibrary-*.apk
+            dist/android/ManageYourLibrary-*.update.json
+            dist/android/build-input-validation.json
+          if-no-files-found: error
+
+  macos:
+    needs: android-input
     timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-22.04
-            platform: linux
-            arch: x64
-          - os: macos-15
-            platform: macos
+          - runner: macos-15
             arch: arm64
-          - os: macos-15-intel
-            platform: macos
+          - runner: macos-15-intel
             arch: x64
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.runner }}
+    env:
+      MYL_EXPECTED_ARCH: ${{ matrix.arch }}
+      MYL_MACOS_REQUIRE_DISTRIBUTION: '0'
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
-          python-version: '3.12'
-      - name: Install Linux build/runtime prerequisites
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y xvfb libtk8.6 patchelf tesseract-ocr tesseract-ocr-eng tesseract-ocr-spa tesseract-ocr-fra tesseract-ocr-nld tesseract-ocr-chi-sim
-      - name: Install macOS OCR prerequisites
-        if: runner.os == 'macOS'
-        run: brew install tesseract tesseract-lang
-      - name: Resolve and hash-lock native Python wheels
-        run: python3 tools/lock_native_wheels.py
-      - name: Bundle native OCR and dependency licenses
-        run: python3 tools/bundle_native_ocr.py
-      - name: Build and test Linux frozen application and archive
-        if: runner.os == 'Linux'
-        run: |
-          xvfb-run -a bash platforms/linux/build_linux.sh
-          xvfb-run -a python3 tools/package_native_release.py --platform linux
-      - name: Build and test macOS frozen application and archive
-        if: runner.os == 'macOS'
-        run: |
-          set -euo pipefail
-          bash platforms/macos/build_macos.sh
-          python3 tools/package_native_release.py --platform macos
-      - name: Retain native packages and provenance
-        uses: actions/upload-artifact@v4
-        with:
-          name: native-${{ matrix.platform }}-${{ matrix.arch }}
-          path: dist/native-release/*
-          if-no-files-found: error
-          compression-level: 0
-      - name: Retain failed diagnostics
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: failed-diagnostics-${{ matrix.platform }}-${{ matrix.arch }}
-          path: |
-            dist/**/runtime-self-test.json
-            dist/**/first-use-self-test.json
-          if-no-files-found: ignore
-
-  publish:
-    needs: native-build
-    if: inputs.publish
-    runs-on: ubuntu-22.04
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
+          python-version: '3.12.16'
+          architecture: ${{ matrix.arch == 'arm64' && 'arm64' || 'x64' }}
       - uses: actions/download-artifact@v4
         with:
-          pattern: native-*
-          merge-multiple: true
-          path: native-artifacts
-      - name: Publish only complete verified native packages
-        env:
-          GH_TOKEN: ${{ github.token }}
-          SOURCE_SHA: ${{ github.sha }}
-          RUN_LINK: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          NATIVE_REVISION: ${{ inputs.native_revision }}
-        run: |
-          set -euo pipefail
-          cd native-artifacts
-          for checksums in *-SHA256SUMS.txt; do sha256sum -c "$checksums"; done
-          test "$(find . -name '*.tar.gz' | wc -l)" -eq 1
-          test "$(find . -name '*.zip' | wc -l)" -eq 2
-          cd ..
-          [[ "$NATIVE_REVISION" =~ ^[1-9][0-9]*$ ]]
-          tag="v$(tr -d '\r\n' < VERSION)-native.$NATIVE_REVISION"
-          if gh release view "$tag" >/dev/null 2>&1; then
-            echo 'Release already exists; refusing to overwrite it.'
-            exit 1
-          fi
-          cp docs/NATIVE_FIRST_USE.md native-notes.md
-          printf '\nSource revision: `%s`\n\nNative build and checks: %s\n\nThis supplement does not replace the Windows v0.5.3 release.\n' "$SOURCE_SHA" "$RUN_LINK" >> native-notes.md
-          gh release create "$tag" native-artifacts/* --target "$SOURCE_SHA" --title '0.5.3 — macOS and Linux native packages' --notes-file native-notes.md --draft --latest=false
-          gh release edit "$tag" --draft=false --latest=false
+          name: android-build-input-${{ github.sha }}
+          path: dist/android
+      - name: Compile and test native updater, then check the packaged archive
+        run: bash platforms/macos/build_macos.sh
+      - name: Keep QA candidate and compact provenance
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: myl-macos-${{ matrix.arch }}-QA-${{ github.sha }}
+          path: |
+            dist/native-release/*
+            dist/macos/validation/*
+            dist/macos/build-manifest.json
+          if-no-files-found: warn
+          compression-level: 0

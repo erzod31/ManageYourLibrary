@@ -1,7 +1,12 @@
 # Native macOS updater validation and distribution
 
 The native workflow uses real GitHub-hosted `macos-15` (Apple Silicon) and
-`macos-15-intel` runners and CPython 3.12.16. It retains the published bundle ID
+`macos-15-intel` runners and CPython 3.12.16 from Python Build Standalone's
+20261026 release, with an explicit per-architecture SHA-256. GitHub's standard
+Python manifest does not offer macOS/Windows binaries after 3.12.10; the
+Windows APK verifier uses 3.12.10 without changing the product runtime.
+The Mac Python/venv is created only under the independent runner's temporary
+directory, without changing host services or signing credentials. It retains the published bundle ID
 `org.manageyourlibrary.desktop`, builds architecture-specific Mach-O executables,
 resolves exact native binary wheels and installs their recorded hashes offline.
 It runs source/frozen tests, local synthetic OCR, clean first use, the mobile

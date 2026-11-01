@@ -226,7 +226,7 @@ class PrepareTests(unittest.TestCase):
         path = manager.new_session() / value.name; path.write_bytes(data)
         plan = manager.prepare(value, path)
         result = manager.handoff(plan, confirmed=True)
-        self.assertEqual(result["arguments"], [str(path), "/DIR="+str(self.install), "/RESTARTAPPLICATIONS"])
+        self.assertEqual(result["arguments"], [str(path), "/DIR="+str(self.install.resolve()), "/RESTARTAPPLICATIONS"])
         self.assertNotIn("/SILENT", result["arguments"])
         self.launcher.assert_called_once()
 

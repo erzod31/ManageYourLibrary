@@ -1,4 +1,5 @@
 """Distribution gates must reject wrong identity/architecture, QA keys and native approval gaps."""
+import hashlib
 import json
 import os
 import plistlib
@@ -14,6 +15,7 @@ from core.app_updates import APP_ID, MAC_BUNDLE_ID, PRODUCT
 from tools import validate_android_build_input as android
 from tools import validate_macos_release as mac
 from tools.lock_native_wheels import wheel_record
+from tools import prepare_macos_python_notices as notices
 
 
 def fixture_unix_permissions():
@@ -32,10 +34,19 @@ def bundle_fixture(root, arch='arm64'):
     (bundle/'Contents/MacOS').mkdir(parents=True)
     resources=bundle/'Contents/Resources';resources.mkdir()
     (bundle/'Contents/Info.plist').write_bytes(plistlib.dumps({'CFBundleIdentifier':MAC_BUNDLE_ID,
-        'CFBundleExecutable':'ManageYourLibrary','CFBundleVersion':'0.5.5','CFBundleShortVersionString':'0.5.5'}))
+        'CFBundleExecutable':'ManageYourLibrary','CFBundleVersion':'0.5.5','CFBundleShortVersionString':'0.5.5',
+        'LSMinimumSystemVersion':'14.0'}))
     (resources/'update-identity.json').write_text(json.dumps({'product':PRODUCT,'appId':APP_ID,'macBundleId':MAC_BUNDLE_ID,
         'version':'0.5.5','platform':'macos-'+arch}))
     (resources/'VERSION').write_text('0.5.5')
+    notice_folder=resources/'third_party/python-runtime';notice_folder.mkdir(parents=True)
+    notice_hashes={}
+    for name in notices.REQUIRED:
+        content=b'Synthetic unit-test fixture; no distribution approval'
+        (notice_folder/name).write_bytes(content);notice_hashes[name]=hashlib.sha256(content).hexdigest()
+    target,archive_hash=notices.SOURCES[arch]
+    (notice_folder/'provenance.json').write_text(json.dumps({'release':notices.RELEASE,'pythonVersion':'3.12.16',
+        'target':target,'archiveSha256':archive_hash,'notices':notice_hashes}))
     executable=bundle/'Contents/MacOS/ManageYourLibrary'
     executable.write_bytes(b'\xcf\xfa\xed\xfe'+struct.pack('<I',0x0100000C if arch=='arm64' else 0x01000007)+b'\0'*24)
     executable.chmod(0o755)
@@ -68,6 +79,23 @@ class MacReleaseGateTests(unittest.TestCase):
         with patch.object(mac.sys,'platform','win32'),self.assertRaises(RuntimeError):
             mac.native_validate(Path('not-a-real-app'),'0.5.5','arm64',run=runner)
         runner.assert_not_called()
+
+    def test_bundle_rejects_missing_minimum_os_or_changed_runtime_notices(self):
+        with tempfile.TemporaryDirectory() as temporary, fixture_unix_permissions():
+            bundle=bundle_fixture(Path(temporary))
+            info=bundle/'Contents/Info.plist';original=info.read_bytes();value=plistlib.loads(original)
+            del value['LSMinimumSystemVersion'];info.write_bytes(plistlib.dumps(value))
+            with self.assertRaisesRegex(ValueError,'14.0'):mac.inspect_bundle(bundle,'0.5.5','arm64')
+            info.write_bytes(original)
+            (bundle/'Contents/Resources/third_party/python-runtime/LICENSE.tcl.txt').write_text('changed')
+            with self.assertRaisesRegex(ValueError,'changed'):mac.inspect_bundle(bundle,'0.5.5','arm64')
+
+    def test_full_python_archive_hash_is_checked_before_tar_or_output(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root=Path(temporary);archive=root/'wrong.tar.zst';archive.write_bytes(b'altered download')
+            with patch.object(notices.subprocess,'check_output') as tar, self.assertRaisesRegex(ValueError,'hash'):
+                notices.prepare(archive,root/'python',root/'notices','arm64')
+            tar.assert_not_called();self.assertFalse((root/'notices').exists())
 
     def test_qa_adhoc_gate_is_never_distribution_approved(self):
         with tempfile.TemporaryDirectory() as temporary, fixture_unix_permissions():

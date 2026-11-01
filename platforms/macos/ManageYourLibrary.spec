@@ -4,11 +4,14 @@ from pathlib import Path
 from PyInstaller.utils.hooks import collect_all, collect_data_files, copy_metadata
 from tools.write_update_identity import write as write_update_identity
 from core.app_updates import MAC_BUNDLE_ID
+from tools.prepare_macos_python_notices import verify_notices
 
 ROOT = Path.cwd()
 VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 import platform
 arch = "arm64" if platform.machine().lower() in {"arm64", "aarch64"} else "x64"
+runtime_notices = Path(os.environ["MYL_NATIVE_PYTHON_NOTICES"])
+verify_notices(runtime_notices, arch)
 identity = write_update_identity(ROOT / "dist/build-inputs/macos/update-identity.json", "macos-" + arch)
 apk = ROOT / "dist/android" / f"ManageYourLibrary-{VERSION}.apk"
 if not apk.is_file() or not apk.with_suffix(".update.json").is_file():
@@ -17,7 +20,8 @@ datas = [(str(ROOT / "VERSION"), "."), (str(ROOT / "LICENSE"), "."),
     (str(ROOT / "THIRD_PARTY_NOTICES.md"), "."), (str(identity), "."),
     (str(ROOT / "app_icon.ico"), "."), (str(ROOT / "data"), "data"),
     (str(ROOT / "ocr_models/indra"), "ocr_models/indra"), (str(ROOT / "third_party"), "third_party"),
-    (str(apk), "android"), (str(apk.with_suffix(".update.json")), "android")]
+    (str(apk), "android"), (str(apk.with_suffix(".update.json")), "android"),
+    (str(runtime_notices), "third_party/python-runtime")]
 binaries, hiddenimports = [], ["indra_ocr", "onnxruntime", "cv2", "numpy", "pypdf", "PIL", "PIL._tkinter_finder", "pypdfium2", "ftfy"]
 for package in ("pypdfium2", "ftfy"):
     package_datas, package_binaries, package_hidden = collect_all(package)
@@ -39,4 +43,4 @@ coll = COLLECT(exe, a.binaries, a.datas, name="ManageYourLibrary", strip=False, 
 app = BUNDLE(coll, name="ManageYourLibrary.app", bundle_identifier=MAC_BUNDLE_ID,
     codesign_identity=signer, entitlements_file=None,
     info_plist={"CFBundleIdentifier": MAC_BUNDLE_ID, "CFBundleShortVersionString": VERSION,
-                "CFBundleVersion": VERSION, "NSHighResolutionCapable": True})
+                "CFBundleVersion": VERSION, "LSMinimumSystemVersion": "14.0", "NSHighResolutionCapable": True})

@@ -14,6 +14,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from core.app_updates import APP_ID, MAC_BUNDLE_ID, PRODUCT
+from tools.prepare_macos_python_notices import verify_notices
 
 CPUS = {0x01000007: 'x64', 0x0100000C: 'arm64'}
 
@@ -46,6 +47,8 @@ def inspect_bundle(bundle, version, arch):
                 'CFBundleShortVersionString': version, 'CFBundleVersion': version}
     if any(plist.get(k) != v for k, v in expected.items()):
         raise ValueError('Published bundle identity/version was not preserved')
+    if plist.get('LSMinimumSystemVersion') != '14.0':
+        raise ValueError('The pinned OCR runtime requires an explicit macOS 14.0 minimum')
     marker = next((bundle / p for p in ['Contents/Resources/update-identity.json',
                   'Contents/Frameworks/update-identity.json'] if (bundle / p).is_file()), None)
     if marker is None:
@@ -56,6 +59,7 @@ def inspect_bundle(bundle, version, arch):
         raise ValueError('Embedded updater identity does not match bundle')
     if marker.with_name('VERSION').read_text().strip() != version:
         raise ValueError('Bundled VERSION does not match')
+    runtime_notices = verify_notices(marker.parent / 'third_party/python-runtime', arch)
     executable = bundle / 'Contents/MacOS/ManageYourLibrary'
     if not executable.is_file() or not executable.stat().st_mode & 0o111:
         raise ValueError('Main executable is missing or not executable')
@@ -74,7 +78,8 @@ def inspect_bundle(bundle, version, arch):
             binaries.append(path.relative_to(bundle).as_posix())
     if executable.relative_to(bundle).as_posix() not in binaries:
         raise ValueError('Main executable is not Mach-O')
-    return {'bundleId': MAC_BUNDLE_ID, 'version': version, 'arch': arch, 'machOBinariesChecked': len(binaries)}
+    return {'bundleId': MAC_BUNDLE_ID, 'version': version, 'arch': arch, 'minimumMacOS': '14.0',
+            'runtimeNoticesChecked': len(runtime_notices['notices']), 'machOBinariesChecked': len(binaries)}
 
 
 def command(arguments):

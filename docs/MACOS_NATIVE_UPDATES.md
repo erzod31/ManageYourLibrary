@@ -15,6 +15,13 @@ bundle/update identity, codesign, Gatekeeper and stapled-ticket status. After
 ZIP packaging, it checks file bytes, executable permissions and symlinks and
 reruns the frozen diagnostics from an independent extraction.
 
+Both architectures require **macOS 14 or later**, recorded in `Info.plist` before
+signing. The bootstrap recovers unmodified Python/Tcl/OpenSSL runtime notices
+from the same hash-pinned PBS full archive: the full and install-only Python
+executables must have identical hashes. The bundle includes that toolchain
+notice set and its provenance; native gates check it again after packaging.
+The notice set can include components that are not used by the frozen app.
+
 If PyPI has no macOS Intel wheel for the pinned ONNX Runtime 1.31.1, the Intel
 runner attempts a CPU build of that exact version from the upstream release
 commit `6af1a932e2286d5c58166085d24c68783033edee`. It records submodule revisions,
@@ -48,6 +55,17 @@ all distribution gates pass. Signing/notarization credentials must already be
 authorized and configured; the project does not create an Apple account,
 purchase a certificate, upload secrets, remove quarantine or weaken Gatekeeper.
 The QA workflow intentionally cannot perform this production transition.
+
+Notarization is a separate authorized operation after the final Developer ID
+signature. The first strict build can leave an app for that handoff while
+refusing to publish an archive: submit a ZIP of that exact app with Apple's
+`notarytool` using an existing authorized keychain profile, wait for acceptance,
+and staple the ticket to the app. Then run `tools/validate_macos_release.py`
+with `--require-distribution` and package with
+`python tools/package_native_release.py --platform macos`. Both steps must use
+the same version, architecture, expected team and verified release APK record.
+Do not rebuild or modify the sealed app after notarization. The archive
+round-trip checks repeat the signature, ticket and frozen diagnostics.
 
 The native build command is `bash platforms/macos/build_macos.sh` in a fresh
 checkout with the matching APK under `dist/android`. Existing output is

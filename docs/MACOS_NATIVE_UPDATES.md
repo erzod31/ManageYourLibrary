@@ -21,6 +21,8 @@ from the same hash-pinned PBS full archive: the full and install-only Python
 executables must have identical hashes. The bundle includes that toolchain
 notice set and its provenance; native gates check it again after packaging.
 The notice set can include components that are not used by the frozen app.
+The CI bootstrap uses the runners' existing GNU tar and zstd to read the full
+archive without installing any host tool.
 
 If PyPI has no macOS Intel wheel for the pinned ONNX Runtime 1.31.1, the Intel
 runner attempts a CPU build of that exact version from the upstream release

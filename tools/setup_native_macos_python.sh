@@ -3,6 +3,7 @@ set -euo pipefail
 test "$(uname -s)" = Darwin || { echo 'Native macOS runner required'; exit 1; }
 test -n "${RUNNER_TEMP:-}" && test -n "${GITHUB_PATH:-}" && test -n "${GITHUB_ENV:-}" || { echo 'Independent GitHub runner environment required'; exit 1; }
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+command -v gtar >/dev/null && command -v zstd >/dev/null || { echo 'Runner-provided GNU tar/zstd required for PBS notices'; exit 1; }
 case "${MYL_EXPECTED_ARCH:-}" in
   arm64)
     test "$(uname -m)" = arm64
@@ -27,7 +28,7 @@ tar -xzf "$OWNED/python.tar.gz" -C "$OWNED"
 FULL_URL="https://github.com/astral-sh/python-build-standalone/releases/download/20261026/cpython-3.12.16%2B20261026-$TARGET-apple-darwin-pgo%2Blto-full.tar.zst"
 curl --fail --location --retry 2 --proto '=https' --tlsv1.2 "$FULL_URL" --output "$OWNED/python-full.tar.zst"
 "$OWNED/python/bin/python3" "$ROOT/tools/prepare_macos_python_notices.py" --archive "$OWNED/python-full.tar.zst" \
-  --python-root "$OWNED/python" --output "$OWNED/runtime-notices" --arch "$MYL_EXPECTED_ARCH"
+  --python-root "$OWNED/python" --output "$OWNED/runtime-notices" --arch "$MYL_EXPECTED_ARCH" --tar gtar
 "$OWNED/python/bin/python3" -m venv "$OWNED/build-venv"
 printf '%s\n' "$OWNED/build-venv/bin" >> "$GITHUB_PATH"
 printf '%s\n' "MYL_NATIVE_PYTHON_ROOT=$OWNED/python" >> "$GITHUB_ENV"

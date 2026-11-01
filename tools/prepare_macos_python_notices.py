@@ -84,8 +84,9 @@ def main():
     parser.add_argument('--python-root', required=True, type=Path)
     parser.add_argument('--output', required=True, type=Path)
     parser.add_argument('--arch', required=True, choices=SOURCES)
+    parser.add_argument('--tar', default='tar', help='Archive reader; native CI uses preinstalled gtar/zstd')
     args = parser.parse_args()
-    proof = prepare(args.archive, args.python_root, args.output, args.arch)
+    proof = prepare(args.archive, args.python_root, args.output, args.arch, tar=args.tar)
     print(json.dumps({k: v for k, v in proof.items() if k != 'notices'}))
     return 0
 

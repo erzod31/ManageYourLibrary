@@ -31,6 +31,11 @@ hash-locks bootstrap wheels and feeds the resulting native wheel into the normal
 hash-locked dependency resolver. It does not silently downgrade the OCR runtime
 or substitute an Apple Silicon/Linux binary. Failure remains a native build
 failure, with diagnostics retained outside the app.
+The Intel source build disables compiling upstream test/benchmark binaries;
+`--skip_tests` alone only disables executing them. The application's complete
+source suite and frozen OCR/mobile/updater gates still run. After an observed
+45-minute timeout at about 70%, Intel has a 75-minute job limit on the same
+standard public runner; a successfully built, hash-verified wheel is cached.
 
 The default workflow produces **QA artifacts only**. The disposable Android
 input key is isolated to the runner and never replaces the maintainer's signing

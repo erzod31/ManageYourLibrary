@@ -73,15 +73,17 @@ jobs:
 
   macos:
     needs: android-input
-    timeout-minutes: 45
+    timeout-minutes: ${{ matrix.timeout }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - runner: macos-15
             arch: arm64
+            timeout: 45
           - runner: macos-15-intel
             arch: x64
+            timeout: 75
     runs-on: ${{ matrix.runner }}
     env:
       MYL_EXPECTED_ARCH: ${{ matrix.arch }}
@@ -95,7 +97,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: dist/onnx-macos-x64
-          key: myl-ort-1.31.1-6af1a932-macos15-x64-py312-numpy254-v1
+          key: myl-ort-1.31.1-6af1a932-macos15-x64-py312-numpy254-v2
       - name: Build exact ONNX Runtime on native Intel when no official wheel exists
         if: matrix.arch == 'x64'
         run: bash tools/build_onnxruntime_macos_x64.sh
@@ -104,7 +106,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: dist/onnx-macos-x64
-          key: myl-ort-1.31.1-6af1a932-macos15-x64-py312-numpy254-v1
+          key: myl-ort-1.31.1-6af1a932-macos15-x64-py312-numpy254-v2
       - uses: actions/download-artifact@v4
         with:
           name: android-build-input-${{ github.sha }}

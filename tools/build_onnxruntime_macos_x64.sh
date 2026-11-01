@@ -14,6 +14,7 @@ from pathlib import Path
 from tools.lock_native_wheels import wheel_record
 folder=Path(os.environ['MYL_ORT_EVIDENCE']);proof=json.loads((folder/'native-wheel.json').read_text())
 assert proof['sourceCommit']=='6af1a932e2286d5c58166085d24c68783033edee'
+assert proof['upstreamUnitTestsBuilt'] is False
 actual=wheel_record(folder/'wheels'/proof['file'])
 assert actual['name']=='onnxruntime' and actual['version']=='1.31.1' and actual['sha256']==proof['sha256']
 PY
@@ -49,12 +50,12 @@ git -C "$OWNED/source" checkout --detach FETCH_HEAD
 test "$(git -C "$OWNED/source" rev-parse HEAD)" = "$SOURCE_SHA"
 git -C "$OWNED/source" submodule update --init --recursive --depth 1
 git -C "$OWNED/source" submodule status --recursive > "$EVIDENCE/submodule-revisions.txt"
-printf 'onnxruntime=1.31.1\nsource=%s\narchitecture=x86_64\nconfiguration=Release\nparallel=3\n' "$SOURCE_SHA" > "$EVIDENCE/source-build.txt"
+printf 'onnxruntime=1.31.1\nsource=%s\narchitecture=x86_64\nconfiguration=Release\nparallel=3\nupstreamUnitTestsBuilt=false\n' "$SOURCE_SHA" > "$EVIDENCE/source-build.txt"
 cd "$OWNED/source"
 ./build.sh --config Release --build_shared_lib --build_wheel --parallel 3 \
   --skip_tests --skip_submodule_sync --compile_no_warning_as_error \
   --build_dir "$OWNED/build" --apple_deploy_target 14.0 \
-  --cmake_extra_defines CMAKE_OSX_ARCHITECTURES=x86_64
+  --cmake_extra_defines CMAKE_OSX_ARCHITECTURES=x86_64 onnxruntime_BUILD_UNIT_TESTS=OFF onnxruntime_BUILD_BENCHMARKS=OFF
 test -n "$(find "$OWNED/build/Release/dist" -name 'onnxruntime-1.31.1-*.whl' -print -quit)"
 mkdir -p "$EVIDENCE/wheels"
 find "$OWNED/build/Release/dist" -name '*.whl' -exec cp {} "$EVIDENCE/wheels/" \;
@@ -65,6 +66,7 @@ from pathlib import Path
 from tools.lock_native_wheels import wheel_record
 folder=Path(os.environ['MYL_ORT_EVIDENCE']);wheels=list((folder/'wheels').glob('onnxruntime-1.31.1-*.whl'));assert len(wheels)==1
 proof=wheel_record(wheels[0]);proof['sourceCommit']='6af1a932e2286d5c58166085d24c68783033edee'
+proof['upstreamUnitTestsBuilt']=False
 (folder/'native-wheel.json').write_text(json.dumps(proof,indent=2))
 PY
 printf 'MYL_NATIVE_EXTRA_WHEELS=%s\n' "$EVIDENCE/wheels" >> "$GITHUB_ENV"
